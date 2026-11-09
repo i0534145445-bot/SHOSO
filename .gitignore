@@ -1,0 +1,15 @@
+# Media never lives in the repo — it lives outside the workspace root
+# (/tmp/media by default, override with MEDIA_ROOT). Large media inside the
+# workspace breaks the turn-end snapshot and wipes the sandbox.
+google_drive/
+work/
+deliver/
+audio/
+gfxsrc/
+media/
+*.mp4
+*.mp3
+*.wav
+*.png
+*.jpg
+__pycache__/
