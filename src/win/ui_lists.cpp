@@ -1,6 +1,8 @@
 // SHOSO Music - list view plumbing, buttons, menus, playback events
 #include "app.h"
 
+#include <algorithm>
+
 namespace shoso {
 
 // ---------------------------------------------------------------- activation
@@ -137,39 +139,6 @@ LRESULT onNotify(App& a, HWND h, NMHDR* nm) {
         }
         case NM_CLICK:
             return 0;
-        case NM_CUSTOMDRAW: {
-            LPNMLVCUSTOMDRAW cd = (LPNMLVCUSTOMDRAW)nm;
-            const Theme& th = theme();
-            switch (cd->nmcd.dwDrawStage) {
-                case CDDS_PREPAINT:
-                    return CDRF_NOTIFYITEMDRAW;
-                case CDDS_ITEMPREPAINT: {
-                    size_t row = (size_t)cd->nmcd.dwItemSpec;
-                    bool sel = (ListView_GetItemState(a.hwndList, (int)row, LVIS_SELECTED) & LVIS_SELECTED) != 0;
-                    bool cur = false;
-                    if (row < a.rows.size() && a.rows[row].kind == ROW_TRACK &&
-                        a.rows[row].trackId == a.q().currentId()) cur = true;
-                    cd->clrTextBk = sel ? th.selectedBg : ((row % 2) ? th.listAlt : th.listBg);
-                    cd->clrText = sel ? th.text : (cur ? th.playing : th.text);
-                    return CDRF_NOTIFYSUBITEMDRAW | CDRF_NEWFONT;
-                }
-                case CDDS_ITEMPREPAINT | CDDS_SUBITEM: {
-                    size_t row = (size_t)cd->nmcd.dwItemSpec;
-                    bool sel = (ListView_GetItemState(a.hwndList, (int)row, LVIS_SELECTED) & LVIS_SELECTED) != 0;
-                    bool cur = false;
-                    if (row < a.rows.size() && a.rows[row].kind == ROW_TRACK &&
-                        a.rows[row].trackId == a.q().currentId()) cur = true;
-                    cd->clrTextBk = sel ? th.selectedBg : ((row % 2) ? th.listAlt : th.listBg);
-                    int sub = cd->iSubItem;
-                    int main = (int)a.cols.size() - 1;
-                    if (sub == main && cur && !sel) cd->clrText = th.playing;
-                    else if (sub == main) cd->clrText = sel ? th.text : th.text;
-                    else cd->clrText = sel ? th.text : th.textDim;
-                    return CDRF_NEWFONT;
-                }
-            }
-            return CDRF_DODEFAULT;
-        }
     }
     return 0;
 }
@@ -222,9 +191,15 @@ static HMENU buildQueueMenu(App& a) {
 }
 
 void onButton(App& a, int id) {
-    if (id >= IDC_TAB0 && id < IDC_TAB0 + 6) { a.setView(id - IDC_TAB0); return; }
+    if (id >= IDC_NAV_FIRST && id < IDC_NAV_FIRST + 6) {
+        static const int views[6] = {VIEW_QUEUE, VIEW_SONGS, VIEW_FOLDERS,
+                                     VIEW_ALBUMS, VIEW_ARTISTS, VIEW_PLAYLISTS};
+        a.setView(views[id - IDC_NAV_FIRST]);
+        return;
+    }
+    if (id == IDC_NAV_NP) { a.setNowPlaying(!a.showNowPlaying); return; }
     switch (id) {
-        case IDC_MENU: {
+        case IDC_NAV_MENU: {
             HMENU m = CreatePopupMenu();
             AppendMenuW(m, MF_STRING, CMD_ADD_FOLDER, L"הוספת תיקייה לספרייה...");
             AppendMenuW(m, MF_STRING, CMD_RESCAN, L"סריקה מחדש");
@@ -239,12 +214,25 @@ void onButton(App& a, int id) {
             AppendMenuW(m, MF_STRING, CMD_ABOUT, L"אודות SHOSO מיוזיק");
             AppendMenuW(m, MF_SEPARATOR, 0, nullptr);
             AppendMenuW(m, MF_STRING, CMD_EXIT, L"יציאה");
-            popupAtButton(a, a.btnMenu, m);
+            popupAtButton(a, a.btnNavMenu, m);
             return;
         }
-        case IDC_QUEUE: {
+        case IDC_QDROP: {
             HMENU m = buildQueueMenu(a);
-            popupAtButton(a, a.btnQueue, m);
+            popupAtButton(a, a.btnQDrop, m);
+            return;
+        }
+        case IDC_QCLEAR: {
+            if (a.q().empty()) return;
+            if (msgBoxYesNo(a.hwnd, "לנקות את התור הנוכחי?", kAppNameHe) == IDYES) {
+                a.player.stopAndClose();
+                a.playing = false;
+                a.q().clear();
+                a.markDirty();
+                a.refreshList();
+                a.updateTransportUi();
+                a.updateStatusText();
+            }
             return;
         }
         case IDC_SORT: {
@@ -253,31 +241,7 @@ void onButton(App& a, int id) {
             return;
         }
         case IDC_BACK: a.goBack(); return;
-        case IDC_PREV: a.nextTrack(false); SetFocus(a.hwndList); return;
-        case IDC_NEXT: a.nextTrack(true); SetFocus(a.hwndList); return;
-        case IDC_PLAY: a.togglePlay(); SetFocus(a.hwndList); return;
-        case IDC_SHUFFLE: {
-            a.q().setShuffle(!a.q().shuffle, (uint32_t)GetTickCount());
-            a.markDirty();
-            InvalidateRect(a.btnShuffle, nullptr, TRUE);
-            if (a.view == VIEW_QUEUE) a.refreshList();
-            return;
-        }
-        case IDC_REPEAT: {
-            RepeatMode r = a.q().repeat;
-            r = (r == RepeatMode::Off) ? RepeatMode::All : (r == RepeatMode::All ? RepeatMode::One : RepeatMode::Off);
-            a.q().repeat = r;
-            a.markDirty();
-            InvalidateRect(a.btnRepeat, nullptr, TRUE);
-            return;
-        }
-        case IDC_FAV: {
-            const Track* t = a.currentTrack();
-            if (t) a.toggleFavorite(t->id);
-            return;
-        }
-        case IDC_SLEEP: openSleepDialog(); return;
-        case IDC_ADDFOLDER:
+        case IDC_PLAYPAUSE: a.togglePlay(); return;
         case IDC_EMPTY: {
             std::string dir = pickFolderDialog(a.hwnd, "בחרו תיקיית מוזיקה");
             if (!dir.empty()) a.addFolderToLibrary(dir);
@@ -287,10 +251,120 @@ void onButton(App& a, int id) {
 }
 
 // ------------------------------------------------------------------- menus
+static void addToPlaylistByIndex(App& a, size_t playlistIndex, const std::vector<uint32_t>& ids);
+
 void showAddToPlaylistMenu(POINT pt, const std::vector<uint32_t>& ids) {
     App& a = app();
-    (void)pt; (void)ids;
-    (void)a;
+    HMENU sub = CreatePopupMenu();
+    for (size_t i = 0; i < a.playlistOrder.size(); ++i) {
+        const Playlist* p = a.playlistById(a.playlistOrder[i]);
+        if (!p) continue;
+        AppendMenuW(sub, MF_STRING, CMD_PLAY_ADD_FIRST + (UINT_PTR)i, W(p->name).c_str());
+    }
+    AppendMenuW(sub, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(sub, MF_STRING, CMD_NEW_PLAYLIST, L"פלייליסט חדש...");
+    SetForegroundWindow(a.hwnd);
+    int cmd = (int)TrackPopupMenu(sub, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_LAYOUTRTL,
+                                  pt.x, pt.y, 0, a.hwnd, nullptr);
+    DestroyMenu(sub);
+    if (cmd == CMD_NEW_PLAYLIST) { openNamePlaylistDialog(0); return; }
+    if (cmd >= CMD_PLAY_ADD_FIRST && cmd < CMD_PLAY_ADD_FIRST + 64)
+        addToPlaylistByIndex(a, (size_t)(cmd - CMD_PLAY_ADD_FIRST), ids);
+}
+
+// --------------------------------------------- Musicolet-style owner drawn row
+void drawListRow(App& a, DRAWITEMSTRUCT* di) {
+    const Theme& th = theme();
+    FontSet& fs = fontsFor(a.dpi);
+    HDC hdc = di->hDC;
+    RECT r = di->rcItem;
+    fillSolid(hdc, r, th.listBg);
+    int row = (int)di->itemID;
+    if (row < 0 || row >= (int)a.rows.size()) return;
+    const Row& rr = a.rows[row];
+    bool sel = (di->itemState & ODS_SELECTED) != 0;
+    const Track* t = nullptr;
+    bool cur = false;
+    if (rr.kind == ROW_TRACK) {
+        t = a.library.byId(rr.trackId);
+        cur = t && t->id == a.q().currentId();
+    }
+    if (sel) fillSolid(hdc, r, th.selectedBg);
+    int pad = scale(10, a.dpi);
+    int hh = r.bottom - r.top;
+    int cy = r.top + hh / 2;
+
+    if (cur) {
+        RECT b = {r.left + 2, r.top + 2, r.right - 2, r.bottom - 2};
+        roundRectFrame(hdc, b, scale(6, a.dpi), th.accent, std::max(1, scale(1, a.dpi)));
+    }
+
+    // drag-handle style grip at the right (RTL start)
+    RECT hd = {r.right - pad - scale(16, a.dpi), cy - scale(9, a.dpi),
+               r.right - pad, cy + scale(9, a.dpi)};
+    glyph::draw(hdc, glyph::Handle, hd, cur ? th.accent : th.textFaint, a.dpi);
+
+    // square thumbnail
+    int ts = scale(46, a.dpi);
+    int tx0 = hd.left - scale(8, a.dpi) - ts;
+    RECT tb = {tx0, cy - ts / 2, tx0 + ts, cy + ts / 2};
+    HBITMAP art = (rr.kind == ROW_TRACK && t) ? artForTrack(*t, ts) : nullptr;
+    roundRectFill(hdc, tb, scale(4, a.dpi), th.panelBg);
+    if (art) {
+        HDC m2 = CreateCompatibleDC(hdc);
+        HBITMAP ob = (HBITMAP)SelectObject(m2, art);
+        BitBlt(hdc, tb.left, tb.top, ts, ts, m2, 0, 0, SRCCOPY);
+        SelectObject(m2, ob);
+        DeleteDC(m2);
+    } else {
+        glyph::Kind gk = glyph::Note;
+        if (rr.kind == ROW_ALBUM) gk = glyph::Disc;
+        else if (rr.kind == ROW_ARTIST) gk = glyph::Person;
+        else if (rr.kind == ROW_FOLDER) gk = glyph::Folder;
+        else if (rr.kind == ROW_PLAYLIST) gk = glyph::Stack;
+        glyph::draw(hdc, gk, tb, th.textFaint, a.dpi);
+    }
+
+    // overflow dots at the left edge (actions live in the context menu)
+    RECT dt = {r.left + pad / 2, cy - scale(10, a.dpi), r.left + pad / 2 + scale(18, a.dpi), cy + scale(10, a.dpi)};
+    glyph::draw(hdc, glyph::DotsV, dt, sel ? th.textDim : th.textFaint, a.dpi);
+
+    // three text lines
+    std::string l1, l2, l3;
+    if (rr.kind == ROW_TRACK && t) {
+        l1 = t->displayTitle();
+        l2 = t->displayArtist();
+        l3 = t->displayAlbum();
+        if (t->durationMs > 0) l3 += (l3.empty() ? "" : " · ") + formatClock(t->durationMs);
+    } else if (rr.kind == ROW_ALBUM) {
+        const AlbumGroup& g = a.albums[rr.groupIndex];
+        l1 = g.album; l2 = g.artist;
+        l3 = hePlural((int)g.trackIds.size(), "שיר", "שירים") + " · " + formatLongDuration(g.totalMs);
+    } else if (rr.kind == ROW_ARTIST) {
+        const ArtistGroup& g = a.artists[rr.groupIndex];
+        l1 = g.artist;
+        l2 = hePlural((int)g.albumCount, "אלבום", "אלבומים");
+        l3 = hePlural((int)g.trackIds.size(), "שיר", "שירים") + " · " + formatLongDuration(g.totalMs);
+    } else if (rr.kind == ROW_FOLDER) {
+        const FolderGroup& g = a.folders[rr.groupIndex];
+        l1 = g.name; l2 = g.folder;
+        l3 = hePlural((int)g.trackIds.size(), "שיר", "שירים") + " · " + formatLongDuration(g.totalMs);
+    } else if (rr.kind == ROW_PLAYLIST) {
+        const Playlist* p = a.playlistById(rr.playlistId);
+        if (p) {
+            l1 = p->name;
+            l3 = hePlural((int)p->trackIds.size(), "שיר", "שירים");
+            if (p->system) l2 = "פלייליסט מערכת";
+        }
+    }
+    RECT tr = {dt.right + scale(6, a.dpi), r.top + scale(6, a.dpi), tb.left - scale(8, a.dpi), r.bottom - scale(4, a.dpi)};
+    int l1h = scale(22, a.dpi), l2h = scale(18, a.dpi);
+    RECT r1 = {tr.left, tr.top, tr.right, tr.top + l1h};
+    RECT r2 = {tr.left, r1.bottom, tr.right, r1.bottom + l2h};
+    RECT r3 = {tr.left, r2.bottom, tr.right, tr.bottom};
+    drawTextU(hdc, l1, r1, cur ? th.playing : th.text, fs.uiBold, DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+    if (!l2.empty()) drawTextU(hdc, l2, r2, th.textDim, fs.smallF, DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+    if (!l3.empty()) drawTextU(hdc, l3, r3, th.textFaint, fs.smallF, DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
 }
 
 static void addToPlaylistByIndex(App& a, size_t playlistIndex, const std::vector<uint32_t>& ids) {
@@ -397,6 +471,7 @@ void onMenuCommand(App& a, int id) {
             a.updateNowArt(true);
             if (a.view == VIEW_QUEUE) a.refreshList();
             a.updateStatusText();
+            InvalidateRect(a.btnQDrop, nullptr, TRUE);
         }
         return;
     }

@@ -8,23 +8,23 @@ namespace shoso {
 static Theme g_themeDark;
 static Theme g_themeLight = [] {
     Theme t;
-    t.windowBg   = RGB(246, 246, 250);
+    t.windowBg   = RGB(250, 250, 250);
     t.panelBg    = RGB(255, 255, 255);
-    t.barBg      = RGB(248, 248, 252);
+    t.barBg      = RGB(255, 255, 255);
     t.listBg     = RGB(255, 255, 255);
-    t.listAlt    = RGB(246, 246, 250);
-    t.hoverBg    = RGB(236, 236, 244);
-    t.selectedBg = RGB(224, 216, 255);
-    t.border     = RGB(214, 214, 224);
-    t.text       = RGB(28, 28, 36);
-    t.textDim    = RGB(96, 96, 112);
-    t.textFaint  = RGB(140, 140, 155);
-    t.accent     = RGB(104, 70, 230);
-    t.accentSoft = RGB(150, 125, 240);
-    t.playing    = RGB(96, 60, 220);
-    t.danger     = RGB(200, 60, 70);
-    t.trackFill  = RGB(104, 70, 230);
-    t.trackBg    = RGB(222, 222, 232);
+    t.listAlt    = RGB(245, 245, 245);
+    t.hoverBg    = RGB(238, 238, 238);
+    t.selectedBg = RGB(230, 240, 231);
+    t.border     = RGB(222, 222, 222);
+    t.text       = RGB(33, 33, 33);
+    t.textDim    = RGB(117, 117, 117);
+    t.textFaint  = RGB(158, 158, 158);
+    t.accent     = RGB(67, 160, 71);
+    t.accentSoft = RGB(129, 199, 132);
+    t.playing    = RGB(46, 125, 50);
+    t.danger     = RGB(198, 40, 40);
+    t.trackFill  = RGB(67, 160, 71);
+    t.trackBg    = RGB(214, 214, 214);
     t.dark = false;
     return t;
 }();
@@ -100,6 +100,12 @@ void frameRect(HDC hdc, const RECT& r, COLORREF c, int w) {
 void roundRectFill(HDC hdc, const RECT& r, int radius, COLORREF c) {
     BrushSel b(hdc, c);
     PenSel p(hdc, c, 1);
+    RoundRect(hdc, r.left, r.top, r.right, r.bottom, radius * 2, radius * 2);
+}
+
+void roundRectFrame(HDC hdc, const RECT& r, int radius, COLORREF c, int w) {
+    PenSel p(hdc, c, w);
+    NullBrushSel nb(hdc);
     RoundRect(hdc, r.left, r.top, r.right, r.bottom, radius * 2, radius * 2);
 }
 
@@ -338,6 +344,64 @@ void draw(HDC hdc, Kind k, const RECT& rr, COLORREF color, int dpi) {
             circleFill(hdc, cx, cy, 2 * u, color);
             break;
         }
+        case Person:
+            circleFill(hdc, cx, cy - 4 * u, 4 * u, color);
+            {
+                BrushSel b(hdc, color); PenSel p(hdc, color, 1);
+                Ellipse(hdc, cx - 7 * u, cy + 1 * u, cx + 7 * u + 1, cy + 11 * u);
+            }
+            break;
+        case PlayCircle:
+            circleOutline(hdc, cx, cy, 8 * u, color, lw);
+            {
+                POINT p[3] = {{cx + 4 * u, cy}, {cx - 3 * u, cy - 4 * u}, {cx - 3 * u, cy + 4 * u}};
+                poly(hdc, p, 3, color);
+            }
+            break;
+        case DotsV:
+            circleFill(hdc, cx, cy - 6 * u, 2 * u, color);
+            circleFill(hdc, cx, cy, 2 * u, color);
+            circleFill(hdc, cx, cy + 6 * u, 2 * u, color);
+            break;
+        case ChevronDown:
+            line(hdc, cx - 5 * u, cy - 2 * u, cx, cy + 3 * u, color, lw);
+            line(hdc, cx + 5 * u, cy - 2 * u, cx, cy + 3 * u, color, lw);
+            break;
+        case Handle:
+            line(hdc, cx - 6 * u, cy - 3 * u, cx + 6 * u, cy - 3 * u, color, lw);
+            line(hdc, cx - 6 * u, cy + 3 * u, cx + 6 * u, cy + 3 * u, color, lw);
+            break;
+        case AddQueue:
+            line(hdc, cx - 8 * u, cy - 5 * u, cx + 1 * u, cy - 5 * u, color, lw);
+            line(hdc, cx - 8 * u, cy, cx + 1 * u, cy, color, lw);
+            line(hdc, cx - 8 * u, cy + 5 * u, cx - 2 * u, cy + 5 * u, color, lw);
+            line(hdc, cx + 3 * u, cy + 5 * u, cx + 9 * u, cy + 5 * u, color, lw);
+            line(hdc, cx + 6 * u, cy + 2 * u, cx + 6 * u, cy + 8 * u, color, lw);
+            break;
+        case Speaker: {
+            POINT p[6] = {{cx - 8 * u, cy - 3 * u}, {cx - 4 * u, cy - 3 * u}, {cx + 0 * u, cy - 7 * u},
+                          {cx + 0 * u, cy + 7 * u}, {cx - 4 * u, cy + 3 * u}, {cx - 8 * u, cy + 3 * u}};
+            poly(hdc, p, 6, color);
+            line(hdc, cx + 3 * u, cy - 3 * u, cx + 5 * u, cy, color, lw);
+            line(hdc, cx + 5 * u, cy, cx + 3 * u, cy + 3 * u, color, lw);
+            line(hdc, cx + 6 * u, cy - 5 * u, cx + 9 * u, cy, color, lw);
+            line(hdc, cx + 9 * u, cy, cx + 6 * u, cy + 5 * u, color, lw);
+            break;
+        }
+        case Tag: {
+            POINT p[4] = {{cx, cy - 8 * u}, {cx + 7 * u, cy}, {cx, cy + 8 * u}, {cx - 7 * u, cy}};
+            {
+                PenSel pen(hdc, color, lw); NullBrushSel nb(hdc);
+                Polygon(hdc, p, 4);
+            }
+            circleFill(hdc, cx, cy - 3 * u, 2 * u, color);
+            break;
+        }
+        case Stack:
+            roundRectFill(hdc, RECT{cx - 7 * u, cy - 7 * u, cx + 5 * u, cy + 3 * u}, 2 * u, color);
+            line(hdc, cx - 4 * u, cy + 6 * u, cx + 8 * u, cy + 6 * u, color, lw);
+            line(hdc, cx + 8 * u, cy + 6 * u, cx + 8 * u, cy - 4 * u, color, lw);
+            break;
         case Mic: {
             roundRectFill(hdc, RECT{cx - 3 * u, cy - 8 * u, cx + 3 * u, cy + 2 * u}, 3 * u, color);
             // arc below

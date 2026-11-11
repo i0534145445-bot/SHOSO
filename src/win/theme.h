@@ -4,24 +4,25 @@
 
 namespace shoso {
 
+// Musicolet-like palette: neutral greys + green accent
 struct Theme {
-    COLORREF windowBg   = RGB(16, 16, 22);
-    COLORREF panelBg    = RGB(24, 24, 33);
-    COLORREF barBg      = RGB(21, 21, 29);
-    COLORREF listBg     = RGB(19, 19, 27);
-    COLORREF listAlt    = RGB(24, 24, 33);
-    COLORREF hoverBg    = RGB(33, 33, 45);
-    COLORREF selectedBg = RGB(52, 45, 92);
-    COLORREF border     = RGB(42, 42, 56);
-    COLORREF text       = RGB(233, 233, 240);
-    COLORREF textDim    = RGB(152, 152, 170);
-    COLORREF textFaint  = RGB(104, 104, 122);
-    COLORREF accent     = RGB(139, 108, 255);
-    COLORREF accentSoft = RGB(88, 66, 190);
-    COLORREF playing    = RGB(178, 156, 255);
-    COLORREF danger     = RGB(235, 100, 110);
-    COLORREF trackFill  = RGB(139, 108, 255);
-    COLORREF trackBg    = RGB(52, 52, 68);
+    COLORREF windowBg   = RGB(30, 30, 30);
+    COLORREF panelBg    = RGB(40, 40, 40);
+    COLORREF barBg      = RGB(30, 30, 30);
+    COLORREF listBg     = RGB(30, 30, 30);
+    COLORREF listAlt    = RGB(36, 36, 36);
+    COLORREF hoverBg    = RGB(48, 48, 48);
+    COLORREF selectedBg = RGB(58, 58, 58);
+    COLORREF border     = RGB(66, 66, 66);
+    COLORREF text       = RGB(236, 236, 236);
+    COLORREF textDim    = RGB(163, 163, 163);
+    COLORREF textFaint  = RGB(122, 122, 122);
+    COLORREF accent     = RGB(93, 187, 99);
+    COLORREF accentSoft = RGB(129, 199, 132);
+    COLORREF playing    = RGB(129, 199, 132);
+    COLORREF danger     = RGB(229, 115, 115);
+    COLORREF trackFill  = RGB(93, 187, 99);
+    COLORREF trackBg    = RGB(72, 72, 72);
     bool dark = true;
 };
 
@@ -44,6 +45,7 @@ FontSet& fontsFor(int dpi);
 void fillSolid(HDC hdc, const RECT& r, COLORREF c);
 void frameRect(HDC hdc, const RECT& r, COLORREF c, int w = 1);
 void roundRectFill(HDC hdc, const RECT& r, int radius, COLORREF c);
+void roundRectFrame(HDC hdc, const RECT& r, int radius, COLORREF c, int w = 1);
 void fillPolygon(HDC hdc, const POINT* pts, int n, COLORREF c);
 void drawTextU(HDC hdc, const std::string& utf8, RECT r, COLORREF color, HFONT font,
                DWORD align = DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
@@ -55,7 +57,8 @@ namespace glyph {
 enum Kind {
     Play, Pause, Stop, Prev, Next, Shuffle, RepeatAll, RepeatOne, RepeatOff,
     Heart, HeartFill, Search, Menu, Folder, Add, Clock, Note, Back, Sort,
-    Close, Check, Queue, Trash, Info, Disc, Mic
+    Close, Check, Queue, Trash, Info, Disc, Mic,
+    Person, PlayCircle, DotsV, ChevronDown, Handle, AddQueue, Speaker, Tag, Stack
 };
 void draw(HDC hdc, Kind k, const RECT& r, COLORREF color, int dpi);
 } // namespace glyph

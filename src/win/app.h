@@ -35,11 +35,10 @@ struct Row {
 // control + timer ids
 enum {
     IDC_SEARCH = 100, IDC_LIST = 101, IDC_SEEK = 102, IDC_VOLUME = 103,
-    IDC_TAB0 = 110,            // .. IDC_TAB0+5
-    IDC_MENU = 120, IDC_QUEUE = 121, IDC_BACK = 122,
-    IDC_PREV = 130, IDC_PLAY = 131, IDC_NEXT = 132,
-    IDC_SHUFFLE = 133, IDC_REPEAT = 134, IDC_FAV = 135,
-    IDC_SLEEP = 136, IDC_ADDFOLDER = 137, IDC_SORT = 138,
+    IDC_QDROP = 110, IDC_QCLEAR = 111, IDC_PLAYPAUSE = 112,
+    IDC_BACK = 113, IDC_SORT = 114,
+    IDC_NAV_FIRST = 120,       // .. +5 : queue, songs, folders, albums, artists, playlists
+    IDC_NAV_NP = 126, IDC_NAV_MENU = 127,
     IDC_EMPTY = 140
 };
 enum { TMR_POS = 1, TMR_SLEEP = 2, TMR_SAVE = 3, TMR_SEARCH = 4 };
@@ -73,12 +72,10 @@ struct App {
     HINSTANCE hinst = nullptr;
     int dpi = 96;
     HWND hwndSearch = nullptr, hwndList = nullptr, hwndSeek = nullptr, hwndVol = nullptr;
-    HWND hwndEmpty = nullptr, hwndSubSearch = nullptr;
-    HWND tabBtns[6] = {nullptr};
-    HWND btnMenu = nullptr, btnQueue = nullptr, btnBack = nullptr;
-    HWND btnPrev = nullptr, btnPlay = nullptr, btnNext = nullptr;
-    HWND btnShuffle = nullptr, btnRepeat = nullptr, btnFav = nullptr;
-    HWND btnSleep = nullptr, btnAddFolder = nullptr, btnSort = nullptr;
+    HWND hwndEmpty = nullptr;
+    HWND btnQDrop = nullptr, btnQClear = nullptr, btnPlayPause = nullptr;
+    HWND btnBack = nullptr, btnSort = nullptr;
+    HWND btnNav[6] = {nullptr}, btnNavNp = nullptr, btnNavMenu = nullptr;
 
     // ------- ui model -------
     int view = VIEW_SONGS;
@@ -94,7 +91,6 @@ struct App {
     std::vector<uint32_t> playlistOrder;
     std::vector<std::string> cols;
     std::vector<int> colW;
-    std::vector<RECT> colRects;
     bool dirty = false;
     bool scanning = false;
     int scannedTracks = 0;
@@ -110,8 +106,15 @@ struct App {
     uint32_t endedGuardId = 0;
     unsigned long endedGuardTick = 0;
 
-    RECT rcClient = {0}, rcTop = {0}, rcHeader = {0}, rcList = {0}, rcStatus = {0}, rcBottom = {0};
-    RECT g_searchBox = {0}, g_rcArt = {0}, g_rcTitle = {0}, g_rcArtist = {0}, g_rcTotal = {0}, g_rcPos = {0};
+    RECT rcClient = {0}, rcList = {0}, rcBottom = {0};
+    RECT rcQueueBar = {0}, rcRow2 = {0}, rcSearchRow = {0}, rcNav = {0}, rcNP = {0};
+    RECT g_searchBox = {0};
+    bool showNowPlaying = false;
+    bool searchFocused = false;
+    // "now playing" screen hit rects (painted by the parent, hit tested manually)
+    RECT npBack = {0}, npCover = {0};
+    RECT npHeart = {0}, npInfo = {0}, npAddQ = {0}, npSleep = {0}, npRepeat = {0}, npShuffle = {0};
+    RECT npPrev = {0}, npPlay = {0}, npNext = {0};
     std::string g_statusRight, g_statusLeft;
 
     Queue& q() { return queues[activeQueue]; }
@@ -159,6 +162,8 @@ struct App {
 
     // ------- ui refresh -------
     void relayout();
+    void npLayout();
+    void setNowPlaying(bool on);
     void updateTitle();
     void updateTransportUi();
     void updateNowArt(bool force);
@@ -169,7 +174,6 @@ struct App {
 App& app();
 
 HWND createMainWindow(HINSTANCE hinst);
-void runApp(HINSTANCE hinst, int showCmd, const std::vector<std::string>& initialFiles);
 
 // menu command ids (shared)
 enum {
@@ -189,6 +193,7 @@ enum {
 
 // message routing helpers implemented in ui_lists.cpp
 LRESULT onNotify(App& a, HWND h, NMHDR* nm);
+void drawListRow(App& a, DRAWITEMSTRUCT* di);   // owner drawn Musicolet-style row
 void onButton(App& a, int id);
 void onMenuCommand(App& a, int id);
 void onTrackEnded(App& a);

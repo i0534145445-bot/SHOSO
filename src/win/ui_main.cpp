@@ -1,5 +1,7 @@
-// SHOSO Music - main window: layout, painting, message routing, tray, hotkeys
+// SHOSO Music - main window: Musicolet-style layout, painting, routing, tray
 #include "app.h"
+
+#include <algorithm>
 
 namespace shoso {
 
@@ -9,37 +11,50 @@ enum { CMD_TRAY_SHOW = 2000, CMD_TRAY_PLAY, CMD_TRAY_NEXT, CMD_TRAY_PREV, CMD_TR
 
 struct BtnInfo {
     glyph::Kind kind = glyph::Menu;
-    std::string label;
     bool hover = false;
-    bool hasLabel = false;
 };
 static std::map<HWND, BtnInfo> g_btns;
-
 static BtnInfo& btnInfo(HWND h) { return g_btns[h]; }
 
-// ------------------------------------------------------------- small helpers
 static int sc(const App& a, int v) { return scale(v, a.dpi); }
 
-static HWND makeButton(App& a, HWND parent, int id, int x, int y, int w, int h,
-                       glyph::Kind kind, const std::string& label = std::string()) {
+// nav slots (right -> left): queues, songs, folders, albums, artists, playlists, now-playing, menu
+static int navViewOf(int i) {
+    switch (i) {
+        case 0: return VIEW_QUEUE;
+        case 1: return VIEW_SONGS;
+        case 2: return VIEW_FOLDERS;
+        case 3: return VIEW_ALBUMS;
+        case 4: return VIEW_ARTISTS;
+        default: return VIEW_PLAYLISTS;
+    }
+}
+static glyph::Kind navGlyph(int i) {
+    switch (i) {
+        case 0: return glyph::Queue;
+        case 1: return glyph::Note;
+        case 2: return glyph::Folder;
+        case 3: return glyph::Disc;
+        case 4: return glyph::Person;
+        case 5: return glyph::Stack;
+        default: return glyph::Menu;
+    }
+}
+
+static HWND makeButton(App& a, HWND parent, int id, glyph::Kind kind) {
     HWND hw = CreateWindowExW(0, L"BUTTON", L"", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
-                              x, y, w, h, parent, (HMENU)(INT_PTR)id, a.hinst, nullptr);
-    BtnInfo& bi = g_btns[hw];
-    bi.kind = kind;
-    bi.label = label;
-    bi.hasLabel = !label.empty();
+                              0, 0, 10, 10, parent, (HMENU)(INT_PTR)id, a.hinst, nullptr);
+    btnInfo(hw).kind = kind;
     return hw;
 }
 
 static LRESULT CALLBACK BtnSubclass(HWND h, UINT m, WPARAM w, LPARAM l, UINT_PTR, DWORD_PTR);
-
 static void trackHover(HWND h) {
     TRACKMOUSEEVENT tme = {sizeof(tme)};
     tme.dwFlags = TME_LEAVE;
     tme.hwndTrack = h;
     TrackMouseEvent(&tme);
 }
-
 static LRESULT CALLBACK BtnSubclass(HWND h, UINT m, WPARAM w, LPARAM l, UINT_PTR, DWORD_PTR) {
     BtnInfo& bi = btnInfo(h);
     switch (m) {
@@ -54,7 +69,6 @@ static LRESULT CALLBACK BtnSubclass(HWND h, UINT m, WPARAM w, LPARAM l, UINT_PTR
     return DefSubclassProc(h, m, w, l);
 }
 
-static LRESULT CALLBACK EditSubclass(HWND h, UINT m, WPARAM w, LPARAM l, UINT_PTR, DWORD_PTR);
 static LRESULT CALLBACK EditSubclass(HWND h, UINT m, WPARAM w, LPARAM l, UINT_PTR, DWORD_PTR) {
     if (m == WM_KEYDOWN) {
         if (w == VK_RETURN) {
@@ -72,249 +86,306 @@ static LRESULT CALLBACK EditSubclass(HWND h, UINT m, WPARAM w, LPARAM l, UINT_PT
     return DefSubclassProc(h, m, w, l);
 }
 
-// ------------------------------------------------------------------- layout
-static const char* kTabGlyphless[6] = {"שירים", "אלבומים", "אמנים", "תיקיות", "פלייליסטים", "התור"};
+static bool ptIn(const RECT& r, POINT p) { return p.x >= r.left && p.x < r.right && p.y >= r.top && p.y < r.bottom; }
 
+// ------------------------------------------------------------------- layout
 void App::relayout() {
     if (!hwnd) return;
     dpi = dpiOf(hwnd);
-    FontSet& fs = fontsFor(dpi);
     GetClientRect(hwnd, &rcClient);
     int W = rcClient.right, H = rcClient.bottom;
-    int topH = sc(*this, 54);
-    int statusH = sc(*this, 24);
-    int bottomH = sc(*this, 104);
-    rcTop = RECT{0, 0, W, topH};
-    rcStatus = RECT{0, H - statusH - bottomH, W, H - bottomH};
-    rcBottom = RECT{0, H - bottomH, W, H};
-    rcList = RECT{0, topH, W, rcStatus.top};
-    rcHeader = RECT{0, topH, W, topH + sc(*this, 26)};
-    rcList.top = rcHeader.bottom;
+    int qbarH = sc(*this, 48), row2H = sc(*this, 40);
+    int searchH = sc(*this, 46), navH = sc(*this, 58);
 
-    // fonts on children
+    rcQueueBar = RECT{0, 0, W, qbarH};
+    rcRow2 = RECT{0, qbarH, W, qbarH + row2H};
+    rcNav = RECT{0, H - navH, W, H};
+    rcSearchRow = RECT{0, H - navH - searchH, W, H - navH};
+    rcList = RECT{0, rcRow2.bottom, W, rcSearchRow.top};
+    rcNP = RECT{0, 0, W, rcNav.top};
+    rcBottom = rcNP;
+
+    FontSet& fs = fontsFor(dpi);
     SendMessageW(hwndSearch, WM_SETFONT, (WPARAM)fs.ui, TRUE);
-    SendMessageW(hwndList, WM_SETFONT, (WPARAM)fs.listF, TRUE);
-    for (HWND b : tabBtns) if (b) SendMessageW(b, WM_SETFONT, (WPARAM)fs.uiBold, TRUE);
+    SendMessageW(hwndList, WM_SETFONT, (WPARAM)fs.ui, TRUE);
     for (auto& kv : g_btns) SendMessageW(kv.first, WM_SETFONT, (WPARAM)fs.ui, TRUE);
 
+    // ---- queue bar: [ X ] [ N. name .... v ]  (rtl: dropdown hugs the right)
     int pad = sc(*this, 10);
-    int btnH = sc(*this, 34);
-    int y = (topH - btnH) / 2;
+    int dropW = std::min(sc(*this, 320), W / 2);
+    int dropH = sc(*this, 32);
+    int dy = (qbarH - dropH) / 2;
+    RECT drop = {W - pad - dropW, dy, W - pad, dy + dropH};
+    MoveWindow(btnQDrop, drop.left, drop.top, dropW, dropH, TRUE);
+    MoveWindow(btnQClear, drop.left - sc(*this, 38), dy, sc(*this, 34), dropH, TRUE);
+
+    // ---- row 2: play/pause, back, sort  (right side); menu lives in the nav bar
+    int y2 = rcRow2.top + (row2H - sc(*this, 34)) / 2;
     int x = W - pad;
+    MoveWindow(btnPlayPause, x - sc(*this, 34), y2, sc(*this, 34), sc(*this, 34), TRUE);
+    x -= sc(*this, 38);
+    MoveWindow(btnBack, x - sc(*this, 34), y2, sc(*this, 34), sc(*this, 34), TRUE);
+    x -= sc(*this, 38);
+    MoveWindow(btnSort, x - sc(*this, 34), y2, sc(*this, 34), sc(*this, 34), TRUE);
 
-    // right -> left: menu, queue, tabs, flex, sort, addfolder, back, search
-    auto take = [&](int w) { x -= w; int r = x; x -= sc(*this, 6); return r; };
-    MoveWindow(btnMenu, take(sc(*this, 40)), y, sc(*this, 40), btnH, TRUE);
-    MoveWindow(btnQueue, take(sc(*this, 116)), y, sc(*this, 116), btnH, TRUE);
-    HDC dc = GetDC(hwnd);
-    for (int i = 0; i < 6; ++i) {
-        int tw = textWidthU(dc, kTabGlyphless[i], fs.uiBold) + sc(*this, 26);
-        if (tw < sc(*this, 60)) tw = sc(*this, 60);
-        MoveWindow(tabBtns[i], take(tw), y, tw, btnH, TRUE);
-    }
-    ReleaseDC(hwnd, dc);
-    x -= sc(*this, 8);
-    int searchW = sc(*this, 220);
-    int searchX = W - pad - searchW;   // search pinned to the left edge
-    RECT rcSearchBox = {searchX, y, searchX + searchW, y + btnH};
-    MoveWindow(hwndSearch, rcSearchBox.left + sc(*this, 26), rcSearchBox.top + sc(*this, 4),
-               searchW - sc(*this, 34), btnH - sc(*this, 8), TRUE);
-    // buttons between tabs and search
-    x = searchX - sc(*this, 8);
-    auto takeL = [&](int w) { x -= w; int r = x; x -= sc(*this, 4); return r; };
-    MoveWindow(btnSort, takeL(sc(*this, 36)), y, sc(*this, 36), btnH, TRUE);
-    MoveWindow(btnAddFolder, takeL(sc(*this, 36)), y, sc(*this, 36), btnH, TRUE);
-    MoveWindow(btnBack, takeL(sc(*this, 36)), y, sc(*this, 36), btnH, TRUE);
-    (void)rcSearchBox;
-    g_searchBox = RECT{searchX, y, searchX + searchW, y + btnH};
+    // ---- search row
+    g_searchBox = RECT{pad, rcSearchRow.top + sc(*this, 6), W - pad, rcSearchRow.bottom - sc(*this, 8)};
+    MoveWindow(hwndSearch, g_searchBox.left + sc(*this, 10), g_searchBox.top + sc(*this, 5),
+               (g_searchBox.right - g_searchBox.left) - sc(*this, 44),
+               (g_searchBox.bottom - g_searchBox.top) - sc(*this, 10), TRUE);
 
-    // list + header + empty overlay
+    // ---- list + empty overlay
     MoveWindow(hwndList, rcList.left, rcList.top, rcList.right - rcList.left,
                rcList.bottom - rcList.top, TRUE);
     MoveWindow(hwndEmpty, rcList.left, rcList.top, rcList.right - rcList.left,
                rcList.bottom - rcList.top, TRUE);
 
-    // column widths
-    int listW = rcList.right - rcList.left;
-    int fixed = 0, weights = 0;
-    for (int w : colW) { if (w > 0) fixed += sc(*this, w); else weights += -w; }
-    int flex = listW - fixed - sc(*this, 4);
-    if (flex < sc(*this, 120)) flex = sc(*this, 120);
-    colRects.clear();
-    int cx = 0;
-    for (size_t i = 0; i < colW.size(); ++i) {
-        int w = colW[i] > 0 ? sc(*this, colW[i]) : (weights ? flex * (-colW[i]) / weights : flex);
-        if (i == colW.size() - 1) w = listW - cx;
-        ListView_SetColumnWidth(hwndList, (int)i, w);
-        colRects.push_back(RECT{cx, rcHeader.top, cx + w, rcHeader.bottom});
-        cx += w;
-    }
+    // ---- bottom navigation: 8 equal slots
+    int slot = W / 8;
+    for (int i = 0; i < 6; ++i)
+        MoveWindow(btnNav[i], W - (i + 1) * slot, rcNav.top, slot, navH, TRUE);
+    MoveWindow(btnNavNp, W - 7 * slot, rcNav.top, slot, navH, TRUE);
+    MoveWindow(btnNavMenu, W - 8 * slot, rcNav.top, slot, navH, TRUE);
 
-    // bottom bar
-    int by = rcBottom.top + sc(*this, 8);
-    int bh = rcBottom.bottom - rcBottom.top - sc(*this, 14);
-    int art = sc(*this, 76);
-    x = W - pad;
-    g_rcArt = RECT{x - art, by, x, by + art};
-    x -= art + sc(*this, 12);
-    int textW = sc(*this, 240);
-    g_rcTitle = RECT{x - textW, by + sc(*this, 4), x, by + sc(*this, 34)};
-    g_rcArtist = RECT{x - textW, by + sc(*this, 34), x, by + sc(*this, 62)};
-    x -= textW + sc(*this, 10);
-    // left side first: sleep + volume + total/pos labels sizes
-    int leftX = pad;
-    MoveWindow(btnSleep, leftX, by + (art - btnH) / 2, sc(*this, 34), btnH, TRUE);
-    leftX += sc(*this, 34) + sc(*this, 6);
-    int volW = sc(*this, 96);
-    MoveWindow(hwndVol, leftX, by + (art - sc(*this, 26)) / 2, volW, sc(*this, 26), TRUE);
-    leftX += volW + sc(*this, 10);
-    int lblW = sc(*this, 48);
-    g_rcTotal = RECT{leftX, by + (art - sc(*this, 22)) / 2, leftX + lblW, by + (art + sc(*this, 22)) / 2};
-    leftX += lblW + sc(*this, 4);
-    // middle seek: between leftX and (x - transport cluster)
-    int cluster = sc(*this, 36) * 3 + sc(*this, 34) * 3 + sc(*this, 24);
-    int seekRight = x - cluster;
-    g_rcPos = RECT{seekRight - lblW, by + (art - sc(*this, 22)) / 2, seekRight, by + (art + sc(*this, 22)) / 2};
-    int seekLeft = leftX;
-    int seekW = seekRight - lblW - sc(*this, 6) - seekLeft;
-    if (seekW < sc(*this, 60)) seekW = sc(*this, 60);
-    MoveWindow(hwndSeek, seekLeft, by + (art - sc(*this, 26)) / 2, seekW, sc(*this, 26), TRUE);
-    // transport cluster right of the pos label
-    int tx = seekRight;
-    MoveWindow(btnFav, tx, by + (art - btnH) / 2, sc(*this, 34), btnH, TRUE);
-    tx += sc(*this, 34) + sc(*this, 2);
-    MoveWindow(btnRepeat, tx, by + (art - btnH) / 2, sc(*this, 34), btnH, TRUE);
-    tx += sc(*this, 34) + sc(*this, 2);
-    MoveWindow(btnShuffle, tx, by + (art - btnH) / 2, sc(*this, 34), btnH, TRUE);
-    tx += sc(*this, 34) + sc(*this, 8);
-    MoveWindow(btnPrev, tx, by + (art - btnH) / 2, sc(*this, 36), btnH, TRUE);
-    tx += sc(*this, 36) + sc(*this, 2);
-    MoveWindow(btnPlay, tx, by + (art - btnH) / 2 - sc(*this, 3), sc(*this, 44), btnH + sc(*this, 6), TRUE);
-    tx += sc(*this, 44) + sc(*this, 2);
-    MoveWindow(btnNext, tx, by + (art - btnH) / 2, sc(*this, 36), btnH, TRUE);
-
+    npLayout();
     InvalidateRect(hwnd, nullptr, FALSE);
 }
 
+// "now playing" geometry + its two trackbars
+void App::npLayout() {
+    if (!hwnd) return;
+    int W = rcNP.right, H = rcNP.bottom;
+    int pad = sc(*this, 14);
+    npBack = RECT{W - sc(*this, 50), sc(*this, 6), W - sc(*this, 10), sc(*this, 46)};
+
+    int cover = std::min((W * 46) / 100, (H * 50) / 100);
+    cover = std::max(cover, sc(*this, 150));
+    int cy0 = sc(*this, 26);
+    npCover = RECT{(W - cover) / 2, cy0, (W + cover) / 2, cy0 + cover};
+
+    int ty = npCover.bottom + sc(*this, 18);
+    int iconsY = ty + sc(*this, 84);
+    int seekY = iconsY + sc(*this, 52);
+    int transY = seekY + sc(*this, 52);
+
+    int iw = sc(*this, 40), gap = sc(*this, 22);
+    int total = 6 * iw + 5 * gap;
+    int ix = (W - total) / 2;
+    npHeart = RECT{ix, iconsY, ix + iw, iconsY + iw}; ix += iw + gap;
+    npInfo = RECT{ix, iconsY, ix + iw, iconsY + iw}; ix += iw + gap;
+    npAddQ = RECT{ix, iconsY, ix + iw, iconsY + iw}; ix += iw + gap;
+    npSleep = RECT{ix, iconsY, ix + iw, iconsY + iw}; ix += iw + gap;
+    npRepeat = RECT{ix, iconsY, ix + iw, iconsY + iw}; ix += iw + gap;
+    npShuffle = RECT{ix, iconsY, ix + iw, iconsY + iw};
+
+    int timeW = sc(*this, 48);
+    if (hwndSeek) MoveWindow(hwndSeek, pad + timeW + sc(*this, 6), seekY + sc(*this, 8),
+                             W - 2 * (pad + timeW + sc(*this, 6)), sc(*this, 26), TRUE);
+    int pw = sc(*this, 46), gw = sc(*this, 30);
+    int tw = 3 * pw + 2 * gw;
+    int tx = (W - tw) / 2;
+    npPrev = RECT{tx, transY, tx + pw, transY + pw}; tx += pw + gw;
+    npPlay = RECT{tx, transY - sc(*this, 6), tx + pw + sc(*this, 10), transY + pw + sc(*this, 4)};
+    tx += pw + gw + sc(*this, 10);
+    npNext = RECT{tx, transY, tx + pw, transY + pw};
+    if (hwndVol) MoveWindow(hwndVol, W - pad - sc(*this, 24) - sc(*this, 6) - sc(*this, 120),
+                            transY + sc(*this, 10), sc(*this, 120), sc(*this, 26), TRUE);
+}
+
+void App::setNowPlaying(bool on) {
+    if (showNowPlaying == on) return;
+    showNowPlaying = on;
+    int hide = on ? SW_HIDE : SW_SHOW;
+    ShowWindow(hwndList, hide);
+    ShowWindow(hwndEmpty, on ? SW_HIDE : (rows.empty() ? SW_SHOW : SW_HIDE));
+    ShowWindow(hwndSearch, hide);
+    ShowWindow(btnQDrop, hide);
+    ShowWindow(btnQClear, hide);
+    ShowWindow(btnPlayPause, hide);
+    ShowWindow(btnSort, hide);
+    ShowWindow(btnBack, (!on && !backStack.empty()) ? SW_SHOW : SW_HIDE);
+    ShowWindow(hwndSeek, on ? SW_SHOW : SW_HIDE);
+    ShowWindow(hwndVol, on ? SW_SHOW : SW_HIDE);
+    npLayout();
+    InvalidateRect(hwnd, nullptr, FALSE);
+    if (!on) SetFocus(hwndList);
+}
+
 // ------------------------------------------------------------------- paints
-static void paintTop(App& a, HDC hdc) {
+static void paintQueueBar(App& a, HDC hdc) {
     const Theme& th = theme();
-    fillSolid(hdc, a.rcTop, th.barBg);
-    RECT line = {a.rcTop.left, a.rcTop.bottom - 1, a.rcTop.right, a.rcTop.bottom};
-    fillSolid(hdc, line, th.border);
-    // search box
-    roundRectFill(hdc, a.g_searchBox, sc(a, 8), th.listBg);
-    frameRect(hdc, a.g_searchBox, th.border, 1);
-    RECT ic = {a.g_searchBox.right - sc(a, 24), a.g_searchBox.top, a.g_searchBox.right - sc(a, 4), a.g_searchBox.bottom};
-    glyph::draw(hdc, glyph::Search, ic, th.textDim, a.dpi);
+    fillSolid(hdc, a.rcQueueBar, th.windowBg);
 }
 
-static void paintHeader(App& a, HDC hdc) {
+static void paintRow2(App& a, HDC hdc) {
     const Theme& th = theme();
-    fillSolid(hdc, a.rcHeader, th.panelBg);
-    RECT line = {a.rcHeader.left, a.rcHeader.bottom - 1, a.rcHeader.right, a.rcHeader.bottom};
-    fillSolid(hdc, line, th.border);
+    fillSolid(hdc, a.rcRow2, th.windowBg);
     FontSet& fs = fontsFor(a.dpi);
-    int sortField = -1;
-    if (a.view == VIEW_SONGS || a.view == VIEW_QUEUE) {
-        switch (sortModeFromInt(a.settings.songsSort)) {
-            case SortMode::Duration: sortField = 0; break;
-            case SortMode::Album: sortField = 1; break;
-            case SortMode::Artist: sortField = 2; break;
-            case SortMode::Title: sortField = 3; break;
-            default: sortField = -1; break;
-        }
+    // position counter "i/n" centered, like Musicolet's queue header row
+    int n = (int)a.q().size();
+    int i = a.q().currentIndex();
+    std::string counter = n > 0 ? std::to_string(i + 1) + "/" + std::to_string(n) : std::string();
+    if (!counter.empty())
+        drawTextU(hdc, counter, a.rcRow2, th.textDim, fs.ui, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+}
+
+static void paintSearchRow(App& a, HDC hdc) {
+    const Theme& th = theme();
+    fillSolid(hdc, a.rcSearchRow, th.windowBg);
+    RECT f = a.g_searchBox;
+    roundRectFill(hdc, f, (f.bottom - f.top) / 2, th.panelBg);
+    if (a.searchFocused || !a.search.empty()) {
+        RECT u = {f.left + sc(a, 8), f.bottom - sc(a, 2), f.right - sc(a, 8), f.bottom};
+        fillSolid(hdc, u, th.accent);
     }
-    int n = 0;
-    (void)n;
-    for (size_t i = 0; i < a.cols.size() && i < a.colRects.size(); ++i) {
-        RECT r = a.colRects[i];
-        r.right -= sc(a, 10);
-        r.left += sc(a, 6);
-        COLORREF c = (int)i == sortField ? th.accent : th.textDim;
-        drawTextU(hdc, a.cols[i], r, c, fs.smallF, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
-        if ((int)i == sortField) {
-            POINT p[3] = {{r.right + sc(a, 3), r.top + (r.bottom - r.top) / 2 - sc(a, 3)},
-                          {r.right + sc(a, 3) + sc(a, 6), r.top + (r.bottom - r.top) / 2 - sc(a, 3)},
-                          {r.right + sc(a, 3) + sc(a, 3), r.top + (r.bottom - r.top) / 2 + sc(a, 3)}};
-            fillPolygon(hdc, p, 3, th.accent);
-        }
-    }
+    RECT ic = {f.right - sc(a, 34), f.top, f.right - sc(a, 10), f.bottom};
+    glyph::draw(hdc, glyph::Search, ic, th.textFaint, a.dpi);
 }
 
-static void paintStatus(App& a, HDC hdc) {
+static void paintNav(App& a, HDC hdc) {
     const Theme& th = theme();
-    fillSolid(hdc, a.rcStatus, th.barBg);
-    RECT line = {a.rcStatus.left, a.rcStatus.top, a.rcStatus.right, a.rcStatus.top + 1};
+    fillSolid(hdc, a.rcNav, th.barBg);
+    RECT line = {a.rcNav.left, a.rcNav.top, a.rcNav.right, a.rcNav.top + 1};
     fillSolid(hdc, line, th.border);
-    FontSet& fs = fontsFor(a.dpi);
-    RECT right = a.rcStatus;
-    right.right -= sc(a, 10);
-    right.left += sc(a, 10);
-    drawTextU(hdc, a.g_statusRight, right, th.textDim, fs.status, DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-    RECT left = a.rcStatus;
-    left.right -= sc(a, 10);
-    left.left += sc(a, 10);
-    COLORREF lc = a.scanning ? th.accent : th.textDim;
-    drawTextU(hdc, a.g_statusLeft, left, lc, fs.status, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
 }
 
-static void paintBottom(App& a, HDC hdc) {
-    const Theme& th = theme();
-    fillSolid(hdc, a.rcBottom, th.barBg);
-    RECT line = {a.rcBottom.left, a.rcBottom.top, a.rcBottom.right, a.rcBottom.top + 1};
-    fillSolid(hdc, line, th.border);
-    FontSet& fs = fontsFor(a.dpi);
+static std::string snackText(App& a) {
+    if (a.scanning) return a.g_statusLeft;
+    if (!a.flashMsg.empty() && (long)(a.flashUntil - GetTickCount()) > 0) return a.flashMsg;
+    if (!a.playError.empty()) return a.playError;
+    return std::string();
+}
 
-    // art
-    roundRectFill(hdc, a.g_rcArt, sc(a, 10), th.listBg);
-    if (a.nowArt) {
+static void paintSnackbar(App& a, HDC hdc, const RECT& host) {
+    std::string txt = snackText(a);
+    if (txt.empty()) return;
+    const Theme& th = theme();
+    FontSet& fs = fontsFor(a.dpi);
+    int tw = textWidthU(hdc, txt, fs.ui);
+    int w = tw + sc(a, 28), h = sc(a, 30);
+    int x = host.left + ((host.right - host.left) - w) / 2;
+    RECT r = {x, host.bottom - h - sc(a, 6), x + w, host.bottom - sc(a, 6)};
+    roundRectFill(hdc, r, sc(a, 6), th.panelBg);
+    frameRect(hdc, r, th.border, 1);
+    drawTextU(hdc, txt, r, a.scanning ? th.accent : th.text, fs.ui,
+              DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+}
+
+static void paintNowPlaying(App& a, HDC hdc) {
+    const Theme& th = theme();
+    FontSet& fs = fontsFor(a.dpi);
+    fillSolid(hdc, a.rcNP, th.windowBg);
+
+    glyph::draw(hdc, glyph::Back, a.npBack, th.textDim, a.dpi);
+
+    // cover
+    RECT c = a.npCover;
+    roundRectFill(hdc, c, sc(a, 6), th.panelBg);
+    const Track* t = a.currentTrack();
+    HBITMAP art = t ? artForTrack(*t, c.right - c.left - 2) : nullptr;
+    if (art) {
         HDC m = CreateCompatibleDC(hdc);
-        HBITMAP old = (HBITMAP)SelectObject(m, a.nowArt);
-        int w = a.g_rcArt.right - a.g_rcArt.left - 2;
-        int h = a.g_rcArt.bottom - a.g_rcArt.top - 2;
-        BitBlt(hdc, a.g_rcArt.left + 1, a.g_rcArt.top + 1, w, h, m, 0, 0, SRCCOPY);
+        HBITMAP old = (HBITMAP)SelectObject(m, art);
+        BitBlt(hdc, c.left + 1, c.top + 1, c.right - c.left - 2, c.bottom - c.top - 2, m, 0, 0, SRCCOPY);
         SelectObject(m, old);
         DeleteDC(m);
     } else {
-        glyph::draw(hdc, glyph::Note, a.g_rcArt, th.textFaint, a.dpi);
+        glyph::draw(hdc, glyph::Note, c, th.textFaint, a.dpi);
     }
-    frameRect(hdc, a.g_rcArt, th.border, 1);
 
-    const Track* t = a.currentTrack();
     if (t) {
-        drawTextU(hdc, t->displayTitle(), a.g_rcTitle, th.text, fs.title,
-                  DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-        std::string sub = t->displayArtist();
-        if (!t->displayAlbum().empty()) sub += " · " + t->displayAlbum();
-        drawTextU(hdc, sub, a.g_rcArtist, th.textDim, fs.smallF,
-                  DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+        RECT r1 = {a.rcNP.left + sc(a, 30), c.bottom + sc(a, 14), a.rcNP.right - sc(a, 30), c.bottom + sc(a, 44)};
+        RECT r2 = {r1.left, r1.bottom, r1.right, r1.bottom + sc(a, 24)};
+        RECT r3 = {r1.left, r2.bottom, r1.right, r2.bottom + sc(a, 24)};
+        drawTextU(hdc, t->displayTitle(), r1, th.text, fs.title, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+        drawTextU(hdc, t->displayArtist(), r2, th.textDim, fs.ui, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+        drawTextU(hdc, t->displayAlbum(), r3, th.textDim, fs.ui, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
     } else {
-        drawTextU(hdc, "לא מתנגן כעת", a.g_rcTitle, th.textFaint, fs.ui,
-                  DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+        RECT r1 = {a.rcNP.left + sc(a, 30), c.bottom + sc(a, 14), a.rcNP.right - sc(a, 30), c.bottom + sc(a, 44)};
+        drawTextU(hdc, "לא מתנגן כעת", r1, th.textFaint, fs.ui, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     }
 
-    // time labels
+    // action icon row
+    bool fav = t && a.isFavorite(t->id);
+    glyph::draw(hdc, fav ? glyph::HeartFill : glyph::Heart, a.npHeart, fav ? th.accent : th.textDim, a.dpi);
+    glyph::draw(hdc, glyph::Info, a.npInfo, th.textDim, a.dpi);
+    glyph::draw(hdc, glyph::AddQueue, a.npAddQ, th.textDim, a.dpi);
+    bool sleepOn = a.sleepSecondsLeft > 0 || a.sleepAtEnd;
+    glyph::draw(hdc, glyph::Clock, a.npSleep, sleepOn ? th.accent : th.textDim, a.dpi);
+    glyph::Kind rk = a.q().repeat == RepeatMode::One ? glyph::RepeatOne :
+                     a.q().repeat == RepeatMode::All ? glyph::RepeatAll : glyph::RepeatOff;
+    glyph::draw(hdc, rk, a.npRepeat, a.q().repeat != RepeatMode::Off ? th.accent : th.textDim, a.dpi);
+    glyph::draw(hdc, glyph::Shuffle, a.npShuffle, a.q().shuffle ? th.accent : th.textDim, a.dpi);
+
+    // seek times
     long long dur = a.player.isOpen() ? a.player.lengthMs() : (t ? t->durationMs : 0);
     if (dur <= 0 && t) dur = t->durationMs;
     long long pos = a.seekDragging ? a.seekDragMs : a.lastPosMs;
-    drawTextU(hdc, formatClock(pos), a.g_rcPos, th.textDim, fs.status, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
-    drawTextU(hdc, formatClock(dur), a.g_rcTotal, th.textDim, fs.status, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    RECT pr = {a.rcNP.left + sc(a, 14), a.npShuffle.bottom + sc(a, 20),
+               a.rcNP.left + sc(a, 14) + sc(a, 48), a.npShuffle.bottom + sc(a, 46)};
+    RECT tr = {a.rcNP.right - sc(a, 14) - sc(a, 48), pr.top, a.rcNP.right - sc(a, 14), pr.bottom};
+    drawTextU(hdc, formatClock(pos), pr, th.textDim, fs.status, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+    drawTextU(hdc, formatClock(dur), tr, th.textDim, fs.status, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+
+    // transport
+    glyph::draw(hdc, glyph::Prev, a.npPrev, th.text, a.dpi);
+    glyph::draw(hdc, glyph::Next, a.npNext, th.text, a.dpi);
+    glyph::draw(hdc, a.playing ? glyph::Pause : glyph::Play, a.npPlay, th.text, a.dpi);
+    RECT sp = {a.rcNP.right - sc(a, 14) - sc(a, 24), a.npPrev.top + sc(a, 10),
+               a.rcNP.right - sc(a, 14), a.npPrev.top + sc(a, 36)};
+    glyph::draw(hdc, glyph::Speaker, sp, th.textDim, a.dpi);
+
+    paintSnackbar(a, hdc, a.rcNP);
 }
 
 // ------------------------------------------------------------- window proc
-static void onClose(App& a) {
-    scannerCancel();
-    a.saveNow();
-    DestroyWindow(a.hwnd);
-}
-
 static void trayAdd(App& a);
 static void trayUpdate(App& a);
 static void trayRemove(App& a);
 static void hideToTray(App& a);
 static void showFromTray(App& a);
 static void trayMenu(App& a);
+
+static void onClose(App& a) {
+    scannerCancel();
+    a.saveNow();
+    DestroyWindow(a.hwnd);
+}
+
+static void npHit(App& a, POINT p) {
+    const Track* t = a.currentTrack();
+    if (ptIn(a.npBack, p)) { a.setNowPlaying(false); return; }
+    if (ptIn(a.npHeart, p)) { if (t) { a.toggleFavorite(t->id); InvalidateRect(a.hwnd, &a.rcNP, FALSE); } return; }
+    if (ptIn(a.npInfo, p)) { if (t) openPropertiesDialog(t->id); return; }
+    if (ptIn(a.npAddQ, p)) {
+        if (t) {
+            std::vector<uint32_t> ids = {t->id};
+            POINT pt = {a.npAddQ.left, a.npAddQ.bottom};
+            ClientToScreen(a.hwnd, &pt);
+            showAddToPlaylistMenu(pt, ids);
+        }
+        return;
+    }
+    if (ptIn(a.npSleep, p)) { openSleepDialog(); return; }
+    if (ptIn(a.npRepeat, p)) {
+        RepeatMode r = a.q().repeat;
+        r = (r == RepeatMode::Off) ? RepeatMode::All : (r == RepeatMode::All ? RepeatMode::One : RepeatMode::Off);
+        a.q().repeat = r;
+        a.markDirty();
+        a.updateTransportUi();
+        return;
+    }
+    if (ptIn(a.npShuffle, p)) {
+        a.q().setShuffle(!a.q().shuffle, (uint32_t)GetTickCount());
+        a.markDirty();
+        a.updateTransportUi();
+        if (a.view == VIEW_QUEUE) a.refreshList();
+        return;
+    }
+    if (ptIn(a.npPrev, p)) { a.nextTrack(false); return; }
+    if (ptIn(a.npNext, p)) { a.nextTrack(true); return; }
+    if (ptIn(a.npPlay, p)) { a.togglePlay(); return; }
+}
 
 static LRESULT CALLBACK MainWndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
     App& a = app();
@@ -329,7 +400,8 @@ static LRESULT CALLBACK MainWndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
             SetWindowSubclass(a.hwndSearch, EditSubclass, 1, 0);
 
             a.hwndList = CreateWindowExW(0, WC_LISTVIEWW, L"",
-                WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_OWNERDATA | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER,
+                WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_OWNERDATA | LVS_OWNERDRAWFIXED |
+                LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER,
                 0, 0, 10, 10, h, (HMENU)(INT_PTR)IDC_LIST, a.hinst, nullptr);
             ListView_SetExtendedListViewStyle(a.hwndList,
                 LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_LABELTIP);
@@ -340,42 +412,32 @@ static LRESULT CALLBACK MainWndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
             if (ux) {
                 typedef HRESULT(WINAPI* FnSWT)(HWND, LPCWSTR, LPCWSTR);
                 FnSWT swt = (FnSWT)(void*)GetProcAddress(ux, "SetWindowTheme");
-                if (swt) {
-                    swt(a.hwndList, L"DarkMode_Explorer", nullptr);
-                }
+                if (swt) swt(a.hwndList, L"DarkMode_Explorer", nullptr);
                 FreeLibrary(ux);
             }
-            SendMessageW(a.hwndList, WM_SETFONT, (WPARAM)fontsFor(a.dpi).listF, TRUE);
 
             a.hwndEmpty = CreateWindowExW(0, L"BUTTON", L"", WS_CHILD | BS_OWNERDRAW,
                                           0, 0, 10, 10, h, (HMENU)(INT_PTR)IDC_EMPTY, a.hinst, nullptr);
 
             a.hwndSeek = CreateWindowExW(WS_EX_LAYOUTRTL, TRACKBAR_CLASSW, L"",
-                WS_CHILD | WS_VISIBLE | TBS_HORZ | TBS_NOTICKS | TBS_FIXEDLENGTH,
+                WS_CHILD | TBS_HORZ | TBS_NOTICKS | TBS_FIXEDLENGTH,
                 0, 0, 10, 10, h, (HMENU)(INT_PTR)IDC_SEEK, a.hinst, nullptr);
             a.hwndVol = CreateWindowExW(WS_EX_LAYOUTRTL, TRACKBAR_CLASSW, L"",
-                WS_CHILD | WS_VISIBLE | TBS_HORZ | TBS_NOTICKS,
+                WS_CHILD | TBS_HORZ | TBS_NOTICKS,
                 0, 0, 10, 10, h, (HMENU)(INT_PTR)IDC_VOLUME, a.hinst, nullptr);
             SendMessageW(a.hwndSeek, TBM_SETRANGE, FALSE, MAKELONG(0, 1000));
             SendMessageW(a.hwndSeek, TBM_SETPAGESIZE, 0, 50);
             SendMessageW(a.hwndVol, TBM_SETRANGE, FALSE, MAKELONG(0, 100));
             SendMessageW(a.hwndVol, TBM_SETPOS, TRUE, a.settings.volume);
 
-            int y = 0;
-            a.btnMenu = makeButton(a, h, IDC_MENU, 0, y, 10, 10, glyph::Menu);
-            a.btnQueue = makeButton(a, h, IDC_QUEUE, 0, y, 10, 10, glyph::Queue, "תור 1");
-            for (int i = 0; i < 6; ++i)
-                a.tabBtns[i] = makeButton(a, h, IDC_TAB0 + i, 0, y, 10, 10, glyph::Menu, kTabGlyphless[i]);
-            a.btnSort = makeButton(a, h, IDC_SORT, 0, y, 10, 10, glyph::Sort);
-            a.btnAddFolder = makeButton(a, h, IDC_ADDFOLDER, 0, y, 10, 10, glyph::Add);
-            a.btnBack = makeButton(a, h, IDC_BACK, 0, y, 10, 10, glyph::Back);
-            a.btnPrev = makeButton(a, h, IDC_PREV, 0, y, 10, 10, glyph::Prev);
-            a.btnPlay = makeButton(a, h, IDC_PLAY, 0, y, 10, 10, glyph::Play);
-            a.btnNext = makeButton(a, h, IDC_NEXT, 0, y, 10, 10, glyph::Next);
-            a.btnShuffle = makeButton(a, h, IDC_SHUFFLE, 0, y, 10, 10, glyph::Shuffle);
-            a.btnRepeat = makeButton(a, h, IDC_REPEAT, 0, y, 10, 10, glyph::RepeatAll);
-            a.btnFav = makeButton(a, h, IDC_FAV, 0, y, 10, 10, glyph::Heart);
-            a.btnSleep = makeButton(a, h, IDC_SLEEP, 0, y, 10, 10, glyph::Clock);
+            a.btnQDrop = makeButton(a, h, IDC_QDROP, glyph::ChevronDown);
+            a.btnQClear = makeButton(a, h, IDC_QCLEAR, glyph::Close);
+            a.btnPlayPause = makeButton(a, h, IDC_PLAYPAUSE, glyph::Play);
+            a.btnBack = makeButton(a, h, IDC_BACK, glyph::Back);
+            a.btnSort = makeButton(a, h, IDC_SORT, glyph::Sort);
+            for (int i = 0; i < 6; ++i) a.btnNav[i] = makeButton(a, h, IDC_NAV_FIRST + i, navGlyph(i));
+            a.btnNavNp = makeButton(a, h, IDC_NAV_NP, glyph::PlayCircle);
+            a.btnNavMenu = makeButton(a, h, IDC_NAV_MENU, glyph::DotsV);
             for (auto& kv : g_btns) SetWindowSubclass(kv.first, BtnSubclass, 2, 0);
             ShowWindow(a.btnBack, SW_HIDE);
 
@@ -421,10 +483,16 @@ static LRESULT CALLBACK MainWndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
             HBITMAP bmp = CreateCompatibleBitmap(hdc, rc.right - rc.left, rc.bottom - rc.top);
             HBITMAP old = (HBITMAP)SelectObject(mem, bmp);
             fillSolid(mem, rc, theme().windowBg);
-            paintTop(a, mem);
-            paintHeader(a, mem);
-            paintStatus(a, mem);
-            paintBottom(a, mem);
+            if (a.showNowPlaying) {
+                paintNowPlaying(a, mem);
+                paintNav(a, mem);
+            } else {
+                paintQueueBar(a, mem);
+                paintRow2(a, mem);
+                paintSearchRow(a, mem);
+                paintNav(a, mem);
+                paintSnackbar(a, mem, a.rcRow2);
+            }
             BitBlt(hdc, 0, 0, rc.right - rc.left, rc.bottom - rc.top, mem, 0, 0, SRCCOPY);
             SelectObject(mem, old);
             DeleteObject(bmp);
@@ -436,74 +504,93 @@ static LRESULT CALLBACK MainWndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
         case WM_CTLCOLORSTATIC: {
             HDC hdc = (HDC)w;
             SetTextColor(hdc, theme().text);
-            SetBkColor(hdc, theme().listBg);
-            SetBkMode(hdc, OPAQUE);
+            SetBkColor(hdc, theme().panelBg);
+            SetBkMode(hdc, TRANSPARENT);
             static HBRUSH br = nullptr;
             static COLORREF brColor = 0;
-            if (!br || brColor != theme().listBg) {
+            if (!br || brColor != theme().panelBg) {
                 if (br) DeleteObject(br);
-                br = CreateSolidBrush(theme().listBg);
-                brColor = theme().listBg;
+                br = CreateSolidBrush(theme().panelBg);
+                brColor = theme().panelBg;
             }
             return (LRESULT)br;
         }
+        case WM_MEASUREITEM:
+            if (w == IDC_LIST) {
+                MEASUREITEMSTRUCT* mis = (MEASUREITEMSTRUCT*)l;
+                mis->itemHeight = (UINT)scale(64, a.dpi);
+                return TRUE;
+            }
+            return 0;
         case WM_DRAWITEM: {
             UINT id = (UINT)w;
             DRAWITEMSTRUCT* di = (DRAWITEMSTRUCT*)l;
+            if (id == IDC_LIST) { drawListRow(a, di); return TRUE; }
             if (id == IDC_EMPTY) {
                 const Theme& th = theme();
                 fillSolid(di->hDC, di->rcItem, th.listBg);
                 FontSet& fs = fontsFor(a.dpi);
                 int cx = (di->rcItem.left + di->rcItem.right) / 2;
                 int cy = (di->rcItem.top + di->rcItem.bottom) / 2;
-                RECT gr = {cx - sc(a, 40), cy - sc(a, 70), cx + sc(a, 40), cy - sc(a, 0)};
+                RECT gr = {cx - sc(a, 40), cy - sc(a, 76), cx + sc(a, 40), cy - sc(a, 6)};
                 glyph::draw(di->hDC, glyph::Note, gr, th.textFaint, a.dpi);
-                RECT t1 = {di->rcItem.left, cy + sc(a, 6), di->rcItem.right, cy + sc(a, 34)};
+                RECT t1 = {di->rcItem.left, cy, di->rcItem.right, cy + sc(a, 30)};
                 drawTextU(di->hDC, "הספרייה ריקה", t1, th.textDim, fs.title, DT_CENTER | DT_SINGLELINE);
-                RECT t2 = {di->rcItem.left, cy + sc(a, 34), di->rcItem.right, cy + sc(a, 58)};
+                RECT t2 = {di->rcItem.left, cy + sc(a, 30), di->rcItem.right, cy + sc(a, 54)};
                 bool hasFolders = !a.settings.musicFolders.empty();
                 drawTextU(di->hDC, hasFolders ? "לא נמצאו שירים בתיקיות שנבחרו" :
-                          "לחצו כאן או על + כדי לבחור תיקיית מוזיקה", t2, th.textFaint, fs.ui,
+                          "לחצו כאן כדי לבחור תיקיית מוזיקה", t2, th.textFaint, fs.ui,
                           DT_CENTER | DT_SINGLELINE);
                 return TRUE;
             }
-            HWND bh = di->hwndItem;
-            auto it = g_btns.find(bh);
+            auto it = g_btns.find(di->hwndItem);
             if (it == g_btns.end()) return TRUE;
-            BtnInfo& bi = it->second;
+            const Theme& th = theme();
             BtnSkin skin;
-            skin.hovered = bi.hover;
+            skin.hovered = it->second.hover;
             skin.pressed = (di->itemState & ODS_SELECTED) != 0;
             skin.enabled = (di->itemState & ODS_DISABLED) == 0;
-            const Theme& th = theme();
-            // active/toggle states
-            if (id >= IDC_TAB0 && id < IDC_TAB0 + 6) skin.active = (a.view == (int)(id - IDC_TAB0));
-            else if (id == IDC_SHUFFLE) skin.active = a.q().shuffle;
-            else if (id == IDC_REPEAT) skin.active = a.q().repeat != RepeatMode::Off;
-            else if (id == IDC_FAV) {
-                const Track* t = a.currentTrack();
-                skin.active = t && a.isFavorite(t->id);
+            RECT r = di->rcItem;
+            bool active = false;
+            glyph::Kind kind = it->second.kind;
+            COLORREF gc = skin.enabled ? th.textDim : th.textFaint;
+            if (id >= IDC_NAV_FIRST && id < IDC_NAV_FIRST + 6) {
+                active = !a.showNowPlaying && a.view == navViewOf((int)id - IDC_NAV_FIRST);
+            } else if (id == IDC_NAV_NP) {
+                active = a.showNowPlaying;
+            } else if (id == IDC_PLAYPAUSE) {
+                kind = a.playing ? glyph::Pause : glyph::Play;
+                gc = skin.enabled ? th.text : th.textFaint;
+            } else if (id == IDC_QCLEAR) {
+                gc = th.textFaint;
             }
-            else if (id == IDC_SLEEP) skin.active = a.sleepSecondsLeft > 0 || a.sleepAtEnd;
-            else if (id == IDC_BACK) skin.active = false;
-            if (id >= IDC_TAB0 && id < IDC_TAB0 + 6) {
-                std::string label = kViewNamesHe[id - IDC_TAB0];
-                paintFlatButton(di->hDC, di->rcItem, skin, th, bi.kind, a.dpi, label, fontsFor(a.dpi).uiBold);
-            } else if (id == IDC_QUEUE) {
-                paintButtonBg(di->hDC, di->rcItem, skin, th, a.dpi);
-                int gh = di->rcItem.bottom - di->rcItem.top;
-                RECT gr = {di->rcItem.right - gh + gh / 6, di->rcItem.top + gh / 6,
-                           di->rcItem.right - gh / 6, di->rcItem.bottom - gh / 6};
-                glyph::draw(di->hDC, glyph::Queue, gr, skin.enabled ? th.textDim : th.textFaint, a.dpi);
-                RECT lr = di->rcItem;
-                lr.right -= gh;
-                lr.left += scale(6, a.dpi);
-                std::string ql = a.q().name + "  (" + std::to_string(a.q().size()) + ")";
-                drawTextU(di->hDC, ql, lr, skin.enabled ? th.text : th.textFaint,
-                          fontsFor(a.dpi).ui, DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-            } else {
-                paintFlatButton(di->hDC, di->rcItem, skin, th, bi.kind, a.dpi, std::string(), nullptr);
+            if (skin.hovered && skin.enabled) roundRectFill(di->hDC, r, sc(a, 8), th.hoverBg);
+            if (id == IDC_QDROP) {
+                roundRectFill(di->hDC, r, sc(a, 6), th.panelBg);
+                frameRect(di->hDC, r, th.border, 1);
+                RECT chev = {r.left + sc(a, 6), r.top, r.left + sc(a, 26), r.bottom};
+                glyph::draw(di->hDC, glyph::ChevronDown, chev, th.textDim, a.dpi);
+                RECT tx = {r.left + sc(a, 28), r.top, r.right - sc(a, 10), r.bottom};
+                std::string label = std::to_string(a.activeQueue + 1) + ". " + a.q().name;
+                drawTextU(di->hDC, label, tx, th.text, fontsFor(a.dpi).uiBold,
+                          DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+                return TRUE;
             }
+            if (id >= IDC_NAV_FIRST && id <= IDC_NAV_MENU) {
+                int gh = r.bottom - r.top;
+                int gw = r.right - r.left;
+                int side = std::min(gw, gh) - 2 * (gh / 5);
+                RECT gr = {r.left + (gw - side) / 2, r.top + gh / 5,
+                           r.left + (gw + side) / 2, r.top + gh / 5 + side};
+                glyph::draw(di->hDC, kind, gr, active ? th.accent : gc, a.dpi);
+                if (active) {
+                    RECT u = {r.left + (r.right - r.left) / 2 - sc(a, 14), r.bottom - sc(a, 4),
+                              r.left + (r.right - r.left) / 2 + sc(a, 14), r.bottom - sc(a, 1)};
+                    fillSolid(di->hDC, u, th.accent);
+                }
+                return TRUE;
+            }
+            glyph::draw(di->hDC, kind, r, gc, a.dpi);
             return TRUE;
         }
         case WM_HSCROLL: {
@@ -518,7 +605,7 @@ static LRESULT CALLBACK MainWndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
                 if (code == SB_THUMBTRACK) {
                     a.seekDragging = true;
                     a.seekDragMs = ms;
-                    InvalidateRect(h, &a.rcBottom, FALSE);
+                    InvalidateRect(h, &a.rcNP, FALSE);
                 } else if (code == SB_ENDSCROLL || code == SB_THUMBPOSITION) {
                     if (a.seekDragging) { a.seekDragging = false; a.seekTo(a.seekDragMs); }
                 } else {
@@ -540,15 +627,24 @@ static LRESULT CALLBACK MainWndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
                 GetWindowTextW(a.hwndSearch, buf, 255);
                 a.pendingSearch = U(buf);
                 SetTimer(h, TMR_SEARCH, 250, nullptr);
+                InvalidateRect(h, &a.rcSearchRow, FALSE);
                 return 0;
             }
-            if (code == BN_CLICKED || code == BN_DOUBLECLICKED) {
-                onButton(a, id);
+            if ((code == EN_SETFOCUS || code == EN_KILLFOCUS) && id == IDC_SEARCH) {
+                a.searchFocused = (code == EN_SETFOCUS);
+                InvalidateRect(h, &a.rcSearchRow, FALSE);
                 return 0;
             }
+            if (code == BN_CLICKED || code == BN_DOUBLECLICKED) { onButton(a, id); return 0; }
             if (code == 0) { onMenuCommand(a, id); return 0; }
             return 0;
         }
+        case WM_LBUTTONUP:
+            if (a.showNowPlaying) {
+                POINT p = {LOWORD(l), HIWORD(l)};
+                npHit(a, p);
+            }
+            return 0;
         case WM_KEYDOWN: {
             if (GetFocus() == a.hwndSearch) return DefWindowProcW(h, m, w, l);
             bool ctrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
@@ -557,10 +653,12 @@ static LRESULT CALLBACK MainWndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
             if (w == VK_DELETE && a.view == VIEW_QUEUE) { onMenuCommand(a, CMD_ROW_REMOVE_QUEUE); return 0; }
             if (ctrl && w == 'F') { SetFocus(a.hwndSearch); return 0; }
             if (w == VK_ESCAPE) {
+                if (a.showNowPlaying) { a.setNowPlaying(false); return 0; }
                 if (!a.backStack.empty() || a.scope.valid()) a.goBack();
                 return 0;
             }
-            if (w >= '1' && w <= '6' && ctrl) { a.setView((int)(w - '1')); return 0; }
+            if (w == VK_RETURN && a.showNowPlaying) { a.togglePlay(); return 0; }
+            if (w >= '1' && w <= '6' && ctrl) { a.setView(navViewOf((int)(w - '1'))); return 0; }
             return DefWindowProcW(h, m, w, l);
         }
         case WM_TIMER: {
@@ -574,10 +672,9 @@ static LRESULT CALLBACK MainWndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
                         a.lastPosMs = pos;
                         SendMessageW(a.hwndSeek, TBM_SETPOS, (WPARAM)FALSE,
                                      (LPARAM)(pos * 1000 / std::max<long long>(1, a.player.lengthMs())));
-                        InvalidateRect(h, &a.rcBottom, FALSE);
+                        if (a.showNowPlaying) InvalidateRect(h, &a.rcNP, FALSE);
                         long long dur = a.player.lengthMs();
                         if (dur > 0 && pos >= dur - 150) {
-                            // safety net if MM_MCINOTIFY is missed
                             KillTimer(h, TMR_POS);
                             onTrackEnded(a);
                             SetTimer(h, TMR_POS, 300, nullptr);
@@ -699,7 +796,6 @@ static LRESULT CALLBACK MainWndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
     return DefWindowProcW(h, m, w, l);
 }
 
-
 // --------------------------------------------------------------------- tray
 static NOTIFYICONDATAW g_nid = {0};
 static bool g_trayOk = false;
@@ -786,33 +882,21 @@ void App::updateTransportUi() {
         SendMessageW(hwndSeek, TBM_SETPOS, (WPARAM)TRUE,
                      (LPARAM)(dur > 0 ? lastPosMs * 1000 / dur : 0));
     }
-    InvalidateRect(hwnd, &rcBottom, FALSE);
-    InvalidateRect(btnPlay, nullptr, TRUE);
-    InvalidateRect(btnShuffle, nullptr, TRUE);
-    InvalidateRect(btnRepeat, nullptr, TRUE);
-    InvalidateRect(btnFav, nullptr, TRUE);
-    InvalidateRect(btnSleep, nullptr, TRUE);
-    InvalidateRect(btnQueue, nullptr, TRUE);
+    InvalidateRect(btnPlayPause, nullptr, TRUE);
+    InvalidateRect(btnNavNp, nullptr, TRUE);
+    if (showNowPlaying) InvalidateRect(hwnd, &rcNP, FALSE);
+    InvalidateRect(hwnd, &rcRow2, FALSE);
     updateTitle();
+    trayUpdate(*this);
 }
 
 void App::updateNowArt(bool force) {
     const Track* t = currentTrack();
     uint32_t id = t ? t->id : 0;
-    int px = scale(76, dpi) - 2;
-    if (!force && id == nowArtTrack && px == nowArtPixels) return;
+    if (!force && id == nowArtTrack) return;
     nowArtTrack = id;
-    nowArtPixels = px;
-    nowArt = nullptr;
-    if (t) nowArt = artForTrack(*t, px);
-    InvalidateRect(hwnd, &rcBottom, FALSE);
-}
-
-void App::flash(const std::string& msg, unsigned long ms) {
-    flashMsg = msg;
-    flashUntil = GetTickCount() + (ms ? ms : 5000);
-    g_statusLeft = msg;
-    if (hwnd) InvalidateRect(hwnd, &rcStatus, FALSE);
+    InvalidateRect(hwnd, &rcNP, FALSE);
+    InvalidateRect(hwndList, nullptr, FALSE);
 }
 
 void App::updateStatusText() {
@@ -850,12 +934,25 @@ void App::updateStatusText() {
     }
     g_statusRight = right;
     if (!flashMsg.empty() && (long)(flashUntil - GetTickCount()) > 0) {
-        g_statusLeft = flashMsg;                 // transient feedback wins
+        g_statusLeft = flashMsg;
     } else {
         if (!flashMsg.empty()) flashMsg.clear();
         g_statusLeft = playError.empty() ? left : playError;
     }
-    if (hwnd) InvalidateRect(hwnd, &rcStatus, FALSE);
+    if (hwnd) {
+        InvalidateRect(hwnd, &rcRow2, FALSE);
+        if (showNowPlaying) InvalidateRect(hwnd, &rcNP, FALSE);
+    }
+}
+
+void App::flash(const std::string& msg, unsigned long ms) {
+    flashMsg = msg;
+    flashUntil = GetTickCount() + (ms ? ms : 5000);
+    g_statusLeft = msg;
+    if (hwnd) {
+        InvalidateRect(hwnd, &rcRow2, FALSE);
+        if (showNowPlaying) InvalidateRect(hwnd, &rcNP, FALSE);
+    }
 }
 
 // ------------------------------------------------------------------ create
