@@ -1,0 +1,37 @@
+// SHOSO Setup - resources: icon, manifest, embedded player payload
+#include <windows.h>
+
+#define IDI_APP 101
+#define IDR_PAYLOAD 200
+
+IDI_APP ICON "resources/app.ico"
+1 24 "resources/app.manifest"
+IDR_PAYLOAD RCDATA "../../dist/SHOSO-Music.exe"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,0
+ PRODUCTVERSION 1,0,0,0
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS 0x40004L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040d04b0"
+    BEGIN
+      VALUE "CompanyName", "SHOSO"
+      VALUE "FileDescription", "SHOSO Music Setup"
+      VALUE "FileVersion", "1.0.0.0"
+      VALUE "InternalName", "SHOSO-Setup"
+      VALUE "OriginalFilename", "SHOSO-Setup.exe"
+      VALUE "ProductName", "SHOSO Music"
+      VALUE "ProductVersion", "1.0.0.0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x40d, 1200
+  END
+END

@@ -1,0 +1,28 @@
+# build artifacts (dist/*.exe is committed on purpose - it is the deliverable)
+build/
+obj/
+*.obj
+*.o
+*.pdb
+*.ilk
+*.exp
+*.lib
+.zig-cache/
+zig-cache/
+zig-out/
+
+# toolchains fetched locally (scripts inside tools/ are kept)
+tools/*
+!tools/get_zig.sh
+!tools/make_icon.py
+
+# editors / os
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# python
+__pycache__/
+*.pyc
