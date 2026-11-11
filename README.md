@@ -25,13 +25,19 @@ npm run start:app
 
 ### אפשרות 2 – הורדת `.exe` מוכן (בלי לבנות לבד)
 
+📄 מדריך מלא: **[BUILD-EXE.md](BUILD-EXE.md)**
+
 הפרויקט כולל workflow של GitHub Actions שבונה מתקין אמיתי ל-Windows:
 
 1. היכנס ל-**Actions → Build Windows app → Run workflow**.
 2. בסיום, הורד את הארטיפקט **`SHOSO-Music-Windows`** (מכיל מתקין + Portable).
 3. או דחוף תג (`git tag v1.0.0 && git push --tags`) – הקבצים יצורפו אוטומטית ל-Release.
 
-### אפשרות 3 – בניית `.exe` מקומית
+### אפשרות 3 – בניית `.exe` מקומית (פשוט מאוד)
+
+לחץ פעמיים על **`build-exe.bat`** – הסקריפט מתקין, בונה, ופותח את תיקיית `release\` עם הקבצים.
+
+או ידנית:
 
 ```powershell
 npm install
@@ -106,7 +112,8 @@ build/            אייקונים ל-Windows
 | `npm run app` | הרצת האפליקציה בלי בנייה מחדש |
 | `npm run dev` | שרת פיתוח בדפדפן (מצב דמו) |
 | `npm test` | בדיקות |
-| `npm run dist` | יצירת מתקין + Portable ל-Windows |
+| `npm run dist` | יצירת מתקין + Portable ל-Windows (בתיקיית `release\`) |
+| `build-exe.bat` | בנייה בקליק אחד (מתקין + נייד) |
 
 ## בדיקות
 
