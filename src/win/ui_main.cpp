@@ -564,6 +564,10 @@ static LRESULT CALLBACK MainWndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
             } else if (id == IDC_QCLEAR) {
                 gc = th.textFaint;
             }
+            // owner-draw buttons must paint their ENTIRE rect every frame,
+            // otherwise Windows' default BTNFACE (light grey) shows through
+            COLORREF bgc = (id >= IDC_NAV_FIRST && id <= IDC_NAV_MENU) ? th.barBg : th.windowBg;
+            fillSolid(di->hDC, r, bgc);
             if (skin.hovered && skin.enabled) roundRectFill(di->hDC, r, sc(a, 8), th.hoverBg);
             if (id == IDC_QDROP) {
                 roundRectFill(di->hDC, r, sc(a, 6), th.panelBg);
