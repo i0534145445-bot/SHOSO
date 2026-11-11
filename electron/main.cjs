@@ -416,6 +416,20 @@ function registerIpc() {
 /* Window                                                             */
 /* ------------------------------------------------------------------ */
 
+const resolveIcon = () => {
+  const candidates = [
+    path.join(__dirname, '..', 'build', 'icon.ico'),
+    path.join(process.resourcesPath || '', 'build', 'icon.ico'),
+  ];
+  return candidates.find((candidate) => {
+    try {
+      return fs.existsSync(candidate);
+    } catch {
+      return false;
+    }
+  });
+};
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -426,7 +440,8 @@ function createWindow() {
     backgroundColor: '#0c0f14',
     title: 'SHOSO Music',
     autoHideMenuBar: true,
-    icon: path.join(__dirname, '..', 'build', 'icon.ico'),
+    // The icon exists in dev; packaged builds take the icon from the .exe itself.
+    icon: resolveIcon(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
