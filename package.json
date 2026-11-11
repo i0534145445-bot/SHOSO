@@ -60,6 +60,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "shortcutName": "SHOSO Music"
-    }
+    },
+    "publish": null
   }
 }
