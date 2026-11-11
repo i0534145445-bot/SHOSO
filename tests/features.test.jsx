@@ -217,3 +217,28 @@ describe('player extras', () => {
     expect(screen.getByText('טיימר שינה')).toBeTruthy();
   });
 });
+
+describe('state sanitation', () => {
+  it('ignores corrupt persisted values instead of crashing', async () => {
+    const { bootstrap } = await import('../src/lib/store.js');
+    localStorage.setItem('shoso.state.v1', JSON.stringify({
+      volume: 'loud',
+      eqGains: [1, 2],
+      sort: null,
+      playlists: [null, { name: 42 }],
+      abRepeat: { a: 'x', b: 3 },
+      theme: 'neon',
+      repeat: 'weird',
+    }));
+    const state = await bootstrap();
+    expect(state.volume).toBe(0.85);
+    expect(state.eqGains).toHaveLength(10);
+    expect(state.sort).toEqual({ key: 'title', dir: 'asc' });
+    expect(state.playlists).toHaveLength(1);
+    expect(state.playlists[0].name).toBe('42');
+    expect(state.abRepeat).toEqual({ a: null, b: 3 });
+    expect(state.theme).toBe('dark');
+    expect(state.repeat).toBe('off');
+    localStorage.removeItem('shoso.state.v1');
+  });
+});

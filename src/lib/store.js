@@ -191,6 +191,44 @@ export async function bootstrap() {
   }
   if (!patch.currentId) patch.playing = false;
 
+  // Defensive sanitation: hand-edited or older state files must never break the UI.
+  const num = (value, fallback, min, max) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(max, Math.max(min, n));
+  };
+  patch.volume = num(patch.volume ?? state.volume, 0.85, 0, 1);
+  patch.lastVolume = num(patch.lastVolume ?? patch.volume, 0.85, 0, 1);
+  patch.rate = num(patch.rate ?? 1, 1, 0.5, 2);
+  patch.preamp = num(patch.preamp ?? 0, 0, -12, 12);
+  if (!Array.isArray(patch.eqGains) || patch.eqGains.length !== EQ_FREQUENCIES.length) {
+    patch.eqGains = EQ_FREQUENCIES.map(() => 0);
+  } else {
+    patch.eqGains = patch.eqGains.map((g) => num(g, 0, -12, 12));
+  }
+  if (!patch.sort || typeof patch.sort !== 'object' || !patch.sort.key) {
+    patch.sort = { key: 'title', dir: 'asc' };
+  }
+  const ab = patch.abRepeat;
+  patch.abRepeat = {
+    a: ab && Number.isFinite(Number(ab.a)) && ab.a !== null ? Number(ab.a) : null,
+    b: ab && Number.isFinite(Number(ab.b)) && ab.b !== null ? Number(ab.b) : null,
+  };
+  for (const key of ['playlists', 'favorites', 'history', 'queue', 'folders']) {
+    if (!Array.isArray(patch[key])) patch[key] = [];
+  }
+  patch.playlists = patch.playlists
+    .filter((pl) => pl && typeof pl === 'object')
+    .map((pl) => ({
+      id: String(pl.id || Math.random().toString(36).slice(2)),
+      name: String(pl.name || 'פלייליסט'),
+      trackIds: Array.isArray(pl.trackIds) ? pl.trackIds : [],
+      createdAt: pl.createdAt || Date.now(),
+      cover: pl.cover || null,
+    }));
+  if (!REPEAT_MODES.includes(patch.repeat)) patch.repeat = 'off';
+  if (!['dark', 'light'].includes(patch.theme)) patch.theme = 'dark';
+
   state = { ...state, ...patch };
   attachEngine();
   applyTheme();
