@@ -38,6 +38,7 @@ export default function Reader() {
   const [searchResults, setSearchResults] = useState([]);
   const [currentChapter, setCurrentChapter] = useState(0);
   const [percent, setPercent] = useState(0);
+  const [pageInfo, setPageInfo] = useState({ page: 1, pages: 1 });
   const [pdfPage, setPdfPage] = useState(1);
   const [pdfZoom, setPdfZoom] = useState(1.5);
   const [tts, setTts] = useState({ playing: false, rate: 1 });
@@ -123,6 +124,22 @@ export default function Reader() {
     return () => { cancelled = true; clearTimeout(saveTimer.current); };
   }, [parsed?.format, pdfPage, pdfZoom]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* ---------- page count (Readera's "3 מתוך 12") ---------- */
+  const measurePages = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el || !parsed || parsed.format === 'PDF') return;
+    const pages = Math.max(1, Math.ceil(el.scrollHeight / Math.max(1, el.clientHeight)));
+    const page = Math.min(pages, Math.floor(el.scrollTop / Math.max(1, el.clientHeight)) + 1);
+    setPageInfo({ page, pages });
+  }, [parsed]);
+
+  useEffect(() => {
+    measurePages();
+    const onResize = () => measurePages();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [measurePages, parsed?.format, parsed?.chapters?.length, readerSettings.fontSize, readerSettings.lineHeight, readerSettings.maxWidth, readerSettings.margins]);
+
   /* ---------- scroll progress (EPUB/TXT/...) ---------- */
   const onScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -136,6 +153,11 @@ export default function Reader() {
       if (ref && ref.offsetTop <= el.scrollTop + el.clientHeight * 0.3) idx = i;
     });
     setCurrentChapter(idx);
+    setPageInfo((prev) => {
+      const pages = Math.max(1, Math.ceil(el.scrollHeight / Math.max(1, el.clientHeight)));
+      const page = Math.min(pages, Math.floor(el.scrollTop / Math.max(1, el.clientHeight)) + 1);
+      return prev.page === page && prev.pages === pages ? prev : { page, pages };
+    });
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       saveProgress(book.id, {
@@ -412,13 +434,13 @@ export default function Reader() {
                     className={readerSettings.mode === 'scroll' ? 'active' : ''}
                     onClick={() => updateReader({ mode: 'scroll' })}
                   >
-                    אנכי
+                    גלילה
                   </button>
                   <button
                     className={readerSettings.mode === 'paginated' ? 'active' : ''}
                     onClick={() => updateReader({ mode: 'paginated' })}
                   >
-                    אופקי
+                    דפדוף
                   </button>
                 </div>
 
@@ -566,7 +588,7 @@ export default function Reader() {
           {!loading && !error && !isPdf && parsed && (
             <div
               ref={scrollRef}
-              className={`book-scroll ${readerSettings.justify ? 'justify' : ''} ${readerSettings.hyphenation ? 'hyphen' : ''}`}
+              className={`book-scroll ${readerSettings.justify ? 'justify' : ''} ${readerSettings.hyphenation ? 'hyphen' : ''} ${readerSettings.mode === 'paginated' ? 'paginated' : ''}`}
               dir={parsed.direction || 'rtl'}
               onScroll={onScroll}
               onClick={pokeUi}
@@ -597,7 +619,7 @@ export default function Reader() {
         <span className="page-label">
           {isPdf
             ? `${pdfPage} מתוך ${parsed?.pageCount || '?'}`
-            : `${currentChapter + 1} מתוך ${parsed?.chapters?.length || '?'}`}
+            : `${pageInfo.page} מתוך ${pageInfo.pages}`}
         </span>
         <div className="reader-progress">
           <div className="progress-track">

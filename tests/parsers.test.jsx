@@ -95,10 +95,15 @@ describe('EPUB parsing (demo book)', () => {
     expect(result.direction).toBe('rtl');
   });
 
-  it('creates 3 demo books (EPUB/TXT/FB2)', async () => {
+  it('creates the demo library with a real EPUB, FB2 and several text books', async () => {
     const books = await createDemoBooks();
-    expect(books).toHaveLength(3);
-    expect(books.map((b) => b.format).sort()).toEqual(['EPUB', 'FB2', 'TXT']);
+    expect(books.length).toBeGreaterThanOrEqual(3);
+    const formats = new Set(books.map((b) => b.format));
+    expect(formats.has('EPUB')).toBe(true);
+    expect(formats.has('FB2')).toBe(true);
+    expect(formats.has('TXT')).toBe(true);
+    // every demo book carries a readable buffer
+    books.forEach((b) => expect(b.size).toBeGreaterThan(0));
   });
 });
 

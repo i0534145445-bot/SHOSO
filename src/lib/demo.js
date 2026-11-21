@@ -122,6 +122,91 @@ ${spineItems}
   return zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
 }
 
+
+/* ---- extra demo titles so the library looks like a real collection ---- */
+
+const EXTRA_TEXTS = [
+  {
+    name: 'מכתבים מן העמק.txt',
+    title: 'מכתבים מן העמק',
+    author: 'לאה שדה',
+    format: 'TXT',
+    body: `מכתבים מן העמק
+
+אגרת ראשונה
+השמש נטתה מערבה כשהגעתי אל שער המשק. הריח של שחת קצורה ושל אדמה לחה מילא את האוויר, ונדמה היה לי שאיני זקוק לשום דבר מלבד המקום הזה.
+
+אגרת שנייה
+בבוקר יצאנו אל השדה. הטל עוד ריחף על העלים, והפועלים עבדו בדממה. אמרו לי: כאן הזמן נמדד בקצב של העונות, לא בשעון.
+
+אגרת שלישית
+החורף הגיע. הגשם הכה בגג הפח כל הלילה, ואני ישבתי וקראתי לאור מנורה. במרחק נשמע כלב נובח, ואחר כך דממה.`,
+  },
+  {
+    name: 'The Quiet Hours.txt',
+    title: 'The Quiet Hours',
+    author: 'Margaret Ellery',
+    format: 'TXT',
+    body: `The Quiet Hours
+
+Chapter One
+The house on Alder Street had been empty for eleven years, which was exactly as long as no one had been able to agree about who owned it. The windows were boarded, the garden had become a thicket, and the children of the neighbourhood had invented three separate stories about what lived inside.
+
+Chapter Two
+On a Tuesday in October, a woman arrived with a small suitcase and a ring of keys. She stood on the pavement for a long moment, looked up at the second floor, and said, quietly, "There you are."
+
+Chapter Three
+By evening the boards were down. By Friday there were curtains. By the end of the month, the house on Alder Street had a lamp in every window, and the street had forgotten it had ever been dark.`,
+  },
+  {
+    name: 'מדריך הגן הקטן.md',
+    title: 'מדריך הגן הקטן',
+    author: 'עמוס גבע',
+    format: 'MD',
+    body: `# מדריך הגן הקטן
+
+## אדמה
+גן טוב מתחיל באדמה. ערבבו חומר אורגני, בדקו ניקוז, ואל תמהרו לזרוע.
+
+## מים
+השקו פחות ממה שנדמה לכם. אצבע בתוך האדמה היא המדד הטוב ביותר.
+
+## עונות
+באביב זורעים, בקיץ משקים, בסתיו קוצרים, בחורף מתכננים.
+
+## הכלל היחיד
+צמח שמתאים למקום גדל בלי מאמץ. צמח שלא מתאים – יגרום לכם לעבוד כל הקיץ.`,
+  },
+  {
+    name: 'זיכרונות של ספרייה.html',
+    title: 'זיכרונות של ספרייה',
+    author: 'רחל בן-עמי',
+    format: 'HTML',
+    body: `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>זיכרונות של ספרייה</title></head><body>
+<h1>זיכרונות של ספרייה</h1>
+<p>שלושים שנה עמדתי בין המדפים. ראיתי ילדים מגיעים בגיל שש ויוצאים בגיל שמונה-עשרה, וכמה מהם חזרו עם ילדים משלהם.</p>
+<p>הספרייה אינה אוסף של ספרים. היא אוסף של אנשים שקראו אותם, ולפעמים גם של אלה שרק החזיקו אותם ביד והתביישו לשאול.</p>
+<p>בקומה השנייה, ליד החלון, היה כיסא אחד שהתלמידים כינו "הכיסא של המזל". אף אחד לא ידע מי קבע את זה, אבל הוא תמיד היה תפוס.</p>
+</body></html>`,
+  },
+  {
+    name: 'על הכתיבה.epub.txt',
+    title: 'על הכתיבה',
+    author: 'יוסף אריאל',
+    format: 'TXT',
+    body: `על הכתיבה
+
+פרק ראשון – הפסקה הראשונה
+כתיבה מתחילה בגסות. הטיוטה הראשונה אינה נועדה להיות טובה; היא נועדה להיות קיימת.
+
+פרק שני – המחיקה
+החלק הקשה אינו הכתיבה אלא ההחלטה מה יישאר. כל מילה שמוחקים מחזירה את הקורא אל מה שנשאר.
+
+פרק שלישי – הקול
+אין "קול" שנמצא מראש. הקול הוא מה שנשאר אחרי שמנקים את כל מה שאינו שלך.`,
+  },
+];
+
 const hashString = (str) => {
   let h1 = 0xdeadbeef;
   let h2 = 0x41c6ce57;
@@ -165,9 +250,13 @@ export async function createDemoBooks() {
     };
   };
 
+  const extras = EXTRA_TEXTS.map((b) =>
+    mk(b.name, b.title, b.author, `.${b.format.toLowerCase()}`, enc(b.body), b.format));
+
   return [
     mk('הספר הישן.epub', 'הספר הישן', 'מרים לוי', '.epub', epubBuffer, 'EPUB'),
     mk('The Library at the End of the World.txt', 'The Library at the End of the World', 'Elias Hart', '.txt', txtBuffer, 'TXT'),
     mk('הבית על הגבעה.fb2', 'הבית על הגבעה', 'דוד כהן', '.fb2', fb2Buffer, 'FB2'),
+    ...extras,
   ];
 }

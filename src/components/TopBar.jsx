@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  useStore, setQuery, setLayout, importFolders, toggleSidebar, setView,
+  useStore, setQuery, setLayout, setSort, importFolders, toggleSidebar, setView,
 } from '../lib/store.js';
 import {
   IconMenu, IconSearch, IconMore, IconGrid, IconList, IconBack,
@@ -32,10 +32,19 @@ const TITLES = {
   book: 'פרטי ספר',
 };
 
+const SORT_OPTIONS = [
+  { key: 'title', label: 'שם הספר' },
+  { key: 'author', label: 'מחבר' },
+  { key: 'added', label: 'תאריך הוספה' },
+  { key: 'size', label: 'גודל קובץ' },
+  { key: 'progress', label: 'התקדמות קריאה' },
+];
+
 export default function TopBar() {
   const query = useStore((s) => s.query);
   const view = useStore((s) => s.view);
   const layout = useStore((s) => s.layout);
+  const sort = useStore((s) => s.sort);
   const [searching, setSearching] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const inputRef = useRef(null);
@@ -109,6 +118,24 @@ export default function TopBar() {
                     onClick={() => setMenuOpen(false)}
                   />
                   <div className="topbar-menu-pop">
+                    <span className="pop-label">מיון לפי</span>
+                    {SORT_OPTIONS.map((o) => (
+                      <button
+                        key={o.key}
+                        className={sort.key === o.key ? 'checked' : ''}
+                        onClick={() => { setSort({ ...sort, key: o.key }); setMenuOpen(false); }}
+                      >
+                        {o.label}
+                        {sort.key === o.key ? ' ✓' : ''}
+                      </button>
+                    ))}
+                    <span className="pop-sep" />
+                    <button
+                      onClick={() => { setSort({ ...sort, dir: sort.dir === 'asc' ? 'desc' : 'asc' }); setMenuOpen(false); }}
+                    >
+                      {sort.dir === 'asc' ? 'סדר יורד' : 'סדר עולה'}
+                    </button>
+                    <span className="pop-sep" />
                     <button onClick={() => { setMenuOpen(false); importFolders(); }}>הוסף תיקיות…</button>
                     <button onClick={() => { setMenuOpen(false); setView('settings'); }}>הגדרות</button>
                     <button onClick={() => { setMenuOpen(false); setView('trash'); }}>אשפה</button>

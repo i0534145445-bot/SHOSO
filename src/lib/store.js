@@ -47,7 +47,7 @@ export const DEFAULT_READER = {
   justify: false,
   hyphenation: true,
   mode: 'scroll', // 'scroll' | 'paginated'
-  maxWidth: 720,
+  maxWidth: 900,
 };
 
 const DEFAULT_STATE = {
@@ -206,7 +206,7 @@ export async function bootstrap() {
   patch.reader.fontSize = num(patch.reader.fontSize, 18, 12, 32);
   patch.reader.lineHeight = num(patch.reader.lineHeight, 1.7, 1.2, 2.4);
   patch.reader.margins = num(patch.reader.margins, 48, 0, 120);
-  patch.reader.maxWidth = num(patch.reader.maxWidth, 720, 480, 1100);
+  patch.reader.maxWidth = num(patch.reader.maxWidth, 900, 480, 1100);
   if (!READER_THEMES.includes(patch.reader.theme)) patch.reader.theme = 'dark';
   if (!['scroll', 'paginated'].includes(patch.reader.mode)) patch.reader.mode = 'scroll';
   if (!patch.sort || typeof patch.sort !== 'object' || !patch.sort.key) {

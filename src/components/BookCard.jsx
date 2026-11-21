@@ -44,7 +44,7 @@ export default function BookCard({ book, from = 'books' }) {
           {book.size ? `, ${formatSize(book.size)}` : ''}
         </p>
 
-        <div className={`row-rail ${percent > 0 ? '' : 'hidden'}`} title={percent > 0 ? `${percent}%` : ''}>
+        <div className="row-rail" title={percent > 0 ? `${percent}%` : 'לא התחלת לקרוא'}>
           <span style={{ width: `${percent}%` }} />
         </div>
       </div>

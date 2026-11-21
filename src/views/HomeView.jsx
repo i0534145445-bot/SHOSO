@@ -39,21 +39,13 @@ export default function HomeView() {
 
   return (
     <div className="home-view">
-      {inProgress.length > 0 ? (
+      {inProgress.length > 0 && (
         <>
           <h2 className="section-title">המשך קריאה</h2>
           <div className="book-list">
             {inProgress.map((b) => <BookCard key={b.id} book={b} from="home" />)}
           </div>
         </>
-      ) : (
-        <div className="empty-state small">
-          <IconReadingNow size={40} />
-          <p>אין ספרים בהמשך קריאה. פתח ספר מהספרייה וההתקדמות תופיע כאן.</p>
-          <div className="empty-actions">
-            <button className="btn ghost small" onClick={() => setView('books')}>לספרייה</button>
-          </div>
-        </div>
       )}
 
       {rest.length > 0 && (
