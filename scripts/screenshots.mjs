@@ -100,7 +100,7 @@ try {
     await page.mouse.move(700, 450);
     await page.waitForTimeout(700);
     // real reading progress so "Reading Now" is meaningful later
-    await page.mouse.wheel(0, 2400);
+    await page.mouse.wheel(0, 620);
     await page.waitForTimeout(1400);
     await page.mouse.move(700, 450);
     await shot('05-reader-night');

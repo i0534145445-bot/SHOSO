@@ -1160,7 +1160,7 @@ a { color: var(--teal-light); }
 
 .toasts {
   position: fixed;
-  bottom: 20px;
+  bottom: 64px;
   inset-inline-start: 20px;
   display: flex;
   flex-direction: column;
