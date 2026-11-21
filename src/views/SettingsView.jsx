@@ -1,34 +1,27 @@
 import React, { useState } from 'react';
-import { useStore, setTheme, setAccent, updateReader, toast, setState } from '../lib/store.js';
-import { FONT_FAMILIES } from '../lib/store.js';
+import {
+  useStore, setTheme, updateReader, toast, setState, getState, COLOR_MODES,
+  FONT_FAMILIES,
+} from '../lib/store.js';
 import { createDemoBooks } from '../lib/demo.js';
-import { IconSun, IconMoon, IconSparkle, IconBook } from '../lib/icons.jsx';
+import { IconSun, IconMoon, IconSparkle, IconTrash, IconBooksDocs } from '../lib/icons.jsx';
 import { appInfo } from '../lib/platform.js';
-
-const ACCENTS = [
-  { id: 'violet', label: 'סגול', color: '#8b5cf6' },
-  { id: 'emerald', label: 'ירוק', color: '#10b981' },
-  { id: 'amber', label: 'ענבר', color: '#f59e0b' },
-  { id: 'rose', label: 'ורוד', color: '#f43f5e' },
-  { id: 'sky', label: 'שמיים', color: '#0ea5e9' },
-];
 
 export default function SettingsView() {
   const theme = useStore((s) => s.theme);
-  const accent = useStore((s) => s.accent);
   const reader = useStore((s) => s.reader);
+  const layout = useStore((s) => s.layout);
   const bookCount = useStore((s) => s.books.length);
+  const trashCount = useStore((s) => s.trash.length);
   const [loadingDemo, setLoadingDemo] = useState(false);
 
   const loadDemo = async () => {
     setLoadingDemo(true);
     try {
-      const { default: store } = await import('../lib/store.js');
       const demo = await createDemoBooks();
-      // Merge demo books via internal merge path: use setState + persist
-      const existing = new Map(store.getState().books.map((b) => [b.id, b]));
+      const existing = new Map(getState().books.map((b) => [b.id, b]));
       demo.forEach((b) => existing.set(b.id, b));
-      store.setState({ books: [...existing.values()] });
+      setState({ books: [...existing.values()] });
       toast(`נטענו ${demo.length} ספרי דמו – פתח אותם מהספרייה`, 'success');
     } catch (err) {
       toast(`שגיאה בטעינת דמו: ${err.message}`, 'error');
@@ -53,17 +46,20 @@ export default function SettingsView() {
           </div>
         </div>
         <div className="setting-row">
-          <span>צבע מבטא</span>
-          <div className="accent-row">
-            {ACCENTS.map((a) => (
-              <button
-                key={a.id}
-                className={`accent-dot ${accent === a.id ? 'active' : ''}`}
-                style={{ background: a.color }}
-                title={a.label}
-                onClick={() => setAccent(a.id)}
-              />
-            ))}
+          <span>פריסת ספרייה</span>
+          <div className="seg">
+            <button
+              className={layout === 'list' ? 'active' : ''}
+              onClick={() => setState({ layout: 'list' })}
+            >
+              רשימה
+            </button>
+            <button
+              className={layout === 'grid' ? 'active' : ''}
+              onClick={() => setState({ layout: 'grid' })}
+            >
+              כריכות
+            </button>
           </div>
         </div>
       </section>
@@ -71,11 +67,11 @@ export default function SettingsView() {
       <section className="settings-card">
         <h2>קריאה (ברירת מחדל)</h2>
         <div className="setting-row">
-          <span>ערכת נושא בקורא</span>
+          <span>מצב צבע</span>
           <div className="seg">
-            {['light', 'dark', 'sepia', 'night'].map((t) => (
-              <button key={t} className={reader.theme === t ? 'active' : ''} onClick={() => updateReader({ theme: t })}>
-                {t === 'light' ? 'בהיר' : t === 'dark' ? 'כהה' : t === 'sepia' ? 'ספיה' : 'לילה'}
+            {COLOR_MODES.map((m) => (
+              <button key={m.id} className={reader.theme === m.id ? 'active' : ''} onClick={() => updateReader({ theme: m.id })}>
+                {m.label}
               </button>
             ))}
           </div>
@@ -94,21 +90,48 @@ export default function SettingsView() {
           <span>ריווח שורות: {reader.lineHeight}</span>
           <input type="range" min="1.2" max="2.4" step="0.1" value={reader.lineHeight} onChange={(e) => updateReader({ lineHeight: Number(e.target.value) })} />
         </div>
+        <div className="setting-row">
+          <span>שוליים: {reader.margins}px</span>
+          <input type="range" min="0" max="120" step="4" value={reader.margins} onChange={(e) => updateReader({ margins: Number(e.target.value) })} />
+        </div>
+      </section>
+
+      <section className="settings-card">
+        <h2>ספרייה</h2>
+        <div className="setting-row">
+          <span><IconBooksDocs size={16} /> ספרים בספרייה</span>
+          <strong>{bookCount}</strong>
+        </div>
+        <div className="setting-row">
+          <span><IconTrash size={16} /> ספרים באשפה</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <strong>{trashCount}</strong>
+            <button className="btn ghost small" onClick={() => setState({ view: 'trash' })}>פתח אשפה</button>
+          </div>
+        </div>
       </section>
 
       <section className="settings-card">
         <h2>ספרי דמו</h2>
-        <p className="dim">אין קבצים? טען שלושה ספרי דמו שנוצרים בדפדפן – EPUB אמיתי בעברית, TXT באנגלית ו-FB2 בעברית. הם מפעילים את כל מנועי הקריאה.</p>
+        <p className="dim">
+          אין קבצים? טען שלושה ספרי דמו שנוצרים בדפדפן – EPUB אמיתי בעברית, TXT באנגלית
+          ו-FB2 בעברית. הם מפעילים את כל מנועי הקריאה.
+        </p>
         <button className="btn primary" onClick={loadDemo} disabled={loadingDemo}>
           <IconSparkle size={16} /> {loadingDemo ? 'טוען…' : 'טען ספרי דמו'}
         </button>
-        <p className="dim small">ספרייה נוכחית: {bookCount} ספרים · מצב: {appInfo.desktop ? 'אפליקציית Windows (Electron)' : 'דפדפן (מצב דמו)'}</p>
+        <p className="dim small" style={{ marginTop: 12 }}>
+          ספרייה נוכחית: {bookCount} ספרים · מצב: {appInfo.desktop ? 'אפליקציית Windows (Electron)' : 'דפדפן (מצב דמו)'}
+        </p>
       </section>
 
       <section className="settings-card">
         <h2>אודות</h2>
-        <p><strong>SHOSO Books</strong> – קורא ספרים שולחני ל-Windows, חלופה ל-Readera לאנדרואיד.</p>
-        <p className="dim">פורמטים: EPUB · PDF · TXT · FB2 · HTML · MD. כל הנתונים נשארים על המחשב – אין שרת ואין חשבון.</p>
+        <p><strong>SHOSO Books</strong> – קורא ספרים שולחני ל-Windows בעיצוב Readera.</p>
+        <p className="dim">
+          פורמטים: EPUB · PDF · TXT · FB2 · HTML · MD. כל הנתונים נשארים על המחשב –
+          אין שרת ואין חשבון.
+        </p>
         <p className="dim small">גרסה {appInfo.version} · Electron {appInfo.electron || '—'}</p>
       </section>
     </div>

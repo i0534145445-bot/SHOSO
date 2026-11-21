@@ -1,9 +1,10 @@
 import React from 'react';
-import { useStore, openBook } from '../lib/store.js';
+import { useStore, openBookFrom } from '../lib/store.js';
 import { formatRelative, formatReadingTime } from '../lib/format.js';
 import { IconHistory } from '../lib/icons.jsx';
 import Cover from '../components/Cover.jsx';
 
+/** Reading history — Readera keeps this alongside "Reading Now". */
 export default function HistoryView() {
   const recent = useStore((s) => s.recent);
   const progress = useStore((s) => s.progress);
@@ -16,29 +17,34 @@ export default function HistoryView() {
 
   if (!items.length) {
     return (
-      <div className="empty-state small">
-        <IconHistory size={40} />
-        <p>עדיין לא קראת ספרים.<br />פתח ספר כדי להתחיל – ההתקדמות תישמר אוטומטית.</p>
+      <div className="empty-state">
+        <div className="empty-icon"><IconHistory size={52} /></div>
+        <h2>אין היסטוריית קריאה</h2>
+        <p>פתח ספר כדי להתחיל – ההתקדמות נשמרת אוטומטית.</p>
       </div>
     );
   }
 
   return (
-    <div className="history-list">
+    <div className="book-list">
       {items.map(({ book, progress: p, time }) => (
-        <button key={book.id} className="history-item" onClick={() => openBook(book.id)}>
-          <Cover book={book} size="sm" />
-          <div className="history-info">
-            <strong>{book.title}</strong>
-            <span>{book.author} · {book.format}</span>
-            <div className="mini-bar"><span style={{ width: `${p?.percent || 0}%` }} /></div>
+        <article key={book.id} className="book-row" onClick={() => openBookFrom(book.id, 'history')}>
+          <div className="row-cover"><Cover book={book} size="sm" /></div>
+          <div className="row-main">
+            <h3>{book.title}</h3>
+            <p>{book.author} · {book.format}</p>
+            <p className="row-format">
+              {formatRelative(p?.updatedAt)}
+              {time > 0 ? ` · ${formatReadingTime(time)}` : ''}
+            </p>
+            <div className="row-rail">
+              <span style={{ width: `${Math.round(p?.percent || 0)}%` }} />
+            </div>
+            <div className="row-actions" style={{ justifyContent: 'flex-end' }}>
+              <span className="dim small">{Math.round(p?.percent || 0)}%</span>
+            </div>
           </div>
-          <div className="history-meta">
-            <span>{Math.round(p?.percent || 0)}%</span>
-            <span className="dim">{formatRelative(p?.updatedAt)}</span>
-            {time > 0 && <span className="dim">{formatReadingTime(time)}</span>}
-          </div>
-        </button>
+        </article>
       ))}
     </div>
   );

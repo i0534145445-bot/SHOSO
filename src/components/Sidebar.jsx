@@ -1,81 +1,98 @@
-import React from 'react';
-import { useStore, setView, importFolders, importFiles, toggleSidebar } from '../lib/store.js';
+import React, { useEffect } from 'react';
 import {
-  IconHome, IconLibrary, IconAuthor, IconFormat, IconFolder, IconHeart,
-  IconHistory, IconCollection, IconSettings, IconPlus, IconClose,
+  useStore, setView, importFolders, importFiles, toggleSidebar, toast,
+} from '../lib/store.js';
+import {
+  IconReadingNow, IconBooksDocs, IconStar, IconClock, IconDoubleCheck,
+  IconAuthor, IconCollection, IconFormat, IconFolder, IconTrash,
+  IconSettings, IconFeedback, IconDownload,
 } from '../lib/icons.jsx';
 import Logo from './Logo.jsx';
 
-const NAV = [
-  { id: 'home', label: 'בית', icon: IconHome },
-  { id: 'library', label: 'ספרייה', icon: IconLibrary },
+/**
+ * Readera's navigation drawer — an overlay sheet that slides in from the start
+ * edge with the exact section list Readera uses:
+ *   Reading Now · Books & documents · Favorites · To Read · Have Read ·
+ *   Trash ── Authors · Series/Collections · Formats · Folders · Downloads ──
+ *   Settings · Send feedback
+ */
+const SECTIONS = [
+  { id: 'home', label: 'קורא עכשיו', icon: IconReadingNow },
+  { id: 'books', label: 'ספרים ומסמכים', icon: IconBooksDocs },
+  { id: 'favorites', label: 'מועדפים', icon: IconStar },
+  { id: 'toread', label: 'לקריאה', icon: IconClock },
+  { id: 'haveread', label: 'נקראו', icon: IconDoubleCheck },
+  { id: 'trash', label: 'אשפה', icon: IconTrash },
+  { sep: true },
   { id: 'authors', label: 'מחברים', icon: IconAuthor },
-  { id: 'formats', label: 'פורמטים', icon: IconFormat },
-  { id: 'favorites', label: 'מועדפים', icon: IconHeart },
-  { id: 'history', label: 'היסטוריה', icon: IconHistory },
   { id: 'collections', label: 'מדפים', icon: IconCollection },
+  { id: 'formats', label: 'פורמטים', icon: IconFormat },
   { id: 'folders', label: 'תיקיות', icon: IconFolder },
+  { id: 'downloads', label: 'הורדות', icon: IconDownload },
+  { sep: true },
+  { id: 'settings', label: 'הגדרות', icon: IconSettings },
+  { id: 'feedback', label: 'שליחת משוב', icon: IconFeedback },
 ];
 
 export default function Sidebar() {
+  const open = useStore((s) => s.drawerOpen);
   const view = useStore((s) => s.view);
-  const collapsed = useStore((s) => s.sidebarCollapsed);
-  const bookCount = useStore((s) => s.books.length);
-  const favCount = useStore((s) => s.favorites.length);
-  const colCount = useStore((s) => s.collections.length);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') toggleSidebar(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  if (!open) return null;
+
+  const go = (item) => {
+    toggleSidebar(false);
+    if (item.id === 'feedback') {
+      toast('תודה! אפשר לשלוח משוב לכתובת feedback@shoso.app', 'success');
+      return;
+    }
+    if (item.id === 'downloads') {
+      importFiles();
+      return;
+    }
+    if (item.id === 'folders') {
+      importFolders();
+      return;
+    }
+    setView(item.id === 'books' ? 'books' : item.id);
+  };
+
+  const active = view === 'library' ? 'books' : view;
 
   return (
-    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
-      <div className="brand">
-        <Logo size={34} />
-        {!collapsed && (
-          <div className="brand-text">
-            <strong>SHOSO Books</strong>
-            <span>קורא ספרים שולחני</span>
-          </div>
-        )}
-        <button className="icon-btn sidebar-toggle" onClick={toggleSidebar} title={collapsed ? 'הרחב' : 'כווץ'}>
-          <IconClose size={16} />
-        </button>
-      </div>
-
-      {!collapsed && (
-        <>
-          <div className="sidebar-actions">
-            <button className="btn primary block" onClick={importFolders}>
-              <IconPlus size={16} /> הוסף תיקיות
-            </button>
-            <button className="btn ghost block" onClick={importFiles}>
-              <IconPlus size={16} /> הוסף קבצים
-            </button>
-          </div>
-
-          <nav className="nav">
-            {NAV.map((item) => {
-              const Icon = item.icon;
-              const badge = item.id === 'library' ? bookCount : item.id === 'favorites' ? favCount : item.id === 'collections' ? colCount : null;
-              return (
-                <button
-                  key={item.id}
-                  className={`nav-item ${view === item.id ? 'active' : ''}`}
-                  onClick={() => setView(item.id)}
-                >
-                  <Icon size={19} />
-                  <span>{item.label}</span>
-                  {badge !== null && badge > 0 && <span className="nav-badge">{badge}</span>}
-                </button>
-              );
-            })}
-          </nav>
-
-          <div className="sidebar-foot">
-            <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')}>
-              <IconSettings size={19} />
-              <span>הגדרות</span>
-            </button>
-          </div>
-        </>
-      )}
-    </aside>
+    <>
+      <div className="drawer-scrim" onClick={() => toggleSidebar(false)} />
+      <aside className="drawer" role="dialog" aria-label="ניווט">
+        <div className="drawer-head">
+          <Logo size={26} />
+          <strong>SHOSO Books</strong>
+        </div>
+        <nav className="drawer-nav">
+          {SECTIONS.map((item, i) => {
+            if (item.sep) return <div className="nav-sep" key={`sep-${i}`} />; // eslint-disable-line react/no-array-index-key
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                className={`nav-item ${active === item.id ? 'active' : ''}`}
+                onClick={() => go(item)}
+              >
+                <Icon size={21} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </aside>
+    </>
   );
 }

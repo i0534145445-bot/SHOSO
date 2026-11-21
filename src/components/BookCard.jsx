@@ -1,89 +1,121 @@
-import React from 'react';
-import { useStore, openBook, toggleFavorite, setView, addBookmark } from '../lib/store.js';
-import { formatRelative, formatSize } from '../lib/format.js';
-import { IconHeart, IconBook, IconInfo, IconClock, IconBookmark, IconMore, IconCheck } from '../lib/icons.jsx';
+import React, { useState } from 'react';
+import {
+  useStore, openBookFrom, toggleFavorite, toggleToRead, toggleHaveRead,
+  setView, removeBook,
+} from '../lib/store.js';
+import { formatSize } from '../lib/format.js';
+import {
+  IconStar, IconClock, IconDoubleCheck, IconBars, IconMore,
+  IconInfo, IconTrash, IconCollection,
+} from '../lib/icons.jsx';
 import Cover from './Cover.jsx';
 
-export default function BookCard({ book }) {
+/**
+ * One library row, pixel-matched to Readera:
+ *   cover 84×118 · title · author · "FORMAT, size" · hairline rail · 5 actions
+ * The five actions are the exact set Readera puts on every row:
+ *   star (favourite) · clock (to read) · double-check (have read) ·
+ *   reading position · overflow.
+ */
+export default function BookCard({ book, from = 'books' }) {
   const favorites = useStore((s) => s.favorites);
+  const toRead = useStore((s) => s.toRead);
   const progress = useStore((s) => s.progress[book.id]);
+  const [menu, setMenu] = useState(false);
+
   const isFav = favorites.includes(book.id);
-  const percent = progress?.percent || 0;
+  const isToRead = toRead.includes(book.id);
+  const percent = Math.round(progress?.percent || 0);
+  const isRead = Boolean(progress?.finished) || percent >= 100;
+
+  const open = () => openBookFrom(book.id, from);
 
   return (
-    <article className="book-card" onDoubleClick={() => openBook(book.id)}>
-      <div className="book-cover-wrap" onClick={() => openBook(book.id)} title="פתח לקריאה">
-        <Cover book={book} size="md" />
-        {percent > 0 && percent < 100 && (
-          <div className="progress-bar">
-            <span style={{ width: `${percent}%` }} />
-          </div>
-        )}
-        {percent >= 100 && <span className="finished-badge">נקרא</span>}
-        <button
-          className={`fav-btn ${isFav ? 'active' : ''}`}
-          onClick={(e) => { e.stopPropagation(); toggleFavorite(book.id); }}
-          title={isFav ? 'הסר ממועדפים' : 'הוסף למועדפים'}
-        >
-          <IconHeart size={16} filled={isFav} />
-        </button>
+    <article className="book-row" onDoubleClick={open}>
+      <div className="row-cover" onClick={open} title="פתח לקריאה">
+        <Cover book={book} size="sm" />
       </div>
-      <div className="book-meta">
-        <h3 className="book-title" onClick={() => openBook(book.id)} title={book.title}>{book.title}</h3>
-        <p className="book-author">{book.author}</p>
-        <div className="book-tags">
-          <span className="tag">{book.format}</span>
-          {book.pageCount > 0 && <span className="tag">{book.pageCount} עמודים</span>}
-          {percent > 0 && <span className="tag accent">{Math.round(percent)}%</span>}
+
+      <div className="row-main" onClick={open} role="presentation">
+        <h3 title={book.title}>{book.title}</h3>
+        <p title={book.author}>{book.author || 'מחבר לא ידוע'}</p>
+        <p className="row-format">
+          {book.format}
+          {book.size ? `, ${formatSize(book.size)}` : ''}
+        </p>
+
+        <div className={`row-rail ${percent > 0 ? '' : 'hidden'}`} title={percent > 0 ? `${percent}%` : ''}>
+          <span style={{ width: `${percent}%` }} />
         </div>
-        <div className="book-actions">
-          <button className="btn small primary" onClick={() => openBook(book.id)}>
-            <IconBook size={14} /> {percent > 0 && percent < 100 ? 'המשך' : 'קרא'}
+      </div>
+
+      <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+        <button
+          className={`icon-btn ${isFav ? 'active' : ''}`}
+          title={isFav ? 'הסר ממועדפים' : 'הוסף למועדפים'}
+          onClick={() => toggleFavorite(book.id)}
+        >
+          <IconStar size={19} filled={isFav} />
+        </button>
+        <button
+          className={`icon-btn ${isToRead ? 'active' : ''}`}
+          title={isToRead ? 'הסר מהרשימה "לקריאה"' : 'הוסף לרשימת "לקריאה"'}
+          onClick={() => toggleToRead(book.id)}
+        >
+          <IconClock size={19} />
+        </button>
+        <button
+          className={`icon-btn ${isRead ? 'active' : ''}`}
+          title={isRead ? 'סמן כלא נקרא' : 'סמן כנקרא'}
+          onClick={() => toggleHaveRead(book.id)}
+        >
+          <IconDoubleCheck size={19} />
+        </button>
+        <button className="icon-btn" title="פתח לקריאה" onClick={open}>
+          <IconBars size={19} />
+        </button>
+        <div style={{ position: 'relative' }}>
+          <button
+            className="icon-btn"
+            title="עוד אפשרויות"
+            onClick={() => setMenu((v) => !v)}
+          >
+            <IconMore size={19} />
           </button>
-          <button className="btn small ghost" onClick={() => setView('book', book.id)} title="פרטים">
-            <IconInfo size={14} />
-          </button>
+          {menu && (
+            <>
+              <div
+                style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+                onClick={() => setMenu(false)}
+              />
+              <div className="row-menu">
+                <button onClick={() => { setMenu(false); setView('book', book.id); }}>
+                  <IconInfo size={16} /> פרטי הספר
+                </button>
+                <button onClick={() => { setMenu(false); setView('collections'); }}>
+                  <IconCollection size={16} /> הוסף למדף
+                </button>
+                <button className="danger" onClick={() => { setMenu(false); removeBook(book.id); }}>
+                  <IconTrash size={16} /> העבר לאשפה
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </article>
   );
 }
 
-export function BookRow({ book }) {
-  const favorites = useStore((s) => s.favorites);
+/** Cover-first tile used by the "thumbnails" library layout. */
+export function BookTile({ book, from = 'books' }) {
   const progress = useStore((s) => s.progress[book.id]);
-  const isFav = favorites.includes(book.id);
-  const percent = progress?.percent || 0;
-
+  const percent = Math.round(progress?.percent || 0);
   return (
-    <article className="book-row" onDoubleClick={() => openBook(book.id)}>
-      <div className="row-cover" onClick={() => openBook(book.id)}>
-        <Cover book={book} size="sm" />
-      </div>
-      <div className="row-main" onClick={() => openBook(book.id)}>
-        <h3>{book.title}</h3>
-        <p>{book.author} · {book.format}</p>
-        {percent > 0 && (
-          <div className="row-progress">
-            <span className="dim">{Math.round(percent)}%</span>
-            <div className="mini-bar"><span style={{ width: `${percent}%` }} /></div>
-          </div>
-        )}
-      </div>
-      <div className="row-actions">
-        <button className={`icon-btn ${isFav ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); toggleFavorite(book.id); }} title={isFav ? 'הסר ממועדפים' : 'הוסף למועדפים'}>
-          <IconHeart size={16} filled={isFav} />
-        </button>
-        <button className={`icon-btn ${percent >= 100 ? 'active' : ''}`} title={percent >= 100 ? 'סמן שלא נקרא' : 'סמן כנקרא'} onClick={() => {}}>
-          <IconCheck size={16} filled={percent >= 100} />
-        </button>
-        <button className="icon-btn" title="סימנייה" onClick={() => addBookmark(book.id, { chapter: 0, scroll: 0, page: 1 })}>
-          <IconBookmark size={16} />
-        </button>
-        <button className="icon-btn" title="עוד אפשרויות">
-          <IconMore size={16} />
-        </button>
-      </div>
-    </article>
+    <button className="book-tile" onClick={() => openBookFrom(book.id, from)}>
+      <Cover book={book} size="md" />
+      <h3 title={book.title}>{book.title}</h3>
+      <span>{percent > 0 ? `${book.author} · ${percent}%` : book.author}</span>
+    </button>
   );
 }

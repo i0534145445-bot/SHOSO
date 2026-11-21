@@ -1,23 +1,26 @@
 import React from 'react';
 import { useStore } from '../lib/store.js';
-import { IconHeart } from '../lib/icons.jsx';
+import { IconStar } from '../lib/icons.jsx';
 import BookCard from '../components/BookCard.jsx';
 
+/** Readera's "Favorites" list. */
 export default function FavoritesView() {
-  const books = useStore((s) => s.books.filter((b) => s.favorites.includes(b.id)));
+  const favorites = useStore((s) => s.favorites);
+  const books = useStore((s) => s.books.filter((b) => favorites.includes(b.id)));
 
   if (!books.length) {
     return (
-      <div className="empty-state small">
-        <IconHeart size={40} />
-        <p>אין ספרים במועדפים עדיין.<br />לחץ על הלב בכרטיס ספר כדי להוסיף.</p>
+      <div className="empty-state">
+        <div className="empty-icon"><IconStar size={52} /></div>
+        <h2>אין מועדפים עדיין</h2>
+        <p>לחץ על כוכב ליד ספר כדי להוסיף אותו לרשימת המועדפים.</p>
       </div>
     );
   }
 
   return (
-    <div className="book-grid">
-      {books.map((b) => <BookCard key={b.id} book={b} />)}
+    <div className="book-list">
+      {books.map((b) => <BookCard key={b.id} book={b} from="favorites" />)}
     </div>
   );
 }

@@ -150,3 +150,79 @@ export const IconMoon = (p) => (
 export const IconSun = (p) => (
   <Svg {...p}><circle cx="12" cy="12" r="4" /><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" /></Svg>
 );
+
+/* ---- Readera icon set ------------------------------------------------- */
+
+/** "Reading Now" – a circular arrow, exactly as in Readera's drawer. */
+export const IconReadingNow = (p) => (
+  <Svg {...p}>
+    <path d="M20 12a8 8 0 1 1-2.4-5.7" />
+    <path d="M20 4.2V9h-4.8" />
+    <path d="M12 9.2v3.4l2.4 1.5" />
+  </Svg>
+);
+
+/** "Books & documents" – open book with two pages. */
+export const IconBooksDocs = (p) => (
+  <Svg {...p}>
+    <path d="M12 6.4C10.6 5.2 8.7 4.6 6.2 4.6H3.4v12.8h2.8c2.5 0 4.4.6 5.8 1.8 1.4-1.2 3.3-1.8 5.8-1.8h2.8V4.6h-2.8c-2.5 0-4.4.6-5.8 1.8Z" />
+    <path d="M12 6.4v12.8" />
+  </Svg>
+);
+
+/** Star – Readera's favourite marker. */
+export const IconStar = ({ filled, ...p }) => (
+  <Svg {...p} fill={filled ? 'currentColor' : 'none'}>
+    <path d="m12 3.6 2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.8l5.9-.8Z" />
+  </Svg>
+);
+
+/** Double check – "Have Read". */
+export const IconDoubleCheck = (p) => (
+  <Svg {...p}>
+    <path d="m2.6 12.6 3.6 3.6L14 8.4" />
+    <path d="m10.2 15.6 1.4 1.4L21.4 7.2" />
+  </Svg>
+);
+
+/** Reading-position bars (fourth icon in Readera's row action strip). */
+export const IconBars = (p) => (
+  <Svg {...p}>
+    <path d="M7 6.5v11" />
+    <path d="M12 4.2v15.6" />
+    <path d="M17 8.4v7.2" />
+  </Svg>
+);
+
+/** Series / label tag. */
+export const IconSeries = (p) => (
+  <Svg {...p}>
+    <path d="M4 6.2A1.6 1.6 0 0 1 5.6 4.6h6.1l7.7 7.7a1.6 1.6 0 0 1 0 2.3l-4.8 4.8a1.6 1.6 0 0 1-2.3 0L4.6 11.7Z" />
+    <path d="M8.6 8.6h.01" />
+  </Svg>
+);
+
+/** Downloads – arrow into a tray. */
+export const IconDownload = (p) => (
+  <Svg {...p}>
+    <path d="M12 4v10.4" />
+    <path d="m8 10.6 4 4 4-4" />
+    <path d="M4.5 17.4v1.4a1.6 1.6 0 0 0 1.6 1.6h11.8a1.6 1.6 0 0 0 1.6-1.6v-1.4" />
+  </Svg>
+);
+
+/** Send feedback – speech bubble. */
+export const IconFeedback = (p) => (
+  <Svg {...p}>
+    <path d="M20.4 12.4c0 3.9-3.8 7-8.4 7-1 0-2-.1-2.9-.4L4.4 20.4l1.4-3.6a6.6 6.6 0 0 1-2.2-4.4c0-3.9 3.8-7 8.4-7s8.4 3.1 8.4 7Z" />
+    <path d="M8.4 12.4h.01M12 12.4h.01M15.6 12.4h.01" />
+  </Svg>
+);
+
+/** Restore from trash. */
+export const IconRestore = (p) => (
+  <Svg {...p}>
+    <path d="M4.6 12a7.4 7.4 0 1 0 2.2-5.2" />
+    <path d="M4.6 4.4V9h4.6" />
+  </Svg>
+);

@@ -5,11 +5,21 @@ import {
 } from '../lib/store.js';
 import { readBookBuffer } from '../lib/platform.js';
 import { parseBookBuffer, searchChapters, renderPdfPage, loadPdf, DETECTED_ONLY_EXT, extOf } from '../lib/parsers.js';
-import { FONT_FAMILIES } from '../lib/store.js';
+import { FONT_FAMILIES, COLOR_MODES } from '../lib/store.js';
 import {
   IconBack, IconToc, IconSearch, IconBookmark, IconFont, IconTts, IconFullscreen,
   IconClose, IconZoomIn, IconZoomOut, IconPlay, IconPause, IconStop, IconCheck,
+  IconMore, IconBars, IconChevron,
 } from '../lib/icons.jsx';
+
+/** Readera's colour-mode swatches. */
+const MODE_SWATCH = {
+  light: { bg: '#fbf7ef', fg: '#3b3833' },
+  sepia: { bg: '#f7e0c7', fg: '#5b4632' },
+  dark: { bg: '#101a1e', fg: '#a9b6ba' },
+  night: { bg: '#000000', fg: '#8d8981' },
+  console: { bg: '#050809', fg: '#3fd15c' },
+};
 
 const TTS_RATES = [0.75, 1, 1.25, 1.5, 2];
 
@@ -257,40 +267,29 @@ export default function Reader() {
 
   return (
     <div className={`reader reader-theme-${readerSettings.theme}`} style={readerStyle} onMouseMove={pokeUi}>
-      {/* Top bar */}
+      {/* Top bar — a single teal strip, exactly like Readera's reader chrome */}
       <div className={`reader-top ${uiVisible ? '' : 'hidden'}`}>
-        <button className="icon-btn" onClick={closeBook} title="חזרה לספרייה (Esc)">
-          <IconBack size={19} />
+        <button className="icon-btn" onClick={closeBook} title="חזרה (Esc)">
+          <IconBack size={21} />
         </button>
         <div className="reader-title">
-          <strong>{parsed?.title || book.title}</strong>
-          <span>{parsed?.author || book.author} · {book.format}</span>
+          <strong>{(parsed?.title || book.title)}</strong>
         </div>
         <div className="reader-actions">
-          {!isPdf && (
-            <>
-              <button className={`icon-btn ${panel === 'toc' ? 'active' : ''}`} onClick={() => setPanel(panel === 'toc' ? null : 'toc')} title="תוכן עניינים (T)">
-                <IconToc size={18} />
-              </button>
-              <button className={`icon-btn ${panel === 'search' ? 'active' : ''}`} onClick={() => setPanel(panel === 'search' ? null : 'search')} title="חיפוש בספר (S)">
-                <IconSearch size={18} />
-              </button>
-              <button className={`icon-btn ${panel === 'bookmarks' ? 'active' : ''}`} onClick={() => setPanel(panel === 'bookmarks' ? null : 'bookmarks')} title="סימניות">
-                <IconBookmark size={18} />
-              </button>
-              <button className="icon-btn" onClick={() => addBookmark(book.id, { chapter: currentChapter, scroll: scrollRef.current?.scrollTop || 0, page: pdfPage })} title="הוסף סימנייה (B)">
-                <IconBookmark size={18} />
-              </button>
-              <button className="icon-btn" onClick={() => (tts.playing ? stopTts() : speakChapter(currentChapter))} title="הקראת טקסט (TTS)">
-                {tts.playing ? <IconStop size={18} /> : <IconTts size={18} />}
-              </button>
-            </>
-          )}
+          <button className={`icon-btn ${panel === 'search' ? 'active' : ''}`} onClick={() => setPanel(panel === 'search' ? null : 'search')} title="חיפוש בספר (S)">
+            <IconSearch size={20} />
+          </button>
+          <button className={`icon-btn ${panel === 'toc' ? 'active' : ''}`} onClick={() => setPanel(panel === 'toc' ? null : 'toc')} title="תוכן עניינים (T)">
+            <IconToc size={20} />
+          </button>
+          <button className={`icon-btn ${panel === 'bookmarks' ? 'active' : ''}`} onClick={() => setPanel(panel === 'bookmarks' ? null : 'bookmarks')} title="סימניות">
+            <IconBookmark size={20} filled={bookmarks.length > 0} />
+          </button>
           <button className={`icon-btn ${panel === 'settings' ? 'active' : ''}`} onClick={() => setPanel(panel === 'settings' ? null : 'settings')} title="הגדרות קריאה (A)">
-            <IconFont size={18} />
+            <IconFont size={20} />
           </button>
           <button className="icon-btn" onClick={() => window.shoso?.toggleFullscreen?.()} title="מסך מלא (F)">
-            <IconFullscreen size={18} />
+            <IconFullscreen size={19} />
           </button>
         </div>
       </div>
@@ -387,55 +386,138 @@ export default function Reader() {
 
             {panel === 'settings' && (
               <div className="reader-settings">
-                <label>
-                  ערכת נושא
-                  <div className="seg">
-                    {['light', 'dark', 'sepia', 'night'].map((t) => (
-                      <button key={t} className={readerSettings.theme === t ? 'active' : ''} onClick={() => updateReader({ theme: t })}>
-                        {t === 'light' ? 'בהיר' : t === 'dark' ? 'כהה' : t === 'sepia' ? 'ספיה' : 'לילה'}
+                <div className="rs-group">מצב צבע</div>
+                <div className="rs-modes">
+                  {COLOR_MODES.map((m) => {
+                    const sw = MODE_SWATCH[m.id] || MODE_SWATCH.dark;
+                    return (
+                      <button
+                        key={m.id}
+                        className={`rs-mode ${readerSettings.theme === m.id ? 'active' : ''}`}
+                        onClick={() => updateReader({ theme: m.id })}
+                        title={m.label}
+                      >
+                        <span className="rs-swatch" style={{ background: sw.bg }}>
+                          <span style={{ width: 13, height: 13, borderRadius: '50%', background: sw.fg, display: 'block' }} />
+                        </span>
+                        <span>{m.label}</span>
                       </button>
-                    ))}
+                    );
+                  })}
+                </div>
+
+                <div className="rs-group">כיוון דפדוף</div>
+                <div className="seg">
+                  <button
+                    className={readerSettings.mode === 'scroll' ? 'active' : ''}
+                    onClick={() => updateReader({ mode: 'scroll' })}
+                  >
+                    אנכי
+                  </button>
+                  <button
+                    className={readerSettings.mode === 'paginated' ? 'active' : ''}
+                    onClick={() => updateReader({ mode: 'paginated' })}
+                  >
+                    אופקי
+                  </button>
+                </div>
+
+                <div className="rs-group">גופן</div>
+                <select
+                  className="rs-select"
+                  value={readerSettings.fontFamily}
+                  onChange={(e) => updateReader({ fontFamily: e.target.value })}
+                >
+                  {FONT_FAMILIES.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </select>
+
+                <div className="rs-group">גודל גופן</div>
+                <div className="rs-row">
+                  <input
+                    type="range"
+                    min="12"
+                    max="32"
+                    value={readerSettings.fontSize}
+                    onChange={(e) => updateReader({ fontSize: Number(e.target.value) })}
+                  />
+                  <div className="rs-stepper">
+                    <button onClick={() => updateReader({ fontSize: Math.max(12, readerSettings.fontSize - 1) })}>−</button>
+                    <em>{readerSettings.fontSize}</em>
+                    <button onClick={() => updateReader({ fontSize: Math.min(32, readerSettings.fontSize + 1) })}>+</button>
                   </div>
-                </label>
-                <label>
-                  גופן
-                  <select value={readerSettings.fontFamily} onChange={(e) => updateReader({ fontFamily: e.target.value })}>
-                    {FONT_FAMILIES.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
-                  </select>
-                </label>
-                <label>
-                  גודל גופן: {readerSettings.fontSize}px
-                  <input type="range" min="12" max="32" value={readerSettings.fontSize} onChange={(e) => updateReader({ fontSize: Number(e.target.value) })} />
-                </label>
-                <label>
-                  ריווח שורות: {readerSettings.lineHeight}
-                  <input type="range" min="1.2" max="2.4" step="0.1" value={readerSettings.lineHeight} onChange={(e) => updateReader({ lineHeight: Number(e.target.value) })} />
-                </label>
-                <label>
-                  שוליים: {readerSettings.margins}px
-                  <input type="range" min="0" max="120" step="4" value={readerSettings.margins} onChange={(e) => updateReader({ margins: Number(e.target.value) })} />
-                </label>
-                <label>
-                  רוחב עמוד: {readerSettings.maxWidth}px
-                  <input type="range" min="480" max="1100" step="20" value={readerSettings.maxWidth} onChange={(e) => updateReader({ maxWidth: Number(e.target.value) })} />
-                </label>
-                <label className="check">
-                  <input type="checkbox" checked={readerSettings.justify} onChange={(e) => updateReader({ justify: e.target.checked })} />
-                  יישור דו-צדדי (Justify)
-                </label>
-                <label className="check">
-                  <input type="checkbox" checked={readerSettings.hyphenation} onChange={(e) => updateReader({ hyphenation: e.target.checked })} />
-                  מקפים (Hyphenation)
-                </label>
-                <label>
-                  מהירות הקראה (TTS)
-                  <div className="seg">
-                    {TTS_RATES.map((r) => (
-                      <button key={r} className={tts.rate === r ? 'active' : ''} onClick={() => setTts((t) => ({ ...t, rate: r }))}>
-                        {r}x
-                      </button>
-                    ))}
+                </div>
+
+                <div className="rs-group">ריווח שורות</div>
+                <div className="rs-row">
+                  <input
+                    type="range"
+                    min="1.2"
+                    max="2.4"
+                    step="0.1"
+                    value={readerSettings.lineHeight}
+                    onChange={(e) => updateReader({ lineHeight: Number(e.target.value) })}
+                  />
+                  <div className="rs-stepper">
+                    <button onClick={() => updateReader({ lineHeight: Math.max(1.2, Number((readerSettings.lineHeight - 0.1).toFixed(1))) })}>−</button>
+                    <em>{readerSettings.lineHeight}</em>
+                    <button onClick={() => updateReader({ lineHeight: Math.min(2.4, Number((readerSettings.lineHeight + 0.1).toFixed(1))) })}>+</button>
                   </div>
+                </div>
+
+                <div className="rs-group">יישור טקסט</div>
+                <div className="seg">
+                  <button className={!readerSettings.justify ? 'active' : ''} onClick={() => updateReader({ justify: false })}>טבעי</button>
+                  <button className={readerSettings.justify ? 'active' : ''} onClick={() => updateReader({ justify: true })}>דו-צדדי</button>
+                </div>
+
+                <div className="rs-group">שולי עמוד</div>
+                <input
+                  type="range"
+                  min="0"
+                  max="120"
+                  step="4"
+                  value={readerSettings.margins}
+                  onChange={(e) => updateReader({ margins: Number(e.target.value) })}
+                />
+
+                <div className="rs-group">רוחב טור</div>
+                <input
+                  type="range"
+                  min="480"
+                  max="1100"
+                  step="20"
+                  value={readerSettings.maxWidth}
+                  onChange={(e) => updateReader({ maxWidth: Number(e.target.value) })}
+                />
+
+                <div className="rs-divider" />
+
+                <button className="rs-link" onClick={() => setPanel('toc')}>
+                  <IconToc size={18} /> תוכן העניינים
+                  <IconChevron size={16} style={{ marginInlineStart: 'auto', opacity: 0.6 }} />
+                </button>
+                <button className="rs-link" onClick={() => setPanel('bookmarks')}>
+                  <IconBookmark size={18} /> סימניות, ציטוטים והערות
+                  <IconChevron size={16} style={{ marginInlineStart: 'auto', opacity: 0.6 }} />
+                </button>
+
+                <div className="rs-group">הקראה (TTS)</div>
+                <div className="seg">
+                  {TTS_RATES.map((r) => (
+                    <button key={r} className={tts.rate === r ? 'active' : ''} onClick={() => setTts((t) => ({ ...t, rate: r }))}>
+                      {r}x
+                    </button>
+                  ))}
+                </div>
+
+                <div className="rs-group">כללי</div>
+                <label className="rs-row" style={{ cursor: 'pointer' }}>
+                  <span>מקפים אוטומטיים</span>
+                  <input
+                    type="checkbox"
+                    checked={readerSettings.hyphenation}
+                    onChange={(e) => updateReader({ hyphenation: e.target.checked })}
+                  />
                 </label>
               </div>
             )}
@@ -510,24 +592,35 @@ export default function Reader() {
         </div>
       </div>
 
-      {/* Bottom bar */}
+      {/* Bottom bar — "2 מתוך 3" plus the progress line, like Readera */}
       <div className={`reader-bottom ${uiVisible ? '' : 'hidden'}`}>
+        <span className="page-label">
+          {isPdf
+            ? `${pdfPage} מתוך ${parsed?.pageCount || '?'}`
+            : `${currentChapter + 1} מתוך ${parsed?.chapters?.length || '?'}`}
+        </span>
         <div className="reader-progress">
-          <span>{percent}%</span>
           <div className="progress-track">
-            <span style={{ width: `${percent}%` }} />
+            <span style={{ width: `${isPdf ? percent : Math.max(2, percent)}%` }} />
           </div>
-          <span>
-            {isPdf ? `עמוד ${pdfPage}/${parsed?.pageCount || '?'}` : `פרק ${(currentChapter + 1)}/${parsed?.chapters?.length || '?'}`}
-          </span>
+          <span className="page-label dim" style={{ color: 'rgba(255,255,255,.8)' }}>{percent}%</span>
         </div>
-        {tts.playing && (
-          <div className="tts-bar">
-            <IconTts size={16} />
-            <span className="tts-text">{ttsText}…</span>
-            <button className="icon-btn" onClick={stopTts}><IconStop size={15} /></button>
-          </div>
+        {!isPdf && (
+          <button
+            className="icon-btn"
+            onClick={() => (tts.playing ? stopTts() : speakChapter(currentChapter))}
+            title="הקראת טקסט (TTS)"
+          >
+            {tts.playing ? <IconStop size={18} /> : <IconTts size={18} />}
+          </button>
         )}
+        <button
+          className="icon-btn"
+          onClick={() => addBookmark(book.id, { chapter: currentChapter, scroll: scrollRef.current?.scrollTop || 0, page: pdfPage })}
+          title="הוסף סימנייה (B)"
+        >
+          <IconBars size={18} />
+        </button>
       </div>
     </div>
   );

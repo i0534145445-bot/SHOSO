@@ -19,13 +19,20 @@ import CollectionDetail from '../views/CollectionDetail.jsx';
 import FoldersView from '../views/FoldersView.jsx';
 import BookDetail from '../views/BookDetail.jsx';
 import SettingsView from '../views/SettingsView.jsx';
+import ToReadView from '../views/ToReadView.jsx';
+import HaveReadView from '../views/HaveReadView.jsx';
+import TrashView from '../views/TrashView.jsx';
 import DropOverlay from './DropOverlay.jsx';
 import ShortcutsDialog from './ShortcutsDialog.jsx';
 import { handleDrop } from '../lib/store.js';
 
 const VIEWS = {
   home: HomeView,
+  books: LibraryView,
   library: LibraryView,
+  toread: ToReadView,
+  haveread: HaveReadView,
+  trash: TrashView,
   authors: AuthorsView,
   author: AuthorDetail,
   formats: FormatsView,
@@ -137,13 +144,13 @@ export default function App() {
 
   return (
     <div className="app">
-      <Sidebar />
+      <TopBar />
       <main className="main">
-        <TopBar />
         <div className="view-scroll" key={view}>
           <View />
         </div>
       </main>
+      <Sidebar />
       {scanStatus?.phase === 'scanning' && (
         <div className="scan-bar">
           <div className="spinner small" />

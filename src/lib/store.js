@@ -22,7 +22,15 @@ import {
 } from './platform.js';
 import { bookHaystack, matchesQuery, collate, normalize } from './format.js';
 
-export const READER_THEMES = ['light', 'dark', 'sepia', 'night'];
+export const READER_THEMES = ['light', 'sepia', 'dark', 'night', 'console'];
+/** Readera colour modes, in Readera's own order. */
+export const COLOR_MODES = [
+  { id: 'light', label: 'רגיל' },
+  { id: 'sepia', label: 'ספיה' },
+  { id: 'dark', label: 'לילה' },
+  { id: 'night', label: 'שחור' },
+  { id: 'console', label: 'קונסול' },
+];
 export const FONT_FAMILIES = [
   { id: 'serif', label: 'סריף (ברירת מחדל)', value: "Georgia, 'Times New Roman', 'David', serif" },
   { id: 'sans', label: 'ללא סריף', value: "'Segoe UI', 'Rubik', 'Heebo', system-ui, sans-serif" },
@@ -47,7 +55,9 @@ const DEFAULT_STATE = {
   folders: [],
   collections: [],
   favorites: [],
+  toRead: [],
   recent: [],
+  trash: [],
   progress: {}, // bookId -> { chapter, scroll, page, percent, updatedAt, finished, totalChapters, totalPages }
   bookmarks: {}, // bookId -> [{ id, chapter, scroll, page, label, createdAt }]
   readingStats: {}, // bookId -> seconds
@@ -57,6 +67,7 @@ const DEFAULT_STATE = {
   theme: 'dark',
   accent: 'violet',
   sidebarCollapsed: false,
+  drawerOpen: false,
   query: '',
   sort: { key: 'title', dir: 'asc' },
   layout: 'list', // 'grid' | 'list'
@@ -134,9 +145,9 @@ export function useStore(selector = (s) => s) {
 /* ------------------------------------------------------------------ */
 
 const PERSIST_KEYS = [
-  'folders', 'collections', 'favorites', 'recent', 'progress', 'bookmarks',
-  'readingStats', 'view', 'theme', 'accent', 'sidebarCollapsed', 'sort',
-  'layout', 'reader', 'currentBookId',
+  'folders', 'collections', 'favorites', 'toRead', 'trash', 'recent',
+  'progress', 'bookmarks', 'readingStats', 'view', 'theme', 'accent',
+  'sidebarCollapsed', 'sort', 'layout', 'reader', 'currentBookId',
 ];
 
 const serialize = () => {
@@ -201,7 +212,7 @@ export async function bootstrap() {
   if (!patch.sort || typeof patch.sort !== 'object' || !patch.sort.key) {
     patch.sort = { key: 'title', dir: 'asc' };
   }
-  for (const key of ['collections', 'favorites', 'recent', 'folders']) {
+  for (const key of ['collections', 'favorites', 'toRead', 'trash', 'recent', 'folders']) {
     if (!Array.isArray(patch[key])) patch[key] = [];
   }
   if (typeof patch.progress !== 'object' || patch.progress === null) patch.progress = {};
@@ -216,12 +227,33 @@ export async function bootstrap() {
       createdAt: c.createdAt || Date.now(),
     }));
   if (!['dark', 'light'].includes(patch.theme)) patch.theme = 'dark';
-  if (!['grid', 'list'].includes(patch.layout)) patch.layout = 'grid';
+  if (!['grid', 'list'].includes(patch.layout)) patch.layout = 'list';
 
   state = { ...state, ...patch };
   applyTheme();
   emit();
+  await seedDemoIfEmpty();
   return state;
+}
+
+/**
+ * Browser builds start empty (there is no filesystem to scan), so seed the
+ * demo library once so the app – and the CI screenshots – show real content.
+ * Desktop builds never do this: they scan real folders.
+ */
+async function seedDemoIfEmpty() {
+  if (typeof window === 'undefined') return;
+  if (import.meta.env && import.meta.env.VITEST) return;
+  if (state.books.length) return;
+  if (window.localStorage?.getItem('shoso:no-demo') === '1') return;
+  try {
+    const { createDemoBooks } = await import('./demo.js');
+    mergeBooks(await createDemoBooks());
+  } catch (err) {
+    // A missing demo is not fatal – the empty state still works.
+    // eslint-disable-next-line no-console
+    console.warn('demo seed skipped', err);
+  }
 }
 
 function applyTheme() {
@@ -276,8 +308,14 @@ export function setAccent(accent) {
   applyTheme();
 }
 
-export function toggleSidebar() {
-  setState({ sidebarCollapsed: !state.sidebarCollapsed });
+/** Readera's navigation drawer (overlay, not a docked column). */
+export function toggleSidebar(force) {
+  const next = typeof force === 'boolean' ? force : !state.drawerOpen;
+  setState({ drawerOpen: next });
+}
+
+export function closeDrawer() {
+  if (state.drawerOpen) setState({ drawerOpen: false });
 }
 
 export function updateReader(patch) {
@@ -383,9 +421,14 @@ export function removeBook(bookId) {
   delete progress[bookId];
   const bookmarks = { ...state.bookmarks };
   delete bookmarks[bookId];
+  const trash = book
+    ? [{ ...book, removedAt: Date.now() }, ...state.trash.filter((b) => b.id !== bookId)].slice(0, 200)
+    : state.trash;
   setState({
     books,
+    trash,
     favorites: state.favorites.filter((id) => id !== bookId),
+    toRead: state.toRead.filter((id) => id !== bookId),
     recent: state.recent.filter((id) => id !== bookId),
     collections: state.collections.map((c) => ({ ...c, bookIds: c.bookIds.filter((id) => id !== bookId) })),
     progress,
@@ -393,7 +436,49 @@ export function removeBook(bookId) {
     currentBookId: state.currentBookId === bookId ? null : state.currentBookId,
   });
   scheduleLibrarySave();
-  toast(`הספר "${book?.title || ''}" הוסר מהספרייה`, 'info');
+  toast(`"${book?.title || ''}" הועבר לאשפה`, 'info');
+}
+
+/** Readera's Trash: restore a book back into the library. */
+export function restoreBook(bookId) {
+  const book = state.trash.find((b) => b.id === bookId);
+  if (!book) return;
+  const clean = { ...book };
+  delete clean.removedAt;
+  setState({
+    books: [...state.books, clean],
+    trash: state.trash.filter((b) => b.id !== bookId),
+  });
+  scheduleLibrarySave();
+  toast(`"${book.title}" שוחזר לספרייה`, 'success');
+}
+
+/** Permanently delete one trashed book, or empty the whole trash. */
+export function purgeBook(bookId = null) {
+  setState({ trash: bookId ? state.trash.filter((b) => b.id !== bookId) : [] });
+  toast(bookId ? 'הספר נמחק לצמיתות' : 'האשפה רוקנה', 'info');
+}
+
+/** Readera's "To Read" list toggle. */
+export function toggleToRead(bookId) {
+  const has = state.toRead.includes(bookId);
+  setState({
+    toRead: has ? state.toRead.filter((id) => id !== bookId) : [...state.toRead, bookId],
+  });
+}
+
+/** Readera's "Have Read" toggle — marks a book finished / unfinished. */
+export function toggleHaveRead(bookId) {
+  const p = state.progress[bookId] || {};
+  const done = Boolean(p.finished) || (p.percent || 0) >= 100;
+  setState({
+    progress: {
+      ...state.progress,
+      [bookId]: done
+        ? { ...p, percent: 0, finished: false, updatedAt: Date.now() }
+        : { ...p, percent: 100, finished: true, updatedAt: Date.now() },
+    },
+  });
 }
 
 export function removeFolder(folder) {
@@ -446,7 +531,13 @@ export function openBook(bookId) {
 }
 
 export function closeBook() {
-  setState({ currentBookId: null, view: 'home' });
+  setState({ currentBookId: null, view: state.returnView || 'books' });
+}
+
+/** Which screen to show when the reader closes. */
+export function openBookFrom(bookId, fromView) {
+  const recent = [bookId, ...state.recent.filter((id) => id !== bookId)].slice(0, 50);
+  setState({ currentBookId: bookId, recent, returnView: fromView, view: 'reader' });
 }
 
 export function saveProgress(bookId, patch) {
@@ -537,6 +628,28 @@ export function formatsList() {
   return [...map.entries()]
     .map(([format, books]) => ({ format, books, count: books.length }))
     .sort((a, b) => b.count - a.count);
+}
+
+export function toReadBooks() {
+  return state.toRead.map((id) => bookById(id)).filter(Boolean);
+}
+
+export function haveReadBooks() {
+  return state.books
+    .filter((b) => {
+      const p = state.progress[b.id];
+      return p && (p.finished || p.percent >= 100);
+    })
+    .sort((a, b) => (state.progress[b.id]?.updatedAt || 0) - (state.progress[a.id]?.updatedAt || 0));
+}
+
+export function continuingBooks() {
+  return [...state.books]
+    .filter((b) => {
+      const p = state.progress[b.id];
+      return p && p.percent > 0 && p.percent < 100;
+    })
+    .sort((a, b) => (state.progress[b.id]?.updatedAt || 0) - (state.progress[a.id]?.updatedAt || 0));
 }
 
 export function continueReading() {
