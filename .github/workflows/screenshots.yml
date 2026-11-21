@@ -20,8 +20,8 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install dependencies (skip Electron postinstall - no network cert in runner)
+        run: npm ci --ignore-scripts
 
       - name: Build web app
         run: npm run build:web
@@ -31,7 +31,7 @@ jobs:
           npm i -D playwright@1.49.1
           npx playwright install --with-deps chromium
 
-      - name: Serve + screenshot
+      - name: Serve built app + take screenshots
         run: |
           npx vite preview --host 0.0.0.0 --port 4173 &
           sleep 4
