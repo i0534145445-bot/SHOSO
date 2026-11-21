@@ -5,12 +5,20 @@
  * Every PNG below is a genuine capture of the running app — no mockups.
  */
 import { chromium } from 'playwright';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, appendFileSync } from 'node:fs';
 
 const OUT = 'screenshots';
 mkdirSync(OUT, { recursive: true });
 
 const BASE = process.env.SCREENSHOT_URL || 'http://localhost:4173';
+const TRACE = `${OUT}/run.txt`;
+writeFileSync(TRACE, `start ${new Date().toISOString()}\n`, 'utf8');
+const trace = (msg) => {
+  try { appendFileSync(TRACE, `${msg}\n`, 'utf8'); } catch { /* ignore */ }
+  console.log(msg);
+};
+process.on('uncaughtException', (err) => { trace(`uncaught: ${err && err.stack}`); process.exit(1); });
+process.on('unhandledRejection', (err) => { trace(`unhandled: ${err && err.stack}`); process.exit(1); });
 
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -19,16 +27,16 @@ const page = await context.newPage();
 const shot = async (name) => {
   await page.waitForTimeout(600);
   await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: false });
-  console.log('saved', name);
+  trace(`saved ${name}`);
 };
 
 /** Run one capture step; a failure is logged and never aborts the whole run. */
 const step = async (label, fn) => {
   try {
     await fn();
-    console.log('✓', label);
+    trace(`ok ${label}`);
   } catch (err) {
-    console.warn('✗', label, '—', err.message.split('\n')[0]);
+    trace(`FAIL ${label} — ${err.message.split('\n')[0]}`);
     const state = await page.evaluate(() => ({
       view: document.querySelector('.topbar-title')?.textContent,
       rows: document.querySelectorAll('.book-row').length,
@@ -53,9 +61,12 @@ const clickText = async (text) => {
 };
 
 try {
+  trace('goto');
   await page.goto(BASE, { waitUntil: 'networkidle' });
+  trace('loaded');
   // demo books are seeded automatically in browser mode
   await page.waitForSelector('.book-row', { timeout: 45000 });
+  trace('rows ready');
 
   await step('drawer', async () => {
     await clickTitle('תפריט');
@@ -150,4 +161,4 @@ try {
   await browser.close();
 }
 
-console.log('done');
+trace('done');
