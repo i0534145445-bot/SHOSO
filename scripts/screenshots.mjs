@@ -77,6 +77,11 @@ try {
   await step('books list', async () => {
     await clickText('ספרים ומסמכים');
     await page.waitForSelector('.book-list', { timeout: 6000 });
+    // use the real row actions so the gold "active" chips are genuine state
+    await page.locator('.book-row').nth(1).locator('.row-actions .icon-btn').nth(0).click();
+    await page.locator('.book-row').nth(2).locator('.row-actions .icon-btn').nth(1).click();
+    await page.locator('.book-row').nth(3).locator('.row-actions .icon-btn').nth(2).click();
+    await page.waitForTimeout(400);
     await shot('03-books-list');
   });
 
@@ -89,13 +94,14 @@ try {
   });
 
   await step('reader', async () => {
-    await page.locator('.book-row h3').first().click();
+    // the EPUB demo book is the long one – open it by title
+    await page.locator('.book-row h3').filter({ hasText: 'הספר הישן' }).first().click();
     await page.waitForSelector('.book-scroll', { timeout: 45000 });
     await page.mouse.move(700, 450);
     await page.waitForTimeout(700);
     // real reading progress so "Reading Now" is meaningful later
-    await page.mouse.wheel(0, 1500);
-    await page.waitForTimeout(1000);
+    await page.mouse.wheel(0, 2400);
+    await page.waitForTimeout(1400);
     await page.mouse.move(700, 450);
     await shot('05-reader-night');
   });
