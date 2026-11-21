@@ -4,7 +4,8 @@ name: App screenshots
 # uploads them as an artifact. Manual trigger only.
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [arena/3c8f84f0-shoso]
 
 permissions:
   contents: read
