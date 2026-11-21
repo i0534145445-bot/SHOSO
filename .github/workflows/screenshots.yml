@@ -1,14 +1,15 @@
 name: App screenshots
 
-# Takes REAL screenshots of the running app (Playwright + Chromium) and
-# uploads them as an artifact. Manual trigger only.
+# Captures REAL screenshots of the running app (Playwright + Chromium) and
+# commits the PNGs straight back to this branch so they can be assembled into
+# a grid locally. Triggered on push to this feature branch.
 
 on:
   push:
     branches: [arena/3c8f84f0-shoso]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   screenshots:
@@ -21,7 +22,7 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies (skip Electron postinstall - no network cert in runner)
+      - name: Install dependencies (skip Electron postinstall)
         run: npm ci --ignore-scripts
 
       - name: Build web app
@@ -38,9 +39,11 @@ jobs:
           sleep 4
           node scripts/screenshots.mjs
 
-      - name: Upload screenshots
-        uses: actions/upload-artifact@v4
-        with:
-          name: SHOSO-Books-Screenshots
-          path: screenshots/*.png
-          if-no-files-found: error
+      - name: Commit screenshots back to branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/i0534145445-bot/SHOSO.git
+          git add screenshots/*.png 2>/dev/null || true
+          git -c advice.dirtyExitCode=false commit -m "ci: add real app screenshots [skip ci]" || true
+          git push origin HEAD:arena/3c8f84f0-shoso
