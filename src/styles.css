@@ -379,6 +379,7 @@ a { color: var(--teal-light); }
    Covers
    ========================================================================== */
 
+.cover.generated { justify-content: center; text-align: center; }
 .cover {
   border-radius: 2px;
   overflow: hidden;
@@ -444,6 +445,9 @@ a { color: var(--teal-light); }
   cursor: pointer;
   position: relative;
   transition: background 0.12s;
+  /* every row is the same height, exactly like Readera's list */
+  height: 134px;
+  overflow: hidden;
 }
 .book-row:hover { background: var(--surface-hi); }
 
@@ -453,10 +457,12 @@ a { color: var(--teal-light); }
 .row-main {
   flex: 1;
   min-width: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
   padding-top: 2px;
   cursor: inherit;
+  overflow: hidden;
 }
 .row-main h3 {
   margin: 0;
