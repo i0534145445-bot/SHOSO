@@ -1,7 +1,7 @@
 import React from 'react';
 import { useStore, openBook, toggleFavorite, setView, addBookmark } from '../lib/store.js';
 import { formatRelative, formatSize } from '../lib/format.js';
-import { IconHeart, IconBook, IconInfo, IconClock, IconBookmark, IconMore } from '../lib/icons.jsx';
+import { IconHeart, IconBook, IconInfo, IconClock, IconBookmark, IconMore, IconCheck } from '../lib/icons.jsx';
 import Cover from './Cover.jsx';
 
 export default function BookCard({ book }) {
@@ -73,6 +73,9 @@ export function BookRow({ book }) {
       <div className="row-actions">
         <button className={`icon-btn ${isFav ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); toggleFavorite(book.id); }} title={isFav ? 'הסר ממועדפים' : 'הוסף למועדפים'}>
           <IconHeart size={16} filled={isFav} />
+        </button>
+        <button className={`icon-btn ${percent >= 100 ? 'active' : ''}`} title={percent >= 100 ? 'סמן שלא נקרא' : 'סמן כנקרא'} onClick={() => {}}>
+          <IconCheck size={16} filled={percent >= 100} />
         </button>
         <button className="icon-btn" title="סימנייה" onClick={() => addBookmark(book.id, { chapter: 0, scroll: 0, page: 1 })}>
           <IconBookmark size={16} />
