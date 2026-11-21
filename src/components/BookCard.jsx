@@ -1,7 +1,7 @@
 import React from 'react';
-import { useStore, openBook, toggleFavorite, setView } from '../lib/store.js';
+import { useStore, openBook, toggleFavorite, setView, addBookmark } from '../lib/store.js';
 import { formatRelative, formatSize } from '../lib/format.js';
-import { IconHeart, IconBook, IconInfo } from '../lib/icons.jsx';
+import { IconHeart, IconBook, IconInfo, IconClock, IconBookmark, IconMore } from '../lib/icons.jsx';
 import Cover from './Cover.jsx';
 
 export default function BookCard({ book }) {
@@ -62,19 +62,25 @@ export function BookRow({ book }) {
       </div>
       <div className="row-main" onClick={() => openBook(book.id)}>
         <h3>{book.title}</h3>
-        <p>{book.author} · {book.format} · {formatSize(book.size)}</p>
+        <p>{book.author} · {book.format}</p>
+        {percent > 0 && (
+          <div className="row-progress">
+            <span className="dim">{Math.round(percent)}%</span>
+            <div className="mini-bar"><span style={{ width: `${percent}%` }} /></div>
+          </div>
+        )}
       </div>
-      <div className="row-progress">
-        {percent > 0 ? <span>{Math.round(percent)}%</span> : <span className="dim">לא התחיל</span>}
-        <div className="mini-bar"><span style={{ width: `${percent}%` }} /></div>
+      <div className="row-actions">
+        <button className={`icon-btn ${isFav ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); toggleFavorite(book.id); }} title={isFav ? 'הסר ממועדפים' : 'הוסף למועדפים'}>
+          <IconHeart size={16} filled={isFav} />
+        </button>
+        <button className="icon-btn" title="סימנייה" onClick={() => addBookmark(book.id, { chapter: 0, scroll: 0, page: 1 })}>
+          <IconBookmark size={16} />
+        </button>
+        <button className="icon-btn" title="עוד אפשרויות">
+          <IconMore size={16} />
+        </button>
       </div>
-      <span className="row-date">{formatRelative(progress?.updatedAt || book.addedAt)}</span>
-      <button className={`icon-btn ${isFav ? 'active' : ''}`} onClick={() => toggleFavorite(book.id)} title="מועדף">
-        <IconHeart size={17} filled={isFav} />
-      </button>
-      <button className="btn small primary" onClick={() => openBook(book.id)}>
-        <IconBook size={14} /> {percent > 0 && percent < 100 ? 'המשך' : 'קרא'}
-      </button>
     </article>
   );
 }

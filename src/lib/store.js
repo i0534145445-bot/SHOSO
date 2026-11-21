@@ -59,7 +59,7 @@ const DEFAULT_STATE = {
   sidebarCollapsed: false,
   query: '',
   sort: { key: 'title', dir: 'asc' },
-  layout: 'grid', // 'grid' | 'list'
+  layout: 'list', // 'grid' | 'list'
   reader: { ...DEFAULT_READER },
   scanStatus: null,
   toasts: [],
