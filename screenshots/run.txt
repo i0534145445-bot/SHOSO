@@ -1,0 +1,27 @@
+start 2026-11-21T23:35:00.868Z
+goto
+loaded
+rows ready
+saved 02-drawer
+ok drawer
+saved 03-books-list
+ok books list
+saved 04-books-tiles
+ok books tiles
+saved 05-reader-night
+ok reader
+saved 06-reader-settings
+ok reader settings
+saved 07-reader-sepia
+ok sepia mode
+saved 08-reader-toc
+ok toc
+saved 09-authors
+ok authors
+saved 10-settings
+ok settings
+saved 11-trash
+ok trash
+saved 01-reading-now
+ok reading now
+done
