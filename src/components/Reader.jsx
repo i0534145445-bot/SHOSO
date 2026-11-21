@@ -408,6 +408,22 @@ export default function Reader() {
 
             {panel === 'settings' && (
               <div className="reader-settings">
+                <div className="rs-group">כיוון דפדוף</div>
+                <div className="seg">
+                  <button
+                    className={readerSettings.mode === 'scroll' ? 'active' : ''}
+                    onClick={() => updateReader({ mode: 'scroll' })}
+                  >
+                    גלילה
+                  </button>
+                  <button
+                    className={readerSettings.mode === 'paginated' ? 'active' : ''}
+                    onClick={() => updateReader({ mode: 'paginated' })}
+                  >
+                    דפדוף
+                  </button>
+                </div>
+
                 <div className="rs-group">מצב צבע</div>
                 <div className="rs-modes">
                   {COLOR_MODES.map((m) => {
@@ -426,22 +442,6 @@ export default function Reader() {
                       </button>
                     );
                   })}
-                </div>
-
-                <div className="rs-group">כיוון דפדוף</div>
-                <div className="seg">
-                  <button
-                    className={readerSettings.mode === 'scroll' ? 'active' : ''}
-                    onClick={() => updateReader({ mode: 'scroll' })}
-                  >
-                    גלילה
-                  </button>
-                  <button
-                    className={readerSettings.mode === 'paginated' ? 'active' : ''}
-                    onClick={() => updateReader({ mode: 'paginated' })}
-                  >
-                    דפדוף
-                  </button>
                 </div>
 
                 <div className="rs-group">גופן</div>

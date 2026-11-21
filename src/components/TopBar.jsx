@@ -2,9 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   useStore, setQuery, setLayout, setSort, importFolders, toggleSidebar, setView,
 } from '../lib/store.js';
-import {
-  IconMenu, IconSearch, IconMore, IconGrid, IconList, IconBack,
-} from '../lib/icons.jsx';
+import { IconMenu, IconSearch, IconMore, IconBack } from '../lib/icons.jsx';
 
 /**
  * Readera's app bar: one solid teal strip – menu, left-aligned screen title,
@@ -96,13 +94,6 @@ export default function TopBar() {
                 <IconSearch size={21} />
               </button>
             )}
-            <button
-              className="icon-btn"
-              title={layout === 'list' ? 'תצוגת כריכות' : 'תצוגת רשימה'}
-              onClick={() => setLayout(layout === 'list' ? 'grid' : 'list')}
-            >
-              {layout === 'list' ? <IconGrid size={20} /> : <IconList size={20} />}
-            </button>
             <div style={{ position: 'relative' }}>
               <button
                 className="icon-btn"
@@ -134,6 +125,20 @@ export default function TopBar() {
                       onClick={() => { setSort({ ...sort, dir: sort.dir === 'asc' ? 'desc' : 'asc' }); setMenuOpen(false); }}
                     >
                       {sort.dir === 'asc' ? 'סדר יורד' : 'סדר עולה'}
+                    </button>
+                    <span className="pop-sep" />
+                    <span className="pop-label">תצוגת ספרייה</span>
+                    <button
+                      className={layout === 'list' ? 'checked' : ''}
+                      onClick={() => { setLayout('list'); setMenuOpen(false); }}
+                    >
+                      רשימה{layout === 'list' ? ' ✓' : ''}
+                    </button>
+                    <button
+                      className={layout === 'grid' ? 'checked' : ''}
+                      onClick={() => { setLayout('grid'); setMenuOpen(false); }}
+                    >
+                      כריכות{layout === 'grid' ? ' ✓' : ''}
                     </button>
                     <span className="pop-sep" />
                     <button onClick={() => { setMenuOpen(false); importFolders(); }}>הוסף תיקיות…</button>

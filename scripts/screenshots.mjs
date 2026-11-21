@@ -86,10 +86,12 @@ try {
   });
 
   await step('books tiles', async () => {
-    await clickTitle('תצוגת כריכות');
+    await clickTitle('עוד');
+    await page.locator('.topbar-menu-pop button').filter({ hasText: 'כריכות' }).click();
     await page.waitForSelector('.book-tile', { timeout: 6000 });
     await shot('04-books-tiles');
-    await clickTitle('תצוגת רשימה');
+    await clickTitle('עוד');
+    await page.locator('.topbar-menu-pop button').filter({ hasText: 'רשימה' }).click();
     await page.waitForSelector('.book-list', { timeout: 6000 });
   });
 
