@@ -29,9 +29,8 @@ export async function initPlatform() {
 
 /* ---------------- media URLs ---------------- */
 
-export const mediaUrl = (trackOrPath) => {
-  const filePath = typeof trackOrPath === 'string' ? trackOrPath : trackOrPath.path;
-  // Browser demo tracks are already blob:/data: URLs – pass them through untouched.
+export const mediaUrl = (bookOrPath) => {
+  const filePath = typeof bookOrPath === 'string' ? bookOrPath : bookOrPath.path;
   if (!bridge || /^(blob|data|https?):/i.test(filePath)) return filePath;
   return bridge.mediaUrl(filePath);
 };
@@ -43,7 +42,7 @@ const pickWithInput = ({ directory = false, multiple = true } = {}) =>
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = multiple;
-    input.accept = 'audio/*,.mp3,.flac,.m4a,.wav,.ogg,.opus,.aac,.wma,.aiff,.m4b';
+    input.accept = '.epub,.pdf,.txt,.fb2,.html,.htm,.md,.mobi,.djvu';
     if (directory) {
       input.setAttribute('webkitdirectory', '');
       input.setAttribute('directory', '');
@@ -74,7 +73,7 @@ export async function pickFiles() {
 
 /* ---------------- persistence ---------------- */
 
-const LS_STATE = 'shoso.state.v1';
+const LS_STATE = 'shoso.books.state.v1';
 
 export async function loadPersistedState() {
   if (bridge) {
@@ -126,17 +125,6 @@ export async function savePersistedLibrary(library) {
   }
 }
 
-export async function readLyrics(track) {
-  if (bridge) {
-    try {
-      return await bridge.lyrics(track);
-    } catch {
-      return null;
-    }
-  }
-  return track._lyrics || null;
-}
-
 export async function revealInExplorer(filePath) {
   if (bridge && filePath) {
     try {
@@ -148,43 +136,70 @@ export async function revealInExplorer(filePath) {
   return false;
 }
 
+export async function openExternal(url) {
+  if (bridge) {
+    try {
+      return await bridge.openExternal(url);
+    } catch {
+      return false;
+    }
+  }
+  window.open(url, '_blank', 'noopener,noreferrer');
+  return true;
+}
+
 export const onScanProgress = (cb) => (bridge ? bridge.onScanProgress(cb) : () => {});
 export const setNativeTheme = (theme) => (bridge ? bridge.setTheme(theme) : null);
 export const pathForFile = (file) => (bridge ? bridge.pathForFile(file) : null);
 
-/* ---------------- browser: turn File objects into tracks ---------------- */
+/* ---------------- reading book bytes ---------------- */
 
-const AUDIO_RX = /\.(mp3|m4a|m4b|aac|flac|wav|ogg|oga|opus|wma|webm|aiff|aif|mp4)$/i;
+/** In browser mode we keep File handles in memory (object URLs die on reload). */
+const fileHandles = new Map();
+
+export function registerFileHandle(bookId, file) {
+  fileHandles.set(bookId, file);
+}
+
+export function getFileHandle(bookId) {
+  return fileHandles.get(bookId) || null;
+}
+
+/**
+ * Read a book's bytes as ArrayBuffer.
+ * Desktop: fetch via shoso-media:// protocol. Browser: File.arrayBuffer().
+ */
+export async function readBookBuffer(book) {
+  if (!book) throw new Error('ספר לא נמצא');
+  const handle = getFileHandle(book.id);
+  if (handle) {
+    return handle.arrayBuffer();
+  }
+  if (book._buffer) {
+    return book._buffer;
+  }
+  if (bridge) {
+    const url = bridge.mediaUrl(book.path);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`לא ניתן לקרוא את הקובץ (${res.status})`);
+    return res.arrayBuffer();
+  }
+  // Browser fallback: book.path may already be a blob: URL
+  const res = await fetch(book.path);
+  if (!res.ok) throw new Error(`לא ניתן לקרוא את הקובץ (${res.status})`);
+  return res.arrayBuffer();
+}
+
+/* ---------------- browser: turn File objects into books ---------------- */
+
+const BOOK_RX = /\.(epub|pdf|txt|fb2|html|htm|md|mobi|djvu)$/i;
 
 const splitName = (name) => {
-  const base = name.replace(/\.[^.]+$/, '').replace(/_/g, ' ').trim();
+  const base = name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
   const m = /^(.*?)\s+-\s+(.*)$/.exec(base);
-  if (m) {
-    // Common convention is "Artist - Title"; if the second part looks like a number, flip it.
-    return { artist: m[1].trim(), title: m[2].trim() };
-  }
-  const num = /^(\d{1,3})[\s.\-]+(.*)$/.exec(base);
-  if (num) return { artist: null, title: num[2].trim(), trackNo: parseInt(num[1], 10) };
-  return { artist: null, title: base };
+  if (m) return { author: m[1].trim(), title: m[2].trim() };
+  return { author: null, title: base };
 };
-
-const probeDuration = (url) =>
-  new Promise((resolve) => {
-    const el = new Audio();
-    let settled = false;
-    const done = (value) => {
-      if (settled) return;
-      settled = true;
-      el.removeAttribute('src');
-      el.load();
-      resolve(value);
-    };
-    el.addEventListener('loadedmetadata', () => done(Number.isFinite(el.duration) ? el.duration : 0));
-    el.addEventListener('error', () => done(0));
-    setTimeout(() => done(Number.isFinite(el.duration) ? el.duration : 0), 4000);
-    el.src = url;
-    el.load();
-  });
 
 const hashString = (str) => {
   let h1 = 0xdeadbeef;
@@ -194,40 +209,38 @@ const hashString = (str) => {
     h1 = Math.imul(h1 ^ ch, 2654435761);
     h2 = Math.imul(h2 ^ ch, 1597334677);
   }
-  return (((h1 ^ (h2 >>> 16)) >>> 0).toString(16) + (h2 >>> 0).toString(16)).slice(0, 12);
+  return (((h1 ^ (h2 >>> 16)) >>> 0).toString(16) + (h2 >>> 0).toString(16)).slice(0, 16);
 };
 
-export async function tracksFromFiles(files) {
-  const audioFiles = files.filter((f) => AUDIO_RX.test(f.name));
-  const tracks = [];
-  for (const file of audioFiles) {
+export async function booksFromFiles(files) {
+  const bookFiles = files.filter((f) => BOOK_RX.test(f.name));
+  const books = [];
+  for (const file of bookFiles) {
     const url = URL.createObjectURL(file);
     const rel = file.webkitRelativePath || file.name;
     const folder = rel.includes('/') ? rel.split('/').slice(0, -1).join('/') : 'קבצים שהוספתי';
     const parsed = splitName(file.name);
-    const duration = await probeDuration(url);
-    tracks.push({
-      id: hashString(`${file.name}:${file.size}:${file.lastModified}:${rel}`),
+    const ext = `.${(file.name.split('.').pop() || '').toLowerCase()}`;
+    const id = hashString(`${file.name}:${file.size}:${file.lastModified}:${rel}`);
+    registerFileHandle(id, file);
+    books.push({
+      id,
       path: url,
       dir: folder,
       fileName: file.name,
       title: parsed.title,
-      artist: parsed.artist || 'אמן לא ידוע',
-      albumArtist: parsed.artist || '',
-      album: folder.split('/').pop() || 'אלבום לא ידוע',
-      genre: '',
-      year: '',
-      trackNo: parsed.trackNo || 0,
-      discNo: 0,
-      duration,
-      bitrate: 0,
-      codec: (file.name.split('.').pop() || '').toLowerCase(),
-      sampleRate: 0,
+      author: parsed.author || 'מחבר לא ידוע',
+      language: '',
+      format: ext.slice(1).toUpperCase(),
+      ext,
       size: file.size,
       mtime: file.lastModified,
-      picture: null,
-      hasLyrics: false,
+      cover: null,
+      pageCount: 0,
+      chapters: 0,
+      wordCount: 0,
+      addedAt: Date.now(),
     });
   }
-  return tracks;
+  return books;
 }

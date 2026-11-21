@@ -9,6 +9,8 @@ const CSP = [
   "script-src 'self'",
   "font-src 'self' data:",
   "connect-src 'self' data: blob: shoso-media:",
+  "worker-src 'self' blob:",
+  "child-src 'self' blob: shoso-media:",
 ].join('; ');
 
 /**
@@ -46,7 +48,7 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     target: 'chrome120',
-    chunkSizeWarningLimit: 1200,
+    chunkSizeWarningLimit: 2400,
   },
   test: {
     environment: 'jsdom',

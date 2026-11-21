@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
-title SHOSO Music - Build Windows EXE
+title SHOSO Books - Build Windows EXE
 cd /d "%~dp0"
 
 echo ==================================================
-echo   SHOSO Music - creating a Windows .exe
+echo   SHOSO Books - creating a Windows .exe
 echo   (installer + portable, saved in the release folder)
 echo ==================================================
 echo.
@@ -23,7 +23,7 @@ if not exist "node_modules" (
 )
 
 echo.
-echo Building SHOSO Music for Windows...
+echo Building SHOSO Books for Windows...
 call npm run dist || goto :fail
 
 echo.

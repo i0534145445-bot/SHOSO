@@ -43,7 +43,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: SHOSO-Music-Windows
+          name: SHOSO-Books-Windows
           path: |
             release/*.exe
             release/*.blockmap
@@ -54,7 +54,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: SHOSO Music ${{ github.ref_name }}
+          name: SHOSO Books ${{ github.ref_name }}
           draft: false
           generate_release_notes: true
           files: release/*.exe

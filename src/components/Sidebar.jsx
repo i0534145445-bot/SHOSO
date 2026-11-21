@@ -1,127 +1,81 @@
-import React, { useState } from 'react';
-import { useStore, setView, createPlaylist, importFolders, importFiles, openPlaylist } from '../lib/store.js';
+import React from 'react';
+import { useStore, setView, importFolders, importFiles, toggleSidebar } from '../lib/store.js';
 import {
-  IconHome, IconMusic, IconAlbum, IconArtist, IconPlaylist, IconHeart,
-  IconFolder, IconClock, IconQueue, IconSettings, IconPlus, IconGenre,
+  IconHome, IconLibrary, IconAuthor, IconFormat, IconFolder, IconHeart,
+  IconHistory, IconCollection, IconSettings, IconPlus, IconClose,
 } from '../lib/icons.jsx';
 import Logo from './Logo.jsx';
 
-function NavItem({ id, label, icon: Icon, badge }) {
-  const active = useStore((s) => s.view === id);
-  return (
-    <button
-      className={`nav-item ${active ? 'active' : ''}`}
-      onClick={() => setView(id)}
-      title={label}
-    >
-      <Icon />
-      <span className="nav-label">{label}</span>
-      {badge ? <span className="nav-badge">{badge}</span> : null}
-    </button>
-  );
-}
-
-function PlaylistItem({ playlist, active }) {
-  return (
-    <button
-      className={`nav-item playlist-item ${active ? 'active' : ''}`}
-      onClick={() => openPlaylist(playlist.id)}
-      title={playlist.name}
-    >
-      <IconPlaylist />
-      <span className="nav-label">{playlist.name}</span>
-      <span className="nav-badge subtle">{playlist.trackIds.length}</span>
-    </button>
-  );
-}
+const NAV = [
+  { id: 'home', label: 'בית', icon: IconHome },
+  { id: 'library', label: 'ספרייה', icon: IconLibrary },
+  { id: 'authors', label: 'מחברים', icon: IconAuthor },
+  { id: 'formats', label: 'פורמטים', icon: IconFormat },
+  { id: 'favorites', label: 'מועדפים', icon: IconHeart },
+  { id: 'history', label: 'היסטוריה', icon: IconHistory },
+  { id: 'collections', label: 'מדפים', icon: IconCollection },
+  { id: 'folders', label: 'תיקיות', icon: IconFolder },
+];
 
 export default function Sidebar() {
+  const view = useStore((s) => s.view);
   const collapsed = useStore((s) => s.sidebarCollapsed);
-  const playlistList = useStore((s) => s.playlists);
-  const favoriteCount = useStore((s) => s.favorites.length);
-  const trackCount = useStore((s) => s.tracks.length);
-  const activePlaylist = useStore((s) => (s.view === 'playlist' ? window.__shosoSelectedPlaylist : null));
-  const [creating, setCreating] = useState(false);
-  const [name, setName] = useState('');
-
-  const submit = () => {
-    const value = name.trim();
-    if (value) {
-      const playlist = createPlaylist(value);
-      openPlaylist(playlist.id);
-    }
-    setName('');
-    setCreating(false);
-  };
+  const bookCount = useStore((s) => s.books.length);
+  const favCount = useStore((s) => s.favorites.length);
+  const colCount = useStore((s) => s.collections.length);
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="brand">
-        <Logo />
-        <div className="brand-text">
-          <strong>SHOSO</strong>
-          <span>Music for Windows</span>
-        </div>
-      </div>
-
-      <nav className="nav">
-        <NavItem id="home" label="בית" icon={IconHome} />
-        <NavItem id="songs" label="שירים" icon={IconMusic} badge={trackCount || null} />
-        <NavItem id="albums" label="אלבומים" icon={IconAlbum} />
-        <NavItem id="artists" label="אמנים" icon={IconArtist} />
-        <NavItem id="genre" label="ז׳אנרים" icon={IconGenre} />
-        <NavItem id="folders" label="תיקיות" icon={IconFolder} />
-        <NavItem id="favorites" label="מועדפים" icon={IconHeart} badge={favoriteCount || null} />
-        <NavItem id="history" label="היסטוריה" icon={IconClock} />
-        <NavItem id="queue" label="תור נגינה" icon={IconQueue} />
-      </nav>
-
-      <div className="sidebar-section">
-        <div className="sidebar-section-head">
-          <span>פלייליסטים</span>
-          <button className="icon-btn tiny" title="פלייליסט חדש" onClick={() => setCreating(true)}>
-            <IconPlus />
-          </button>
-        </div>
-
-        {creating && (
-          <div className="new-playlist">
-            <input
-              autoFocus
-              value={name}
-              placeholder="שם הפלייליסט"
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') submit();
-                if (e.key === 'Escape') {
-                  setCreating(false);
-                  setName('');
-                }
-              }}
-              onBlur={submit}
-            />
+        <Logo size={34} />
+        {!collapsed && (
+          <div className="brand-text">
+            <strong>SHOSO Books</strong>
+            <span>קורא ספרים שולחני</span>
           </div>
         )}
-
-        <div className="playlist-list">
-          {playlistList.length === 0 && !creating && <p className="sidebar-empty">עדיין אין פלייליסטים</p>}
-          {playlistList.map((playlist) => (
-            <PlaylistItem key={playlist.id} playlist={playlist} active={activePlaylist === playlist.id} />
-          ))}
-        </div>
+        <button className="icon-btn sidebar-toggle" onClick={toggleSidebar} title={collapsed ? 'הרחב' : 'כווץ'}>
+          <IconClose size={16} />
+        </button>
       </div>
 
-      <div className="sidebar-footer">
-        <NavItem id="settings" label="הגדרות" icon={IconSettings} />
-        <div className="sidebar-actions">
-          <button className="btn ghost small" onClick={() => importFolders()} title="הוסף תיקיית מוזיקה (Ctrl+I)">
-            <IconPlus size={15} /> תיקייה
-          </button>
-          <button className="btn ghost small" onClick={() => importFiles()} title="הוסף קבצים בודדים">
-            קבצים
-          </button>
-        </div>
-      </div>
+      {!collapsed && (
+        <>
+          <div className="sidebar-actions">
+            <button className="btn primary block" onClick={importFolders}>
+              <IconPlus size={16} /> הוסף תיקיות
+            </button>
+            <button className="btn ghost block" onClick={importFiles}>
+              <IconPlus size={16} /> הוסף קבצים
+            </button>
+          </div>
+
+          <nav className="nav">
+            {NAV.map((item) => {
+              const Icon = item.icon;
+              const badge = item.id === 'library' ? bookCount : item.id === 'favorites' ? favCount : item.id === 'collections' ? colCount : null;
+              return (
+                <button
+                  key={item.id}
+                  className={`nav-item ${view === item.id ? 'active' : ''}`}
+                  onClick={() => setView(item.id)}
+                >
+                  <Icon size={19} />
+                  <span>{item.label}</span>
+                  {badge !== null && badge > 0 && <span className="nav-badge">{badge}</span>}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="sidebar-foot">
+            <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')}>
+              <IconSettings size={19} />
+              <span>הגדרות</span>
+            </button>
+          </div>
+        </>
+      )}
     </aside>
   );
 }

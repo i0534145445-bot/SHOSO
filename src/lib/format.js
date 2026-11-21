@@ -26,7 +26,41 @@ export const formatSize = (bytes) => {
   return `${value.toFixed(value >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
 };
 
-export const formatBitrate = (bps) => (bps ? `${Math.round(bps / 1000)} kbps` : '—');
+export const formatDate = (ts) => {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+export const formatRelative = (ts) => {
+  if (!ts) return '';
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'עכשיו';
+  if (mins < 60) return `לפני ${mins} דק׳`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `לפני ${hours} שע׳`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `לפני ${days} ימים`;
+  return formatDate(ts);
+};
+
+export const formatReadingTime = (seconds) => {
+  if (!seconds || seconds < 60) return seconds ? `${Math.round(seconds)} שניות` : '—';
+  const mins = Math.round(seconds / 60);
+  if (mins < 60) return `${mins} דק׳ קריאה`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m ? `${h} שע׳ ${m} דק׳` : `${h} שע׳`;
+};
+
+export const formatWordCount = (n) => {
+  if (!n) return '—';
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M מילים`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K מילים`;
+  return `${n} מילים`;
+};
 
 export const hebrewCount = (n, singular, plural) => `${n} ${n === 1 ? singular : plural}`;
 
@@ -40,9 +74,9 @@ export const collate = (a, b) => hebrewCollator.compare(String(a || ''), String(
 
 export const normalize = (text) => stripNiqqud(text).toLowerCase().trim();
 
-/** Build a searchable haystack for a track. */
-export const trackHaystack = (track) =>
-  normalize([track.title, track.artist, track.album, track.albumArtist, track.genre, track.year, track.fileName]
+/** Build a searchable haystack for a book. */
+export const bookHaystack = (book) =>
+  normalize([book.title, book.author, book.format, book.fileName, book.language]
     .filter(Boolean)
     .join(' '));
 
@@ -52,13 +86,13 @@ export const matchesQuery = (haystack, query) => {
   return terms.every((term) => haystack.includes(term));
 };
 
-export const artistsOf = (track) =>
-  String(track.artist || '')
+export const authorsOf = (book) =>
+  String(book.author || '')
     .split(/\s*(?:,|;|\/|feat\.?|ft\.?|&| x |×)\s*/i)
     .map((s) => s.trim())
     .filter(Boolean);
 
-export const primaryArtist = (track) => artistsOf(track)[0] || track.artist || 'אמן לא ידוע';
+export const primaryAuthor = (book) => authorsOf(book)[0] || book.author || 'מחבר לא ידוע';
 
 export const initials = (name) =>
   String(name || '?')
@@ -68,7 +102,7 @@ export const initials = (name) =>
     .map((part) => part[0] || '')
     .join('');
 
-/** Deterministic HSL colour from a string – used for gradient placeholders. */
+/** Deterministic HSL colour from a string – used for generated covers. */
 export const colorFromString = (text) => {
   let hash = 0;
   const str = String(text || '');
@@ -77,3 +111,21 @@ export const colorFromString = (text) => {
   }
   return hash;
 };
+
+/** Detect RTL vs LTR from text (Hebrew/Arabic letters). */
+export const detectDirection = (text) => {
+  const sample = String(text || '').slice(0, 2000);
+  const hebrew = (sample.match(/[\u0590-\u05FF]/g) || []).length;
+  const arabic = (sample.match(/[\u0600-\u06FF]/g) || []).length;
+  const latin = (sample.match(/[A-Za-z]/g) || []).length;
+  return hebrew + arabic > latin ? 'rtl' : 'ltr';
+};
+
+export const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+export const escapeHtml = (text) =>
+  String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');

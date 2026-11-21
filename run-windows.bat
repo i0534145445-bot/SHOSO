@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
-title SHOSO Music
+title SHOSO Books
 cd /d "%~dp0"
 
 echo ================================================
-echo   SHOSO Music - Windows desktop music player
+echo   SHOSO Books - Windows desktop book reader
 echo ================================================
 echo.
 
@@ -26,6 +26,6 @@ if not exist "node_modules" (
   )
 )
 
-echo Starting SHOSO Music...
+echo Starting SHOSO Books...
 call npm run start:app
 if errorlevel 1 pause

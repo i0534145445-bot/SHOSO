@@ -2,15 +2,17 @@ import React from 'react';
 import { IconClose } from '../lib/icons.jsx';
 
 const SHORTCUTS = [
-  ['רווח', 'נגן / השהה'],
-  ['חץ ימינה / שמאלה', 'קדימה / אחורה 5 שניות'],
-  ['Ctrl + חץ ימינה / שמאלה', 'השיר הבא / הקודם'],
-  ['חץ למעלה / למטה', 'הגברת / הנמכת מהירות נגינה'],
-  ['M', 'השתקה'],
-  ['L', 'נגן / השהה'],
-  ['/  או  Ctrl+F', 'חיפוש'],
-  ['Ctrl + I', 'הוספת תיקיית מוזיקה'],
-  ['F1', 'מקשי קיצור'],
+  ['/', 'חיפוש'],
+  ['Ctrl + O', 'ייבוא ספרים'],
+  ['Esc', 'סגירה / ניקוי חיפוש'],
+  ['F1', 'חלון קיצורים זה'],
+  ['בקורא: ← →', 'פרק קודם / הבא'],
+  ['בקורא: PgUp / PgDn', 'גלילה בעמוד'],
+  ['בקורא: B', 'סימנייה'],
+  ['בקורא: F', 'מסך מלא'],
+  ['בקורא: T', 'תוכן עניינים'],
+  ['בקורא: S', 'חיפוש בספר'],
+  ['בקורא: A', 'הגדרות קריאה'],
 ];
 
 export default function ShortcutsDialog({ onClose }) {
@@ -18,19 +20,19 @@ export default function ShortcutsDialog({ onClose }) {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>מקשי קיצור</h2>
-          <button className="icon-btn" onClick={onClose} title="סגור">
-            <IconClose />
-          </button>
+          <h2>קיצורי מקלדת</h2>
+          <button className="icon-btn" onClick={onClose}><IconClose size={18} /></button>
         </div>
-        <div className="shortcut-grid">
-          {SHORTCUTS.map(([keys, action]) => (
-            <div className="shortcut-row" key={keys}>
-              <kbd>{keys}</kbd>
-              <span>{action}</span>
-            </div>
-          ))}
-        </div>
+        <table className="shortcuts-table">
+          <tbody>
+            {SHORTCUTS.map(([key, desc]) => (
+              <tr key={key}>
+                <td><kbd>{key}</kbd></td>
+                <td>{desc}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

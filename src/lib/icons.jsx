@@ -20,16 +20,16 @@ const Svg = ({ children, size = 20, ...rest }) => (
 export const IconHome = (p) => (
   <Svg {...p}><path d="M3 10.5 12 3l9 7.5" /><path d="M5.5 9.5V21h13V9.5" /><path d="M9.5 21v-6.5h5V21" /></Svg>
 );
-export const IconMusic = (p) => (
-  <Svg {...p}><circle cx="8" cy="18" r="3" /><circle cx="18" cy="15.5" r="3" /><path d="M11 18V6.5l10-2v11" /></Svg>
+export const IconBook = (p) => (
+  <Svg {...p}><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5Z" /><path d="M4 18.5V5.5" /><path d="M8 7h8" /></Svg>
 );
-export const IconAlbum = (p) => (
-  <Svg {...p}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="2.6" /></Svg>
+export const IconLibrary = (p) => (
+  <Svg {...p}><path d="M5 4v16" /><path d="M9.5 4v16" /><path d="M14 4.5 18 19" /><path d="M17.5 4.5 21 19" /></Svg>
 );
-export const IconArtist = (p) => (
+export const IconAuthor = (p) => (
   <Svg {...p}><circle cx="12" cy="8" r="3.6" /><path d="M4.5 20.5c1.3-4 4-6 7.5-6s6.2 2 7.5 6" /></Svg>
 );
-export const IconPlaylist = (p) => (
+export const IconCollection = (p) => (
   <Svg {...p}><path d="M4 7h11" /><path d="M4 12h11" /><path d="M4 17h7" /><circle cx="18" cy="16" r="2.4" /><path d="M20.4 16V8.5l1.6-.5" /></Svg>
 );
 export const IconHeart = ({ filled, ...p }) => (
@@ -43,8 +43,8 @@ export const IconFolder = (p) => (
 export const IconClock = (p) => (
   <Svg {...p}><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></Svg>
 );
-export const IconQueue = (p) => (
-  <Svg {...p}><path d="M4 6h12" /><path d="M4 11h12" /><path d="M4 16h7" /><path d="M17 13.5 21 16l-4 2.5Z" /></Svg>
+export const IconHistory = (p) => (
+  <Svg {...p}><path d="M4 12a8 8 0 1 1 2.3 5.6" /><path d="M4 12H2.5M4 12l-1.5-2M12 8v4l3 2" /></Svg>
 );
 export const IconSettings = (p) => (
   <Svg {...p}><circle cx="12" cy="12" r="3" /><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6" /></Svg>
@@ -52,51 +52,11 @@ export const IconSettings = (p) => (
 export const IconPlus = (p) => (
   <Svg {...p}><path d="M12 5v14M5 12h14" /></Svg>
 );
-export const IconGenre = (p) => (
-  <Svg {...p}><path d="M4 6h16" /><path d="M4 12h10" /><path d="M4 18h6" /><circle cx="18" cy="17" r="2.5" /></Svg>
-);
-export const IconPlay = (p) => (
-  <Svg {...p} fill="currentColor" stroke="none"><path d="M8 5.5v13l11-6.5Z" /></Svg>
-);
-export const IconPause = (p) => (
-  <Svg {...p} fill="currentColor" stroke="none"><rect x="7" y="5" width="3.6" height="14" rx="1.2" /><rect x="13.4" y="5" width="3.6" height="14" rx="1.2" /></Svg>
-);
-export const IconNext = (p) => (
-  <Svg {...p} fill="currentColor" stroke="none"><path d="M6 5.5v13l9-6.5Z" /><rect x="16.5" y="5.5" width="2.6" height="13" rx="1" /></Svg>
-);
-export const IconPrev = (p) => (
-  <Svg {...p} fill="currentColor" stroke="none"><path d="M18 5.5v13L9 12Z" /><rect x="4.9" y="5.5" width="2.6" height="13" rx="1" /></Svg>
-);
-export const IconShuffle = (p) => (
-  <Svg {...p}><path d="M4 7h3.5L18 17h2" /><path d="M4 17h3.5L18 7h2" /><path d="M18 4.5 20.5 7 18 9.5" /><path d="M18 14.5 20.5 17 18 19.5" /></Svg>
-);
-export const IconRepeat = (p) => (
-  <Svg {...p}><path d="M6 5.5h9a3 3 0 0 1 3 3V10" /><path d="M18 18.5H9a3 3 0 0 1-3-3V13" /><path d="M15.5 3 18 5.5 15.5 8" /><path d="M8.5 21 6 18.5 8.5 16" /></Svg>
-);
-export const IconRepeatOne = (p) => (
-  <Svg {...p}><path d="M6 5.5h9a3 3 0 0 1 3 3V10" /><path d="M18 18.5H9a3 3 0 0 1-3-3V13" /><path d="M15.5 3 18 5.5 15.5 8" /><path d="M8.5 21 6 18.5 8.5 16" /><path d="M11.6 10.6 12.8 10v4" /></Svg>
-);
-export const IconVolume = ({ level = 2, ...p }) => (
-  <Svg {...p}>
-    <path d="M4 9.5h3l4-3.5v12l-4-3.5H4Z" />
-    {level > 0 && <path d="M15 9a4 4 0 0 1 0 6" />}
-    {level > 1 && <path d="M17.5 6.5a7.5 7.5 0 0 1 0 11" />}
-  </Svg>
-);
-export const IconMuted = (p) => (
-  <Svg {...p}><path d="M4 9.5h3l4-3.5v12l-4-3.5H4Z" /><path d="M16 10l4 4M20 10l-4 4" /></Svg>
+export const IconFormat = (p) => (
+  <Svg {...p}><path d="M6 3h9l4 4v14H6Z" /><path d="M15 3v4h4" /><path d="M9 12h6M9 16h6" /></Svg>
 );
 export const IconSearch = (p) => (
   <Svg {...p}><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></Svg>
-);
-export const IconLyrics = (p) => (
-  <Svg {...p}><path d="M4 6h10" /><path d="M4 11h7" /><path d="M4 16h9" /><path d="M17 6v8.2" /><circle cx="18.6" cy="16.4" r="2.4" /></Svg>
-);
-export const IconEq = (p) => (
-  <Svg {...p}><path d="M5 20V9" /><path d="M12 20V4" /><path d="M19 20v-7" /><circle cx="5" cy="7" r="1.8" /><circle cx="12" cy="16.5" r="1.8" /><circle cx="19" cy="10.5" r="1.8" /></Svg>
-);
-export const IconTrash = (p) => (
-  <Svg {...p}><path d="M4.5 7h15" /><path d="M9.5 7V4.8h5V7" /><path d="M6.5 7l1 12.2h9l1-12.2" /><path d="M10.5 10.5v6M13.5 10.5v6" /></Svg>
 );
 export const IconClose = (p) => (
   <Svg {...p}><path d="m6 6 12 12M18 6 6 18" /></Svg>
@@ -104,27 +64,86 @@ export const IconClose = (p) => (
 export const IconChevron = (p) => (
   <Svg {...p}><path d="m9 6 6 6-6 6" /></Svg>
 );
+export const IconChevronLeft = (p) => (
+  <Svg {...p}><path d="m15 6-6 6 6 6" /></Svg>
+);
 export const IconSort = (p) => (
   <Svg {...p}><path d="M7 4v16" /><path d="m3.5 16.5 3.5 3.5 3.5-3.5" /><path d="M13 7h7" /><path d="M13 12h5" /><path d="M13 17h3" /></Svg>
-);
-export const IconSparkle = (p) => (
-  <Svg {...p}><path d="M12 3.5 13.8 9l5.7 1.8-5.7 1.8L12 18l-1.8-5.4L4.5 10.8 10.2 9Z" /></Svg>
 );
 export const IconFullscreen = (p) => (
   <Svg {...p}><path d="M4 9V4h5" /><path d="M20 15v5h-5" /><path d="M15 4h5v5" /><path d="M9 20H4v-5" /></Svg>
 );
-export const IconGauge = (p) => (
-  <Svg {...p}><path d="M4.5 17a8.5 8.5 0 1 1 15 0" /><path d="M12 12.5 15.5 9" /><circle cx="12" cy="13" r="1.4" /></Svg>
+export const IconBookmark = ({ filled, ...p }) => (
+  <Svg {...p} fill={filled ? 'currentColor' : 'none'}>
+    <path d="M7 4h10v16l-5-3.5L7 20Z" />
+  </Svg>
 );
-export const IconMicrophone = (p) => (
-  <Svg {...p}><rect x="9" y="3.5" width="6" height="10" rx="3" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0" /><path d="M12 17.5V21" /></Svg>
+export const IconToc = (p) => (
+  <Svg {...p}><path d="M9 6h11M9 12h11M9 18h11" /><path d="M4 6h.01M4 12h.01M4 18h.01" /></Svg>
 );
-export const IconKeyboard = (p) => (
-  <Svg {...p}><rect x="3" y="6.5" width="18" height="11" rx="2" /><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10" /></Svg>
+export const IconFont = (p) => (
+  <Svg {...p}><path d="M5 19 12 5l7 14" /><path d="M8 14h8" /></Svg>
+);
+export const IconTts = (p) => (
+  <Svg {...p}><path d="M4 10v4h3l4 3.5v-11L7 10Z" /><path d="M15 9.5a4 4 0 0 1 0 5" /><path d="M17.5 7a7.5 7.5 0 0 1 0 10" /></Svg>
+);
+export const IconGrid = (p) => (
+  <Svg {...p}><rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><rect x="13" y="13" width="7" height="7" rx="1.5" /></Svg>
+);
+export const IconList = (p) => (
+  <Svg {...p}><path d="M9 6h11M9 12h11M9 18h11" /><path d="M4 6h.01M4 12h.01M4 18h.01" /></Svg>
+);
+export const IconTrash = (p) => (
+  <Svg {...p}><path d="M4.5 7h15" /><path d="M9.5 7V4.8h5V7" /><path d="M6.5 7l1 12.2h9l1-12.2" /><path d="M10.5 10.5v6M13.5 10.5v6" /></Svg>
 );
 export const IconRefresh = (p) => (
   <Svg {...p}><path d="M20 11a8 8 0 1 0-2.5 6" /><path d="M20 5v6h-6" /></Svg>
 );
 export const IconMore = (p) => (
   <Svg {...p} fill="currentColor" stroke="none"><circle cx="12" cy="5.5" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="12" cy="18.5" r="1.7" /></Svg>
+);
+export const IconKeyboard = (p) => (
+  <Svg {...p}><rect x="3" y="6.5" width="18" height="11" rx="2" /><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10" /></Svg>
+);
+export const IconBack = (p) => (
+  <Svg {...p}><path d="M15 5l-7 7 7 7" /></Svg>
+);
+export const IconForward = (p) => (
+  <Svg {...p}><path d="M9 5l7 7-7 7" /></Svg>
+);
+export const IconZoomIn = (p) => (
+  <Svg {...p}><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /><path d="M11 8.5v5M8.5 11h5" /></Svg>
+);
+export const IconZoomOut = (p) => (
+  <Svg {...p}><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /><path d="M8.5 11h5" /></Svg>
+);
+export const IconPlay = (p) => (
+  <Svg {...p} fill="currentColor" stroke="none"><path d="M8 5.5v13l11-6.5Z" /></Svg>
+);
+export const IconPause = (p) => (
+  <Svg {...p} fill="currentColor" stroke="none"><rect x="7" y="5" width="3.6" height="14" rx="1.2" /><rect x="13.4" y="5" width="3.6" height="14" rx="1.2" /></Svg>
+);
+export const IconStop = (p) => (
+  <Svg {...p} fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2" /></Svg>
+);
+export const IconSparkle = (p) => (
+  <Svg {...p}><path d="M12 3.5 13.8 9l5.7 1.8-5.7 1.8L12 18l-1.8-5.4L4.5 10.8 10.2 9Z" /></Svg>
+);
+export const IconInfo = (p) => (
+  <Svg {...p}><circle cx="12" cy="12" r="8.5" /><path d="M12 11v5" /><path d="M12 8h.01" /></Svg>
+);
+export const IconEdit = (p) => (
+  <Svg {...p}><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17Z" /><path d="m13.5 6.5 3 3" /></Svg>
+);
+export const IconCheck = (p) => (
+  <Svg {...p}><path d="m5 12.5 4.5 4.5L19 7.5" /></Svg>
+);
+export const IconExternal = (p) => (
+  <Svg {...p}><path d="M14 4h6v6" /><path d="M20 4 11 13" /><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" /></Svg>
+);
+export const IconMoon = (p) => (
+  <Svg {...p}><path d="M20 13.5A8.5 8.5 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5Z" /></Svg>
+);
+export const IconSun = (p) => (
+  <Svg {...p}><circle cx="12" cy="12" r="4" /><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" /></Svg>
 );

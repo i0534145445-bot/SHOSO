@@ -1,82 +1,44 @@
 import React from 'react';
-import { useStore, recentTracks, mostPlayed, setView } from '../lib/store.js';
+import { useStore, openBook } from '../lib/store.js';
+import { formatRelative, formatReadingTime } from '../lib/format.js';
+import { IconHistory } from '../lib/icons.jsx';
 import Cover from '../components/Cover.jsx';
-import { playTrack } from '../lib/store.js';
-
-const dayLabel = (ts) => {
-  const date = new Date(ts);
-  const today = new Date();
-  const yesterday = new Date(Date.now() - 86400000);
-  const same = (a, b) => a.toDateString() === b.toDateString();
-  if (same(date, today)) return 'היום';
-  if (same(date, yesterday)) return 'אתמול';
-  return date.toLocaleDateString('he-IL', { day: 'numeric', month: 'long' });
-};
 
 export default function HistoryView() {
-  const history = useStore((s) => s.history);
-  const top = useStore(() => mostPlayed(15));
-  const tracks = useStore((s) => s.tracks);
+  const recent = useStore((s) => s.recent);
+  const progress = useStore((s) => s.progress);
+  const stats = useStore((s) => s.readingStats);
+  const books = useStore((s) => s.books);
 
-  const grouped = [];
-  for (const entry of history) {
-    const label = dayLabel(entry.at);
-    let group = grouped.find((g) => g.label === label);
-    if (!group) {
-      group = { label, entries: [] };
-      grouped.push(group);
-    }
-    const track = tracks.find((t) => t.id === entry.id);
-    if (track) group.entries.push({ track, at: entry.at });
+  const items = recent
+    .map((id) => ({ book: books.find((b) => b.id === id), progress: progress[id], time: stats[id] || 0 }))
+    .filter((x) => x.book);
+
+  if (!items.length) {
+    return (
+      <div className="empty-state small">
+        <IconHistory size={40} />
+        <p>עדיין לא קראת ספרים.<br />פתח ספר כדי להתחיל – ההתקדמות תישמר אוטומטית.</p>
+      </div>
+    );
   }
 
   return (
-    <div className="view">
-      <div className="view-head">
-        <div>
-          <h2 className="view-title">היסטוריית האזנה</h2>
-          <p className="view-sub">{history.length} השמעות</p>
-        </div>
-      </div>
-
-      {top.length > 0 && (
-        <section className="shelf">
-          <div className="shelf-head"><h3>הכי מושמעים</h3></div>
-          <div className="shelf-row">
-            {top.slice(0, 10).map(({ track, count }) => (
-              <button key={track.id} className="mini-card" onClick={() => playTrack(track, { queue: tracks.map((t) => t.id) })}>
-                <Cover src={track.picture} name={track.album} size={112} rounded={12} />
-                <div className="mini-title">{track.title}</div>
-                <div className="mini-sub">{count} השמעות</div>
-              </button>
-            ))}
+    <div className="history-list">
+      {items.map(({ book, progress: p, time }) => (
+        <button key={book.id} className="history-item" onClick={() => openBook(book.id)}>
+          <Cover book={book} size="sm" />
+          <div className="history-info">
+            <strong>{book.title}</strong>
+            <span>{book.author} · {book.format}</span>
+            <div className="mini-bar"><span style={{ width: `${p?.percent || 0}%` }} /></div>
           </div>
-        </section>
-      )}
-
-      {!history.length && (
-        <div className="empty-state">
-          <p>עוד לא האזנת לשירים.</p>
-          <button className="btn ghost" onClick={() => setView('songs')}>לכל השירים</button>
-        </div>
-      )}
-
-      {grouped.map((group) => (
-        <section className="shelf" key={group.label}>
-          <div className="shelf-head"><h3>{group.label}</h3></div>
-          <div className="queue-list">
-            {group.entries.map(({ track, at }, i) => (
-              <div key={`${track.id}-${i}`} className="queue-row" onDoubleClick={() => playTrack(track, { queue: tracks.map((t) => t.id) })}>
-                <Cover src={track.picture} name={track.album} size={40} rounded={8} />
-                <div className="q-main">
-                  <div className="q-title">{track.title}</div>
-                  <div className="q-sub">{track.artist}</div>
-                </div>
-                <span className="q-dur">{new Date(at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
-            ))}
+          <div className="history-meta">
+            <span>{Math.round(p?.percent || 0)}%</span>
+            <span className="dim">{formatRelative(p?.updatedAt)}</span>
+            {time > 0 && <span className="dim">{formatReadingTime(time)}</span>}
           </div>
-        </section>
+        </button>
       ))}
     </div>
   );

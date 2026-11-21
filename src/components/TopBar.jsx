@@ -1,73 +1,66 @@
-import React, { useEffect, useRef } from 'react';
-import { useStore, setQuery, setView } from '../lib/store.js';
-import { IconSearch, IconClose, IconKeyboard, IconSettings } from '../lib/icons.jsx';
+import React from 'react';
+import { useStore, setQuery, setLayout, importFolders } from '../lib/store.js';
+import { IconSearch, IconPlus, IconGrid, IconList } from '../lib/icons.jsx';
 
-const TITLES = {
-  home: 'בית',
-  songs: 'שירים',
-  albums: 'אלבומים',
-  album: 'אלבום',
-  artists: 'אמנים',
-  artist: 'אמן',
-  playlists: 'פלייליסטים',
-  playlist: 'פלייליסט',
-  favorites: 'מועדפים',
-  history: 'היסטוריית האזנה',
-  folders: 'תיקיות',
-  genre: 'ז׳אנרים',
-  queue: 'תור נגינה',
-  settings: 'הגדרות',
-};
-
-export default function TopBar({ onShowShortcuts }) {
+export default function TopBar() {
   const query = useStore((s) => s.query);
   const view = useStore((s) => s.view);
-  const ref = useRef(null);
+  const layout = useStore((s) => s.layout);
+  const bookCount = useStore((s) => s.books.length);
 
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') {
-        e.preventDefault();
-        ref.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  const titles = {
+    home: 'בית',
+    library: 'ספרייה',
+    authors: 'מחברים',
+    author: 'מחבר',
+    formats: 'פורמטים',
+    format: 'פורמט',
+    favorites: 'מועדפים',
+    history: 'היסטוריה',
+    collections: 'מדפים',
+    collection: 'מדף',
+    folders: 'תיקיות',
+    settings: 'הגדרות',
+    book: 'פרטי ספר',
+  };
 
   return (
-    <header className="topbar" data-tauri-drag-region>
+    <header className="topbar">
       <div className="topbar-title">
-        <span className="eyebrow">SHOSO Music</span>
-        <h1>{TITLES[view] || 'ספרייה'}</h1>
+        <h1>{titles[view] || 'SHOSO Books'}</h1>
+        <span className="topbar-sub">{bookCount} ספרים בספרייה</span>
       </div>
-
-      <div className={`search ${query ? 'has-value' : ''}`}>
-        <IconSearch size={18} />
+      <div className="topbar-search">
+        <IconSearch size={17} />
         <input
-          ref={ref}
           id="global-search"
+          type="search"
+          placeholder="חיפוש ספר, מחבר או פורמט…  ( / )"
           value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            if (e.target.value && !['songs', 'home', 'albums', 'artists'].includes(view)) setView('songs');
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setQuery('');
           }}
-          placeholder="חיפוש שירים, אמנים, אלבומים…  ( / )"
-          aria-label="חיפוש"
         />
         {query && (
-          <button className="icon-btn tiny" onClick={() => setQuery('')} title="נקה חיפוש">
-            <IconClose size={15} />
+          <button className="icon-btn" onClick={() => setQuery('')} title="נקה חיפוש">
+            ✕
           </button>
         )}
       </div>
-
       <div className="topbar-actions">
-        <button className="icon-btn" onClick={onShowShortcuts} title="מקשי קיצור (F1)">
-          <IconKeyboard />
-        </button>
-        <button className="icon-btn" onClick={() => setView('settings')} title="הגדרות">
-          <IconSettings />
+        {(view === 'library' || view === 'favorites' || view === 'home') && (
+          <div className="seg">
+            <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')} title="תצוגת רשת">
+              <IconGrid size={16} />
+            </button>
+            <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')} title="תצוגת רשימה">
+              <IconList size={16} />
+            </button>
+          </div>
+        )}
+        <button className="btn primary" onClick={importFolders}>
+          <IconPlus size={16} /> ייבוא
         </button>
       </div>
     </header>

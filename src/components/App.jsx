@@ -1,44 +1,41 @@
 import React, { useEffect, useState } from 'react';
 import {
-  useStore, getState, togglePlay, nextTrack, prevTrack, seekBy, toggleMute, setRate,
-  handleDrop, importFolders, setQuery, toggleLyrics,
+  useStore, getState, setView, setQuery, importFolders,
 } from '../lib/store.js';
 import Sidebar from './Sidebar.jsx';
 import TopBar from './TopBar.jsx';
-import PlayerBar from './PlayerBar.jsx';
-import LyricsPanel from './LyricsPanel.jsx';
+import Reader from './Reader.jsx';
 import Toasts from './Toasts.jsx';
-import SongsView from '../views/SongsView.jsx';
-import AlbumsView from '../views/AlbumsView.jsx';
-import ArtistsView from '../views/ArtistsView.jsx';
-import AlbumDetail from '../views/AlbumDetail.jsx';
-import ArtistDetail from '../views/ArtistDetail.jsx';
-import PlaylistsView from '../views/PlaylistsView.jsx';
-import PlaylistDetail from '../views/PlaylistDetail.jsx';
-import FavoritesView from '../views/FavoritesView.jsx';
-import SettingsView from '../views/SettingsView.jsx';
-import QueuePanel from '../views/QueuePanel.jsx';
 import HomeView from '../views/HomeView.jsx';
+import LibraryView from '../views/LibraryView.jsx';
+import AuthorsView from '../views/AuthorsView.jsx';
+import AuthorDetail from '../views/AuthorDetail.jsx';
+import FormatsView from '../views/FormatsView.jsx';
+import FormatDetail from '../views/FormatDetail.jsx';
+import FavoritesView from '../views/FavoritesView.jsx';
 import HistoryView from '../views/HistoryView.jsx';
+import CollectionsView from '../views/CollectionsView.jsx';
+import CollectionDetail from '../views/CollectionDetail.jsx';
 import FoldersView from '../views/FoldersView.jsx';
-import GenreView from '../views/GenreView.jsx';
+import BookDetail from '../views/BookDetail.jsx';
+import SettingsView from '../views/SettingsView.jsx';
 import DropOverlay from './DropOverlay.jsx';
 import ShortcutsDialog from './ShortcutsDialog.jsx';
+import { handleDrop } from '../lib/store.js';
 
 const VIEWS = {
   home: HomeView,
-  songs: SongsView,
-  albums: AlbumsView,
-  album: AlbumDetail,
-  artists: ArtistsView,
-  artist: ArtistDetail,
-  playlists: PlaylistsView,
-  playlist: PlaylistDetail,
+  library: LibraryView,
+  authors: AuthorsView,
+  author: AuthorDetail,
+  formats: FormatsView,
+  format: FormatDetail,
   favorites: FavoritesView,
   history: HistoryView,
+  collections: CollectionsView,
+  collection: CollectionDetail,
   folders: FoldersView,
-  genre: GenreView,
-  queue: QueuePanel,
+  book: BookDetail,
   settings: SettingsView,
 };
 
@@ -47,13 +44,14 @@ const isTyping = (el) =>
 
 export default function App() {
   const view = useStore((s) => s.view);
-  const showLyrics = useStore((s) => s.showLyrics);
   const theme = useStore((s) => s.theme);
+  const scanStatus = useStore((s) => s.scanStatus);
   const [dragging, setDragging] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [dragDepth, setDragDepth] = useState(0);
 
-  const View = VIEWS[view] || SongsView;
+  const isReader = view === 'reader';
+  const View = VIEWS[view] || HomeView;
 
   useEffect(() => {
     const root = document.documentElement;
@@ -67,47 +65,13 @@ export default function App() {
         if (event.key === 'Escape') event.target.blur();
         return;
       }
+      if (isReader) return; // Reader handles its own keys
       switch (event.code) {
-        case 'Space':
-          event.preventDefault();
-          togglePlay();
-          break;
-        case 'ArrowRight':
-          if (mod) nextTrack();
-          else seekBy(5);
-          break;
-        case 'ArrowLeft':
-          if (mod) prevTrack();
-          else seekBy(-5);
-          break;
-        case 'ArrowUp':
-          event.preventDefault();
-          setRate(Math.min(2, getState().rate + 0.05));
-          break;
-        case 'ArrowDown':
-          event.preventDefault();
-          setRate(Math.max(0.5, getState().rate - 0.05));
-          break;
-        case 'KeyM':
-          toggleMute();
-          break;
-        case 'KeyF':
-          if (mod) {
-            event.preventDefault();
-            window.shoso?.toggleFullscreen?.();
-          }
-          break;
-        case 'KeyL':
-          togglePlay();
-          break;
-        case 'KeyY':
-          toggleLyrics();
-          break;
         case 'Slash':
           event.preventDefault();
           document.getElementById('global-search')?.focus();
           break;
-        case 'KeyI':
+        case 'KeyO':
           if (mod) {
             event.preventDefault();
             importFolders();
@@ -126,7 +90,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [isReader]);
 
   useEffect(() => {
     const onDragEnter = (e) => {
@@ -161,17 +125,39 @@ export default function App() {
     };
   }, []);
 
+  if (isReader) {
+    return (
+      <>
+        <Reader />
+        <Toasts />
+        {dragging && <DropOverlay />}
+      </>
+    );
+  }
+
   return (
-    <div className={`app ${showLyrics ? 'with-lyrics' : ''}`}>
+    <div className="app">
       <Sidebar />
       <main className="main">
-        <TopBar onShowShortcuts={() => setShowShortcuts(true)} />
+        <TopBar />
         <div className="view-scroll" key={view}>
           <View />
         </div>
       </main>
-      {showLyrics && <LyricsPanel />}
-      <PlayerBar />
+      {scanStatus?.phase === 'scanning' && (
+        <div className="scan-bar">
+          <div className="spinner small" />
+          <span>
+            סורק ספרים… {scanStatus.done}/{scanStatus.total}
+            {scanStatus.file ? ` · ${scanStatus.file}` : ''}
+          </span>
+          {scanStatus.total > 0 && (
+            <div className="scan-progress">
+              <span style={{ width: `${Math.round((scanStatus.done / scanStatus.total) * 100)}%` }} />
+            </div>
+          )}
+        </div>
+      )}
       <Toasts />
       {dragging && <DropOverlay />}
       {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}

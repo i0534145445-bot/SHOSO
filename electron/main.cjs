@@ -1,13 +1,13 @@
 'use strict';
 
 /**
- * SHOSO Music – Electron main process (Windows desktop shell).
+ * SHOSO Books – Electron main process (Windows desktop shell).
  *
  * Responsibilities:
  *  - Create the Windows app window.
- *  - Scan local music folders and read audio metadata (ID3 / FLAC / M4A / OGG).
- *  - Stream local audio to the renderer through a Range-aware `shoso-media://` protocol.
- *  - Persist the library, playlists and settings inside %APPDATA%/SHOSO Music.
+ *  - Scan local book folders and read book metadata (EPUB OPF / FB2 XML / PDF info / TXT).
+ *  - Stream local book files to the renderer through a Range-aware `shoso-media://` protocol.
+ *  - Persist the library and reading state inside %APPDATA%/SHOSO Books.
  */
 
 const { app, BrowserWindow, ipcMain, protocol, dialog, shell, Menu, nativeTheme } = require('electron');
@@ -16,31 +16,29 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const crypto = require('node:crypto');
 const { Readable } = require('node:stream');
-const { pathToFileURL } = require('node:url');
 
-const AUDIO_EXT = new Set(['.mp3', '.m4a', '.aac', '.flac', '.wav', '.ogg', '.oga', '.opus', '.wma', '.webm', '.aiff', '.aif', '.mp4', '.m4b', '.wv']);
-const COVER_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+const BOOK_EXT = new Set(['.epub', '.pdf', '.txt', '.fb2', '.html', '.htm', '.md', '.mobi', '.djvu']);
+const COVER_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 
 const isDev = !app.isPackaged;
 let mainWindow = null;
-let musicMetadata = null;
+let JSZip = null;
 
 const userData = () => app.getPath('userData');
 const coversDir = () => path.join(userData(), 'covers');
 const stateFile = () => path.join(userData(), 'state.json');
 const libraryFile = () => path.join(userData(), 'library.json');
 
-async function getMetadataLib() {
-  if (!musicMetadata) {
-    // music-metadata is CommonJS here; guard against double-`default` wrapping.
-    const mod = await import('music-metadata');
-    musicMetadata = mod && typeof mod.parseFile === 'function' ? mod : mod.default;
+async function getZip() {
+  if (!JSZip) {
+    const mod = await import('jszip');
+    JSZip = mod && mod.default ? mod.default : mod;
   }
-  return musicMetadata;
+  return JSZip;
 }
 
 /* ------------------------------------------------------------------ */
-/* Custom media protocol (byte-range aware, required for seeking)      */
+/* Custom media protocol (byte-range aware, required for PDF seeking)  */
 /* ------------------------------------------------------------------ */
 
 protocol.registerSchemesAsPrivileged([
@@ -51,25 +49,26 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 const MIME = {
-  '.mp3': 'audio/mpeg',
-  '.m4a': 'audio/mp4',
-  '.m4b': 'audio/mp4',
-  '.aac': 'audio/aac',
-  '.flac': 'audio/flac',
-  '.wav': 'audio/wav',
-  '.ogg': 'audio/ogg',
-  '.oga': 'audio/ogg',
-  '.opus': 'audio/ogg',
-  '.webm': 'audio/webm',
-  '.aiff': 'audio/aiff',
-  '.aif': 'audio/aiff',
-  '.wma': 'audio/x-ms-wma',
-  '.wv': 'audio/x-wavpack',
-  '.mp4': 'audio/mp4',
+  '.epub': 'application/epub+zip',
+  '.pdf': 'application/pdf',
+  '.txt': 'text/plain; charset=utf-8',
+  '.fb2': 'application/xml; charset=utf-8',
+  '.html': 'text/html; charset=utf-8',
+  '.htm': 'text/html; charset=utf-8',
+  '.md': 'text/markdown; charset=utf-8',
+  '.mobi': 'application/x-mobipocket-ebook',
+  '.djvu': 'image/x-djvu',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.png': 'image/png',
   '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.css': 'text/css',
+  '.xml': 'application/xml',
+  '.opf': 'application/oebps-package+xml',
+  '.ncx': 'application/x-dtbncx+xml',
+  '.svg': 'image/svg+xml',
+  '.xhtml': 'application/xhtml+xml',
 };
 
 function mediaStream(filePath, request) {
@@ -119,7 +118,6 @@ function registerMediaProtocol() {
       const url = new URL(request.url);
       let filePath = url.searchParams.get('p');
       if (!filePath) return new Response('missing path', { status: 400 });
-      // Blob/remote URLs are handled by the renderer itself; only local files here.
       if (/^(https?|blob|data):/i.test(filePath)) {
         return new Response('unsupported path', { status: 415 });
       }
@@ -131,26 +129,38 @@ function registerMediaProtocol() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Library scanning                                                    */
+/* Metadata helpers                                                    */
 /* ------------------------------------------------------------------ */
 
-const coverCache = new Map();
+function xmlText(xml, tag) {
+  const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i');
+  const m = re.exec(xml || '');
+  return m ? m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').trim() : '';
+}
+
+function xmlAttr(xml, tag, attr) {
+  const re = new RegExp(`<${tag}[^>]*${attr}\\s*=\\s*"([^"]+)"`, 'i');
+  const m = re.exec(xml || '');
+  return m ? m[1] : '';
+}
 
 async function saveCover(data, mime) {
   const hash = crypto.createHash('sha1').update(data).digest('hex');
   await fsp.mkdir(coversDir(), { recursive: true });
-  const ext = mime && mime.includes('png') ? '.png' : mime && mime.includes('webp') ? '.webp' : '.jpg';
+  const ext = mime && mime.includes('png') ? '.png' : mime && mime.includes('webp') ? '.webp' : mime && mime.includes('gif') ? '.gif' : '.jpg';
   const file = path.join(coversDir(), hash + ext);
   if (!fs.existsSync(file)) await fsp.writeFile(file, data);
   return `shoso-media://cover/?p=${encodeURIComponent(file)}`;
 }
+
+const coverCache = new Map();
 
 async function folderCover(dir) {
   if (coverCache.has(dir)) return coverCache.get(dir);
   let result = null;
   try {
     const entries = await fsp.readdir(dir);
-    const preferred = ['cover', 'folder', 'front', 'album', 'artwork'];
+    const preferred = ['cover', 'folder', 'front', 'book', 'artwork'];
     const images = entries.filter((f) => COVER_EXT.has(path.extname(f).toLowerCase()));
     images.sort((a, b) => {
       const ai = preferred.findIndex((p) => a.toLowerCase().startsWith(p));
@@ -167,18 +177,134 @@ async function folderCover(dir) {
   return result;
 }
 
-async function readLrcFor(audioPath) {
-  const base = audioPath.replace(/\.[^.\\/]+$/, '');
-  for (const candidate of [`${base}.lrc`, `${base}.LRC`, path.join(path.dirname(audioPath), 'lyrics.lrc')]) {
-    try {
-      const text = await fsp.readFile(candidate, 'utf8');
-      if (text && text.trim()) return text;
-    } catch {
-      /* next */
+async function readEpubMeta(filePath) {
+  const meta = { title: '', author: '', language: '', cover: null, pageCount: 0, chapters: 0 };
+  try {
+    const Zip = await getZip();
+    const buf = await fsp.readFile(filePath);
+    const zip = await Zip.loadAsync(buf);
+    // container.xml -> OPF
+    let opfPath = null;
+    const container = zip.file('META-INF/container.xml');
+    if (container) {
+      const xml = await container.async('string');
+      const m = /full-path="([^"]+)"/.exec(xml);
+      if (m) opfPath = m[1];
     }
+    if (!opfPath) {
+      const opf = Object.keys(zip.files).find((n) => n.endsWith('.opf'));
+      if (opf) opfPath = opf;
+    }
+    if (!opfPath || !zip.file(opfPath)) return meta;
+    const opfDir = opfPath.includes('/') ? opfPath.slice(0, opfPath.lastIndexOf('/') + 1) : '';
+    const opfXml = await zip.file(opfPath).async('string');
+    meta.title = xmlText(opfXml, 'dc:title') || xmlText(opfXml, 'title');
+    meta.author = xmlText(opfXml, 'dc:creator') || xmlText(opfXml, 'creator');
+    meta.language = xmlText(opfXml, 'dc:language') || xmlText(opfXml, 'language');
+    // cover: manifest item with properties="cover-image" or id="cover"
+    let coverHref = '';
+    const manifestMatch = /<manifest[\s\S]*?<\/manifest>/i.exec(opfXml);
+    const manifest = manifestMatch ? manifestMatch[0] : opfXml;
+    const items = [...manifest.matchAll(/<item[^>]*>/gi)].map((m) => m[0]);
+    for (const item of items) {
+      const props = xmlAttr(item, 'item', 'properties');
+      const id = xmlAttr(item, 'item', 'id');
+      const href = xmlAttr(item, 'item', 'href');
+      if (/cover-image/i.test(props) || /^cover$/i.test(id)) { coverHref = href; break; }
+    }
+    if (!coverHref) {
+      for (const item of items) {
+        const href = xmlAttr(item, 'item', 'href');
+        const media = xmlAttr(item, 'item', 'media-type');
+        if (/image\/(jpeg|png)/i.test(media) && /cover/i.test(href)) { coverHref = href; break; }
+      }
+    }
+    // spine count = chapters
+    const spineMatch = /<spine[\s\S]*?<\/spine>/i.exec(opfXml);
+    if (spineMatch) meta.chapters = (spineMatch[0].match(/<itemref/gi) || []).length;
+    if (coverHref) {
+      const coverPath = opfDir + decodeURIComponent(coverHref);
+      const coverFile = zip.file(coverPath);
+      if (coverFile) {
+        const data = await coverFile.async('nodebuffer');
+        meta.cover = await saveCover(data, coverHref.endsWith('.png') ? 'image/png' : 'image/jpeg');
+      }
+    }
+  } catch {
+    /* keep fallbacks */
   }
-  return null;
+  return meta;
 }
+
+async function readFb2Meta(filePath) {
+  const meta = { title: '', author: '', language: '', cover: null, chapters: 0 };
+  try {
+    const text = await fsp.readFile(filePath, 'utf8');
+    const head = text.slice(0, 200000);
+    meta.title = xmlText(head, 'book-title') || xmlText(head, 'title');
+    const first = xmlText(head, 'first-name');
+    const last = xmlText(head, 'last-name');
+    meta.author = [first, last].filter(Boolean).join(' ').trim();
+    meta.language = xmlText(head, 'lang');
+    meta.chapters = (text.match(/<section[\s>]/gi) || []).length;
+    // cover: <coverpage><image xlink:href="#id"/></coverpage> + <binary id=".." content-type="..">base64</binary>
+    const coverMatch = /<coverpage[\s\S]*?<image[^>]*xlink:href="#([^"]+)"/i.exec(head) || /<coverpage[\s\S]*?<image[^>]*href="#([^"]+)"/i.exec(head);
+    if (coverMatch) {
+      const id = coverMatch[1];
+      const binRe = new RegExp(`<binary[^>]*id="${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]*>([\\s\\S]*?)</binary>`, 'i');
+      const bin = binRe.exec(text);
+      if (bin) {
+        const data = Buffer.from(bin[1].replace(/\s/g, ''), 'base64');
+        meta.cover = await saveCover(data, 'image/jpeg');
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return meta;
+}
+
+async function readPdfMeta(filePath) {
+  const meta = { title: '', author: '', language: '', cover: null, pageCount: 0, chapters: 0 };
+  try {
+    // Lightweight PDF info extraction without full render: parse /Title, /Author, /Count
+    const buf = await fsp.readFile(filePath);
+    const head = buf.slice(0, 200000).toString('latin1');
+    const get = (key) => {
+      const m = new RegExp(`/${key}\\s*\\(([^)]*)\\)`).exec(head);
+      return m ? m[1].replace(/\\([()\\])/g, '$1') : '';
+    };
+    meta.title = get('Title');
+    meta.author = get('Author');
+    const count = /\/Count\s+(\d+)/.exec(head);
+    if (count) meta.pageCount = parseInt(count[1], 10) || 0;
+  } catch {
+    /* ignore */
+  }
+  return meta;
+}
+
+async function readTxtMeta(filePath) {
+  const meta = { title: '', author: '', language: '', cover: null, pageCount: 0, chapters: 0, wordCount: 0 };
+  try {
+    const text = await fsp.readFile(filePath, 'utf8');
+    meta.wordCount = (text.match(/\S+/g) || []).length;
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (lines.length) {
+      // First non-empty line is often the title.
+      meta.title = lines[0].slice(0, 120);
+      if (lines[1] && lines[1].length < 80) meta.author = lines[1].slice(0, 80);
+    }
+    meta.chapters = (text.match(/(^|\n)\s*(פרק|פרק|Chapter|CHAPTER|קפיטל|שער)\s+\S+/gi) || []).length;
+  } catch {
+    /* ignore */
+  }
+  return meta;
+}
+
+/* ------------------------------------------------------------------ */
+/* Library scanning                                                    */
+/* ------------------------------------------------------------------ */
 
 async function walk(dir, out, depth = 0) {
   if (depth > 12) return;
@@ -193,81 +319,74 @@ async function walk(dir, out, depth = 0) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       await walk(full, out, depth + 1);
-    } else if (AUDIO_EXT.has(path.extname(entry.name).toLowerCase())) {
+    } else if (BOOK_EXT.has(path.extname(entry.name).toLowerCase())) {
       out.push(full);
     }
   }
 }
 
-async function readTrack(filePath, { withCover = true } = {}) {
+async function readBook(filePath) {
   const stat = await fsp.stat(filePath).catch(() => null);
   const id = crypto.createHash('sha1').update(filePath).digest('hex').slice(0, 16);
-  const fallbackTitle = path.basename(filePath).replace(/\.[^.]+$/, '');
-  const track = {
+  const ext = path.extname(filePath).toLowerCase();
+  const format = ext.slice(1).toUpperCase();
+  const fallbackTitle = path.basename(filePath).replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+  const book = {
     id,
     path: filePath,
     dir: path.dirname(filePath),
     fileName: path.basename(filePath),
     title: fallbackTitle,
-    artist: 'אמן לא ידוע',
-    albumArtist: '',
-    album: 'אלבום לא ידוע',
-    genre: '',
-    year: '',
-    trackNo: 0,
-    discNo: 0,
-    duration: 0,
-    bitrate: 0,
-    codec: '',
-    sampleRate: 0,
+    author: 'מחבר לא ידוע',
+    language: '',
+    format,
+    ext,
     size: stat ? stat.size : 0,
     mtime: stat ? stat.mtimeMs : 0,
-    picture: null,
-    hasLyrics: false,
+    cover: null,
+    pageCount: 0,
+    chapters: 0,
+    wordCount: 0,
+    addedAt: stat ? stat.mtimeMs : Date.now(),
   };
 
   try {
-    const lib = await getMetadataLib();
-    const meta = await lib.parseFile(filePath, { duration: true, skipCovers: !withCover });
-    const c = meta.common || {};
-    const f = meta.format || {};
-    track.title = c.title || track.title;
-    track.artist = c.artist || (c.artists && c.artists[0]) || track.artist;
-    track.albumArtist = c.albumartist || '';
-    track.album = c.album || track.album;
-    track.genre = Array.isArray(c.genre) ? c.genre.join(', ') : c.genre || '';
-    track.year = c.year ? String(c.year) : '';
-    track.trackNo = c.track && c.track.no ? c.track.no : 0;
-    track.discNo = c.disk && c.disk.no ? c.disk.no : 0;
-    track.duration = f.duration || 0;
-    track.bitrate = f.bitrate || 0;
-    track.codec = f.codec || (f.container || '');
-    track.sampleRate = f.sampleRate || 0;
-    if (c.lyrics && String(c.lyrics).trim()) track.hasLyrics = true;
-    if (withCover && c.picture && c.picture[0] && c.picture[0].data) {
-      try {
-        track.picture = await saveCover(Buffer.from(c.picture[0].data), c.picture[0].format);
-      } catch {
-        /* ignore */
-      }
+    let meta = null;
+    if (ext === '.epub') meta = await readEpubMeta(filePath);
+    else if (ext === '.fb2') meta = await readFb2Meta(filePath);
+    else if (ext === '.pdf') meta = await readPdfMeta(filePath);
+    else if (ext === '.txt' || ext === '.md') meta = await readTxtMeta(filePath);
+    if (meta) {
+      if (meta.title) book.title = meta.title;
+      if (meta.author) book.author = meta.author;
+      if (meta.language) book.language = meta.language;
+      if (meta.cover) book.cover = meta.cover;
+      if (meta.pageCount) book.pageCount = meta.pageCount;
+      if (meta.chapters) book.chapters = meta.chapters;
+      if (meta.wordCount) book.wordCount = meta.wordCount;
     }
   } catch {
     /* keep filename fallbacks */
   }
 
-  if (!track.picture) track.picture = await folderCover(track.dir);
-  if (!track.hasLyrics) track.hasLyrics = Boolean(await readLrcFor(filePath));
-  return track;
+  if (!book.cover) book.cover = await folderCover(book.dir);
+  return book;
 }
 
 async function scanFolder(rootFolder, onProgress) {
   const files = [];
-  await walk(rootFolder, files);
-  const tracks = [];
+  const stat = await fsp.stat(rootFolder).catch(() => null);
+  if (!stat) return [];
+  if (stat.isFile()) {
+    if (BOOK_EXT.has(path.extname(rootFolder).toLowerCase())) files.push(rootFolder);
+  } else {
+    await walk(rootFolder, files);
+  }
+  const books = [];
   let done = 0;
   for (const file of files) {
     try {
-      tracks.push(await readTrack(file));
+      books.push(await readBook(file));
     } catch {
       /* skip unreadable file */
     }
@@ -276,7 +395,7 @@ async function scanFolder(rootFolder, onProgress) {
       onProgress({ done, total: files.length, file: path.basename(file) });
     }
   }
-  return tracks;
+  return books;
 }
 
 /* ------------------------------------------------------------------ */
@@ -295,7 +414,7 @@ function registerIpc() {
 
   ipcMain.handle('dialog:pickFolders', async () => {
     const res = await dialog.showOpenDialog(mainWindow, {
-      title: 'בחר תיקיות מוזיקה',
+      title: 'בחר תיקיות ספרים',
       properties: ['openDirectory', 'multiSelections'],
       buttonLabel: 'הוסף לספרייה',
     });
@@ -304,9 +423,9 @@ function registerIpc() {
 
   ipcMain.handle('dialog:pickFiles', async () => {
     const res = await dialog.showOpenDialog(mainWindow, {
-      title: 'בחר קבצי מוזיקה',
+      title: 'בחר קבצי ספרים',
       properties: ['openFile', 'multiSelections'],
-      filters: [{ name: 'שמע', extensions: [...AUDIO_EXT].map((e) => e.slice(1)) }],
+      filters: [{ name: 'ספרים', extensions: [...BOOK_EXT].map((e) => e.slice(1)) }],
       buttonLabel: 'הוסף לספרייה',
     });
     return res.canceled ? [] : res.filePaths;
@@ -316,42 +435,15 @@ function registerIpc() {
     const list = Array.isArray(folders) ? folders : [folders];
     const all = [];
     for (const folder of list) {
-      const stat = await fsp.stat(folder).catch(() => null);
-      if (!stat) continue;
-      if (stat.isFile()) {
-        all.push(await readTrack(folder));
-        continue;
-      }
       const progress = (p) =>
         !event.sender.isDestroyed() && event.sender.send('library:progress', { folder, ...p });
-      const tracks = await scanFolder(folder, progress);
-      // Only attach files that belong to this folder root
-      all.push(...tracks);
+      const books = await scanFolder(folder, progress);
+      all.push(...books);
     }
     return all;
   });
 
-  ipcMain.handle('track:refresh', async (_event, filePath) => readTrack(filePath));
-
-  ipcMain.handle('track:lyrics', async (_event, track) => {
-    if (!track) return null;
-    if (track.path) {
-      const lrc = await readLrcFor(track.path);
-      if (lrc) return { type: 'lrc', text: lrc };
-    }
-    try {
-      const lib = await getMetadataLib();
-      if (track.path) {
-        const meta = await lib.parseFile(track.path, { skipCovers: true });
-        if (meta.common.lyrics && meta.common.lyrics.length) {
-          return { type: 'unsynced', text: meta.common.lyrics.join('\n') };
-        }
-      }
-    } catch {
-      /* ignore */
-    }
-    return null;
-  });
+  ipcMain.handle('book:refresh', async (_event, filePath) => readBook(filePath));
 
   ipcMain.handle('state:load', async () => {
     try {
@@ -388,6 +480,14 @@ function registerIpc() {
   ipcMain.handle('shell:reveal', async (_event, filePath) => {
     shell.showItemInFolder(filePath);
     return true;
+  });
+
+  ipcMain.handle('shell:openExternal', async (_event, url) => {
+    if (/^https?:\/\//i.test(url)) {
+      await shell.openExternal(url);
+      return true;
+    }
+    return false;
   });
 
   ipcMain.handle('window:toggleFullscreen', () => {
@@ -438,9 +538,8 @@ function createWindow() {
     minHeight: 620,
     show: false,
     backgroundColor: '#0c0f14',
-    title: 'SHOSO Music',
+    title: 'SHOSO Books',
     autoHideMenuBar: true,
-    // The icon exists in dev; packaged builds take the icon from the .exe itself.
     icon: resolveIcon(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -466,13 +565,12 @@ function createWindow() {
     return { action: 'deny' };
   });
 
-  // Windows: keep media keys working while the window is unfocused.
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 }
 
-app.setAppUserModelId('com.shoso.music');
+app.setAppUserModelId('com.shoso.books');
 
 const singleInstance = app.requestSingleInstanceLock();
 if (!singleInstance) {
@@ -519,4 +617,4 @@ if (!singleInstance) {
   });
 }
 
-module.exports = { AUDIO_EXT, readTrack };
+module.exports = { BOOK_EXT, readBook };

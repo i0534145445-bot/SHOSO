@@ -21,13 +21,13 @@ contextBridge.exposeInMainWorld('shoso', {
   pickFiles: () => ipcRenderer.invoke('dialog:pickFiles'),
   scan: (folders) => ipcRenderer.invoke('library:scan', folders),
   onScanProgress: (cb) => on('library:progress', cb),
-  refreshTrack: (filePath) => ipcRenderer.invoke('track:refresh', filePath),
-  lyrics: (track) => ipcRenderer.invoke('track:lyrics', track),
+  refreshBook: (filePath) => ipcRenderer.invoke('book:refresh', filePath),
   loadState: () => ipcRenderer.invoke('state:load'),
   saveState: (state) => ipcRenderer.invoke('state:save', state),
   loadLibrary: () => ipcRenderer.invoke('library:load'),
   saveLibrary: (library) => ipcRenderer.invoke('library:save', library),
   reveal: (filePath) => ipcRenderer.invoke('shell:reveal', filePath),
+  openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
   toggleFullscreen: () => ipcRenderer.invoke('window:toggleFullscreen'),
   minimize: () => ipcRenderer.invoke('window:minimize'),
   maximize: () => ipcRenderer.invoke('window:maximize'),
@@ -41,6 +41,6 @@ contextBridge.exposeInMainWorld('shoso', {
       return null;
     }
   },
-  // Turn a local path into a playable URL.
+  // Turn a local path into a fetchable URL.
   mediaUrl: (filePath) => `shoso-media://local/?p=${encodeURIComponent(filePath)}`,
 });

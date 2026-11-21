@@ -1,8 +1,8 @@
 {
-  "name": "shoso-music",
-  "productName": "SHOSO Music",
+  "name": "shoso-books",
+  "productName": "SHOSO Books",
   "version": "1.0.0",
-  "description": "SHOSO Music - נגן מוזיקה שולחני לווינדוס (Windows only)",
+  "description": "SHOSO Books - קורא ספרים שולחני לווינדוס (Windows only) - חלופה ל-Readera",
   "author": "SHOSO",
   "license": "MIT",
   "private": true,
@@ -20,7 +20,8 @@
     "build:exe": "npm run dist"
   },
   "dependencies": {
-    "music-metadata": "7.14.0"
+    "jszip": "^3.10.2",
+    "pdfjs-dist": "^6.5.438"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
@@ -35,8 +36,8 @@
     "vitest": "^2.1.8"
   },
   "build": {
-    "appId": "com.shoso.music",
-    "productName": "SHOSO Music",
+    "appId": "com.shoso.books",
+    "productName": "SHOSO Books",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -52,14 +53,14 @@
         "nsis",
         "portable"
       ],
-      "artifactName": "SHOSO-Music-${version}-${arch}.${ext}"
+      "artifactName": "SHOSO-Books-${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "SHOSO Music"
+      "shortcutName": "SHOSO Books"
     },
     "publish": null
   }
