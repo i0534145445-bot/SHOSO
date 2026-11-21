@@ -44,6 +44,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/i0534145445-bot/SHOSO.git
-          git add screenshots/*.png 2>/dev/null || true
+          git add screenshots 2>/dev/null || true
           git -c advice.dirtyExitCode=false commit -m "ci: add real app screenshots [skip ci]" || true
           git push origin HEAD:arena/3c8f84f0-shoso
