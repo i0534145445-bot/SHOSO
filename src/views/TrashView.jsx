@@ -32,15 +32,15 @@ export default function TrashView() {
               <h3>{book.title}</h3>
               <p>{book.author || 'מחבר לא ידוע'}</p>
               <p className="row-format">{book.format}{book.size ? `, ${formatSize(book.size)}` : ''}</p>
-              <div className="row-rail hidden" />
-            </div>
-            <div className="row-actions" style={{ justifyContent: 'flex-end', gap: 4 }}>
-              <button className="icon-btn" title="שחזר" onClick={() => restoreBook(book.id)}>
-                <IconRestore size={19} />
-              </button>
-              <button className="icon-btn" title="מחק לצמיתות" onClick={() => purgeBook(book.id)}>
-                <IconTrash size={19} />
-              </button>
+              <div className="row-rail" style={{ visibility: 'hidden' }} />
+              <div className="row-actions" style={{ justifyContent: 'flex-end', gap: 6 }}>
+                <button className="icon-btn" title="שחזר" onClick={() => restoreBook(book.id)}>
+                  <IconRestore size={19} />
+                </button>
+                <button className="icon-btn" title="מחק לצמיתות" onClick={() => purgeBook(book.id)}>
+                  <IconTrash size={19} />
+                </button>
+              </div>
             </div>
           </article>
         ))}

@@ -47,60 +47,60 @@ export default function BookCard({ book, from = 'books' }) {
         <div className="row-rail" title={percent > 0 ? `${percent}%` : 'לא התחלת לקרוא'}>
           <span style={{ width: `${percent}%` }} />
         </div>
-      </div>
 
-      <div className="row-actions" onClick={(e) => e.stopPropagation()}>
-        <button
-          className={`icon-btn ${isFav ? 'active' : ''}`}
-          title={isFav ? 'הסר ממועדפים' : 'הוסף למועדפים'}
-          onClick={() => toggleFavorite(book.id)}
-        >
-          <IconStar size={19} filled={isFav} />
-        </button>
-        <button
-          className={`icon-btn ${isToRead ? 'active' : ''}`}
-          title={isToRead ? 'הסר מהרשימה "לקריאה"' : 'הוסף לרשימת "לקריאה"'}
-          onClick={() => toggleToRead(book.id)}
-        >
-          <IconClock size={19} />
-        </button>
-        <button
-          className={`icon-btn ${isRead ? 'active' : ''}`}
-          title={isRead ? 'סמן כלא נקרא' : 'סמן כנקרא'}
-          onClick={() => toggleHaveRead(book.id)}
-        >
-          <IconDoubleCheck size={19} />
-        </button>
-        <button className="icon-btn" title="פתח לקריאה" onClick={open}>
-          <IconBars size={19} />
-        </button>
-        <div style={{ position: 'relative' }}>
+        <div className="row-actions" onClick={(e) => e.stopPropagation()}>
           <button
-            className="icon-btn"
-            title="עוד אפשרויות"
-            onClick={() => setMenu((v) => !v)}
+            className={`icon-btn ${isFav ? 'active' : ''}`}
+            title={isFav ? 'הסר ממועדפים' : 'הוסף למועדפים'}
+            onClick={() => toggleFavorite(book.id)}
           >
-            <IconMore size={19} />
+            <IconStar size={19} filled={isFav} />
           </button>
-          {menu && (
-            <>
-              <div
-                style={{ position: 'fixed', inset: 0, zIndex: 40 }}
-                onClick={() => setMenu(false)}
-              />
-              <div className="row-menu">
-                <button onClick={() => { setMenu(false); setView('book', book.id); }}>
-                  <IconInfo size={16} /> פרטי הספר
-                </button>
-                <button onClick={() => { setMenu(false); setView('collections'); }}>
-                  <IconCollection size={16} /> הוסף למדף
-                </button>
-                <button className="danger" onClick={() => { setMenu(false); removeBook(book.id); }}>
-                  <IconTrash size={16} /> העבר לאשפה
-                </button>
-              </div>
-            </>
-          )}
+          <button
+            className={`icon-btn ${isToRead ? 'active' : ''}`}
+            title={isToRead ? 'הסר מהרשימה "לקריאה"' : 'הוסף לרשימת "לקריאה"'}
+            onClick={() => toggleToRead(book.id)}
+          >
+            <IconClock size={19} />
+          </button>
+          <button
+            className={`icon-btn ${isRead ? 'active' : ''}`}
+            title={isRead ? 'סמן כלא נקרא' : 'סמן כנקרא'}
+            onClick={() => toggleHaveRead(book.id)}
+          >
+            <IconDoubleCheck size={19} />
+          </button>
+          <button className="icon-btn" title="פתח לקריאה" onClick={open}>
+            <IconBars size={19} />
+          </button>
+          <div style={{ position: 'relative' }}>
+            <button
+              className="icon-btn"
+              title="עוד אפשרויות"
+              onClick={() => setMenu((v) => !v)}
+            >
+              <IconMore size={19} />
+            </button>
+            {menu && (
+              <>
+                <div
+                  style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+                  onClick={() => setMenu(false)}
+                />
+                <div className="row-menu">
+                  <button onClick={() => { setMenu(false); setView('book', book.id); }}>
+                    <IconInfo size={16} /> פרטי הספר
+                  </button>
+                  <button onClick={() => { setMenu(false); setView('collections'); }}>
+                    <IconCollection size={16} /> הוסף למדף
+                  </button>
+                  <button className="danger" onClick={() => { setMenu(false); removeBook(book.id); }}>
+                    <IconTrash size={16} /> העבר לאשפה
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </article>
