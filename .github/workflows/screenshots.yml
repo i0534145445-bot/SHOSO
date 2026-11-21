@@ -1,0 +1,45 @@
+name: App screenshots
+
+# Takes REAL screenshots of the running app (Playwright + Chromium) and
+# uploads them as an artifact. Manual trigger only.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build:web
+
+      - name: Install Playwright + Chromium
+        run: |
+          npm i -D playwright@1.49.1
+          npx playwright install --with-deps chromium
+
+      - name: Serve + screenshot
+        run: |
+          npx vite preview --host 0.0.0.0 --port 4173 &
+          sleep 4
+          node scripts/screenshots.mjs
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: SHOSO-Books-Screenshots
+          path: screenshots/*.png
+          if-no-files-found: error
