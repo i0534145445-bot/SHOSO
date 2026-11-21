@@ -1,6 +1,6 @@
 import React from 'react';
-import { useStore, setQuery, setLayout, importFolders } from '../lib/store.js';
-import { IconSearch, IconPlus, IconGrid, IconList } from '../lib/icons.jsx';
+import { useStore, setQuery, setLayout, importFolders, toggleSidebar } from '../lib/store.js';
+import { IconMenu, IconSearch, IconPlus, IconGrid, IconList } from '../lib/icons.jsx';
 
 export default function TopBar() {
   const query = useStore((s) => s.query);
@@ -26,6 +26,11 @@ export default function TopBar() {
 
   return (
     <header className="topbar">
+      <div className="topbar-menu">
+        <button className="icon-btn" onClick={toggleSidebar} title="תפריט">
+          <IconMenu size={20} />
+        </button>
+      </div>
       <div className="topbar-title">
         <h1>{titles[view] || 'SHOSO Books'}</h1>
         <span className="topbar-sub">{bookCount} ספרים בספרייה</span>
@@ -49,16 +54,6 @@ export default function TopBar() {
         )}
       </div>
       <div className="topbar-actions">
-        {(view === 'library' || view === 'favorites' || view === 'home') && (
-          <div className="seg">
-            <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')} title="תצוגת רשת">
-              <IconGrid size={16} />
-            </button>
-            <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')} title="תצוגת רשימה">
-              <IconList size={16} />
-            </button>
-          </div>
-        )}
         <button className="btn primary" onClick={importFolders}>
           <IconPlus size={16} /> ייבוא
         </button>

@@ -19,7 +19,7 @@ export default function BookCard({ book }) {
             <span style={{ width: `${percent}%` }} />
           </div>
         )}
-        {percent >= 100 && <span className="finished-badge">✓ נקרא</span>}
+        {percent >= 100 && <span className="finished-badge">נקרא</span>}
         <button
           className={`fav-btn ${isFav ? 'active' : ''}`}
           onClick={(e) => { e.stopPropagation(); toggleFavorite(book.id); }}

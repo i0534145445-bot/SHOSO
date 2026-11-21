@@ -4,23 +4,23 @@
    ========================================================================== */
 
 :root {
-  --accent-1: #ffd54f;
-  --accent-2: #ff8a80;
-  --accent-soft: rgba(255, 213, 79, 0.15);
-  --bg: #0b1021;
-  --bg-elev: #141b2d;
-  --bg-elev-2: #1c263e;
-  --bg-hover: rgba(255, 255, 255, 0.04);
-  --bg-active: rgba(255, 255, 255, 0.07);
-  --panel: rgba(20, 27, 45, 0.96);
+  --accent-1: #4cc9f0;
+  --accent-2: #f72585;
+  --accent-soft: rgba(76, 201, 240, 0.15);
+  --bg: #0a1929;
+  --bg-elev: #112240;
+  --bg-elev-2: #1d2e4e;
+  --bg-hover: rgba(255, 255, 255, 0.03);
+  --bg-active: rgba(255, 255, 255, 0.05);
+  --panel: rgba(17, 34, 64, 0.96);
   --text: #e8eaed;
   --text-soft: #a0a4a8;
   --text-dim: #6b7280;
-  --line: rgba(255, 255, 255, 0.06);
-  --line-strong: rgba(255, 255, 255, 0.1);
+  --line: rgba(255, 255, 255, 0.05);
+  --line-strong: rgba(255, 255, 255, 0.08);
   --shadow-lg: 0 26px 60px rgba(0, 0, 0, 0.55);
   --shadow-sm: 0 8px 24px rgba(0, 0, 0, 0.32);
-  --radius: 8px;
+  --radius: 6px;
   --radius-sm: 4px;
   --sidebar-w: 260px;
   --font: 'Segoe UI', 'Segoe UI Variable', 'Rubik', 'Heebo', system-ui, -apple-system, 'Arial Hebrew', sans-serif;
@@ -120,7 +120,7 @@ a { color: var(--accent-2); }
 
 .nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .nav-item {
-  display: flex; align-items: center; gap: 11px;
+  display: flex; align-items: center; gap: 12px;
   padding: 10px 12px; border-radius: var(--radius-sm);
   color: var(--text-soft); font-size: 14px; text-align: start;
   transition: background 0.15s, color 0.15s;
@@ -128,6 +128,7 @@ a { color: var(--accent-2); }
 .nav-item:hover { background: var(--bg-hover); color: var(--text); }
 .nav-item.active { background: var(--accent-soft); color: var(--text); }
 .nav-item.active svg { color: var(--accent-1); }
+.nav-item svg { flex-shrink: 0; }
 .nav-badge {
   margin-inline-start: auto;
   background: var(--bg-active); color: var(--text-soft);
@@ -138,25 +139,28 @@ a { color: var(--accent-2); }
 /* ---------------- topbar ---------------- */
 
 .topbar {
-  display: flex; align-items: center; gap: 18px;
-  padding: 14px 26px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--line);
   background: var(--bg-elev);
 }
-.topbar-title h1 { margin: 0; font-size: 20px; font-weight: 700; }
-.topbar-sub { font-size: 12px; color: var(--text-dim); }
+.topbar-menu { display: flex; align-items: center; gap: 12px; }
+.topbar-title { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.topbar-title h1 { margin: 0; font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-sub { font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar-search {
-  flex: 1; max-width: 520px;
+  flex: 1; max-width: 320px;
   display: flex; align-items: center; gap: 8px;
   background: var(--bg-elev-2);
   border: 1px solid var(--line);
-  border-radius: 8px; padding: 8px 14px;
+  border-radius: 6px; padding: 7px 12px;
   color: var(--text-dim);
 }
 .topbar-search input {
   flex: 1; background: none; border: none; outline: none;
-  font-size: 14px; color: var(--text);
+  font-size: 13px; color: var(--text);
 }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
 .topbar-search input::placeholder { color: var(--text-dim); }
 .topbar-actions { display: flex; align-items: center; gap: 10px; margin-inline-start: auto; }
 
@@ -268,18 +272,18 @@ a { color: var(--accent-2); }
 
 .book-list { display: flex; flex-direction: column; gap: 0; }
 .book-row {
-  display: flex; align-items: center; gap: 14px;
+  display: flex; align-items: center; gap: 16px;
   background: transparent; border-bottom: 1px solid var(--line);
-  padding: 14px 16px; cursor: pointer;
+  padding: 12px 16px; cursor: pointer;
   transition: background 0.15s;
 }
 .book-row:last-child { border-bottom: none; }
 .book-row:hover { background: var(--bg-hover); }
 .row-cover { flex-shrink: 0; }
-.row-cover .cover-sm { width: 72px; height: 108px; border-radius: 6px; }
+.row-cover .cover-sm { width: 76px; height: 114px; border-radius: 6px; }
 .row-main { flex: 1; min-width: 0; cursor: inherit; }
 .row-main h3 { margin: 0; font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
-.row-main p { margin: 3px 0 0; font-size: 13px; color: var(--text-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row-main p { margin: 4px 0 0; font-size: 13px; color: var(--text-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row-progress { font-size: 12px; color: var(--text-dim); min-width: 50px; text-align: end; }
 .row-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
 .row-actions .icon-btn { width: 32px; height: 32px; color: var(--text-soft); }
