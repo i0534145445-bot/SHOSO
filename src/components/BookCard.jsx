@@ -5,7 +5,7 @@ import {
 } from '../lib/store.js';
 import { formatSize } from '../lib/format.js';
 import {
-  IconStar, IconClock, IconDoubleCheck, IconBook, IconMore,
+  IconStar, IconClock, IconDoubleCheck, IconRead, IconMore,
   IconInfo, IconTrash, IconCheck,
 } from '../lib/icons.jsx';
 import Cover from './Cover.jsx';
@@ -120,7 +120,7 @@ export default function BookCard({ book, from = 'books' }) {
             <IconDoubleCheck size={21} />
           </button>
           <button className="icon-btn" title="פתח לקריאה" onClick={open}>
-            <IconBook size={21} />
+            <IconRead size={21} />
           </button>
           <div style={{ position: 'relative' }}>
             <button

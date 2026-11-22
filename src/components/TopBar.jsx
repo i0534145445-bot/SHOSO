@@ -5,7 +5,7 @@ import {
   addSelectionToCollection, createCollection, goBack,
 } from '../lib/store.js';
 import {
-  IconMenu, IconSearch, IconMore, IconBack, IconCheck, IconBook, IconCollection,
+  IconMenu, IconSearch, IconMore, IconBack, IconCheck, IconRead, IconCollection,
   IconTrash, IconClose, IconPlus,
 } from '../lib/icons.jsx';
 import { VIEW_MODES } from './BookList.jsx';
@@ -86,7 +86,7 @@ export default function TopBar() {
         </h1>
         <div className="topbar-actions">
           <button className="icon-btn" title="פתח לקריאה" onClick={openSelection}>
-            <IconBook size={21} />
+            <IconRead size={21} />
           </button>
           <div style={{ position: 'relative' }}>
             <button

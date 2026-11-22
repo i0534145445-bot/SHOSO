@@ -895,6 +895,7 @@ svg { shape-rendering: geometricPrecision; }
 .bd-info { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
 
 .bd-title {
+  align-self: stretch;
   margin: 0;
   font-size: 26px;
   font-weight: 500;
@@ -902,7 +903,7 @@ svg { shape-rendering: geometricPrecision; }
   letter-spacing: 0.1px;
   text-align: start;
 }
-.bd-author { margin: 7px 0 0; font-size: 14px; color: var(--text-2); }
+.bd-author { align-self: stretch; margin: 7px 0 0; font-size: 14px; color: var(--text-2); }
 
 .bd-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
 .bd-chip {

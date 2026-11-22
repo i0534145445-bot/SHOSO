@@ -56,6 +56,7 @@ import raw_starBorder from '@material-design-icons/svg/outlined/star_border.svg?
 import raw_heartFilled from '@material-design-icons/svg/filled/favorite.svg?raw';
 import raw_heartBorder from '@material-design-icons/svg/outlined/favorite_border.svg?raw';
 import raw_book from '@material-design-icons/svg/filled/book.svg?raw';
+import raw_menu_book from '@material-design-icons/svg/filled/menu_book.svg?raw';
 import raw_refresh from '@material-design-icons/svg/filled/refresh.svg?raw';
 import raw_devices from '@material-design-icons/svg/filled/devices.svg?raw';
 import raw_tune from '@material-design-icons/svg/filled/tune.svg?raw';
@@ -163,6 +164,8 @@ export const IconStarBorder = materialIcon(raw_starBorder);
 export const IconHeartFilled = materialIcon(raw_heartFilled);
 export const IconHeartBorder = materialIcon(raw_heartBorder);
 export const IconBook = materialIcon(raw_book);
+/** An open book – the glyph for every "read this" action. */
+export const IconRead = materialIcon(raw_menu_book);
 export const IconRefresh = materialIcon(raw_refresh);
 export const IconDevices = materialIcon(raw_devices);
 export const IconTune = materialIcon(raw_tune);

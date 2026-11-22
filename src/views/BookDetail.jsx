@@ -5,7 +5,7 @@ import {
 } from '../lib/store.js';
 import { formatSize, formatDate, formatRelative } from '../lib/format.js';
 import {
-  IconStar, IconClock, IconDoubleCheck, IconBook, IconBookmark, IconBack,
+  IconStar, IconClock, IconDoubleCheck, IconRead, IconBookmark, IconBack,
   IconTrash, IconCollection, IconPlus,
 } from '../lib/icons.jsx';
 import Cover from '../components/Cover.jsx';
@@ -105,7 +105,7 @@ export default function BookDetail() {
           )}
 
           <button className="btn primary large bd-read" onClick={open}>
-            <IconBook size={18} />
+            <IconRead size={18} />
             {started ? `המשך קריאה · ${percent}%` : isRead ? 'קרא שוב' : 'קרא את הספר'}
           </button>
 
