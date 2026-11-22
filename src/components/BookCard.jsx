@@ -22,6 +22,7 @@ export default function BookCard({ book, from = 'books' }) {
   const toRead = useStore((s) => s.toRead);
   const progress = useStore((s) => s.progress[book.id]);
   const selected = useStore((s) => s.selection.includes(book.id));
+  const selecting = useStore((s) => s.selection.length > 0);
   const [menu, setMenu] = useState(false);
 
   const isFav = favorites.includes(book.id);
@@ -46,7 +47,11 @@ export default function BookCard({ book, from = 'books' }) {
     >
       <div className="row-cover" title={book.title}>
         <Cover book={book} size="sm" />
-        <span className="select-badge" aria-hidden="true">{selected && <IconCheck size={15} />}</span>
+        {selecting && (
+          <span className={`select-badge${selected ? ' on' : ''}`} aria-hidden="true">
+            {selected && <IconCheck size={15} />}
+          </span>
+        )}
       </div>
 
       <div className="row-main" role="presentation" onDoubleClick={open}>
@@ -128,6 +133,7 @@ export default function BookCard({ book, from = 'books' }) {
 export function BookTile({ book, from = 'books', size = 'md' }) {
   const progress = useStore((s) => s.progress[book.id]);
   const selected = useStore((s) => s.selection.includes(book.id));
+  const selecting = useStore((s) => s.selection.length > 0);
   const percent = Math.round(progress?.percent || 0);
   return (
     <button
@@ -141,7 +147,11 @@ export function BookTile({ book, from = 'books', size = 'md' }) {
     >
       <span className="tile-cover">
         <Cover book={book} size="md" />
-        <span className="select-badge" aria-hidden="true">{selected && <IconCheck size={15} />}</span>
+        {selecting && (
+          <span className={`select-badge${selected ? ' on' : ''}`} aria-hidden="true">
+            {selected && <IconCheck size={15} />}
+          </span>
+        )}
       </span>
       <h3 title={book.title}>{book.title}</h3>
       <span>{percent > 0 ? `${book.author} · ${percent}%` : book.author}</span>

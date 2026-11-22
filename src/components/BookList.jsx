@@ -18,6 +18,7 @@ export const VIEW_MODES = [
 function BookBrief({ book, from }) {
   const progress = useStore((s) => s.progress[book.id]);
   const selected = useStore((s) => s.selection.includes(book.id));
+  const selecting = useStore((s) => s.selection.length > 0);
   const percent = Math.round(progress?.percent || 0);
   return (
     <button
@@ -32,7 +33,11 @@ function BookBrief({ book, from }) {
     >
       <span className="brief-cover">
         <Cover book={book} size="xs" />
-        <span className="select-badge small" aria-hidden="true">{selected && <IconCheck size={12} />}</span>
+        {selecting && (
+          <span className={`select-badge small${selected ? ' on' : ''}`} aria-hidden="true">
+            {selected && <IconCheck size={12} />}
+          </span>
+        )}
       </span>
       <span className="brief-text">
         <span className="brief-title">{book.title}</span>

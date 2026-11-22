@@ -490,9 +490,7 @@ svg { shape-rendering: geometricPrecision; }
   color: #fff;
   pointer-events: none;
 }
-.book-row.selected .select-badge,
-.book-tile.selected .select-badge,
-.brief-row.selected .select-badge { background: var(--teal-light); border-color: var(--teal-light); }
+.select-badge.on { background: var(--teal-light); border-color: var(--teal-light); }
 .select-badge.small { width: 16px; height: 16px; border-width: 1.5px; }
 .brief-row.selected { background: rgba(10, 115, 145, 0.22); }
 .book-tile.selected .cover { outline: 2px solid var(--teal-light); outline-offset: 1px; }
