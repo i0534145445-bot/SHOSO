@@ -92,7 +92,7 @@ export default function BookDetail() {
         <Meta label="קבצים ומסמכים" value={book.format} />
         <Meta label="סטטוס" value={status} gold={percent < 100} />
         <Meta label="גודל" value={formatSize(book.size)} />
-        <Meta label="מיקום" value={book.path} mono />
+        {book.path && !book.path.startsWith("blob:") && <Meta label="מיקום" value={book.path} mono />}
         <Meta label="מזהה הקובץ" value={book.fileName} mono />
         <Meta label="נוסף לספרייה" value={`${formatDate(book.addedAt)}${progress?.updatedAt ? ` · ${formatRelative(progress.updatedAt)}` : ''}`} />
         {book.chapters > 0 && <Meta label="פרקים" value={`${book.chapters}`} />}
