@@ -123,6 +123,25 @@ try {
     await page.waitForSelector('.book-grid.tiles .book-tile', { timeout: 6000 });
     await shot('04c-books-grid');
 
+    try {
+      const info = await page.evaluate(() => {
+        const grid = document.querySelector('.book-grid.tiles');
+        const g = getComputedStyle(grid);
+        const rows = [`grid display=${g.display} cols=${g.gridTemplateColumns} w=${grid.getBoundingClientRect().width} justifyItems=${g.justifyItems} alignItems=${g.alignItems}`];
+        [...grid.querySelectorAll('.book-tile')].slice(0, 4).forEach((t, i) => {
+          const tc = t.querySelector('.tile-cover');
+          const cv = t.querySelector('.cover');
+          const r = t.getBoundingClientRect();
+          const rc = cv.getBoundingClientRect();
+          const cs = getComputedStyle(t);
+          const ccs = getComputedStyle(cv);
+          rows.push(`tile${i} x=${r.x | 0} w=${r.width | 0} h=${r.height | 0} disp=${cs.display} justify=${cs.justifySelf} contain=${cs.contain} cvW=${rc.width | 0} cvH=${rc.height | 0} cvWidthProp=${ccs.width} cvAspect=${ccs.aspectRatio} wrapW=${tc.getBoundingClientRect().width | 0}`);
+        });
+        return rows.join(' | ');
+      });
+      trace(`DEBUG ${info}`);
+    } catch (err) { trace(`DEBUG failed ${err.message}`); }
+
     await clickTitle('עוד');
     await page.locator('.topbar-menu-pop button').filter({ hasText: 'תצוגה מלאה' }).click();
     await page.waitForSelector('.book-row', { timeout: 6000 });
