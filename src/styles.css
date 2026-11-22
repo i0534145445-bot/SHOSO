@@ -656,9 +656,11 @@ svg { shape-rendering: geometricPrecision; }
   contain-intrinsic-size: auto 320px;
   display: flex;
   flex-direction: column;
+  align-items: stretch; /* a <button> centres its content by default */
   gap: 8px;
   text-align: start;
 }
+.book-tile > .tile-cover { width: 100%; }
 .book-tile .cover { width: 100%; }
 .book-tile h3 {
   margin: 0;
