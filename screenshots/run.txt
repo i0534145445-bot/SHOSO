@@ -1,4 +1,4 @@
-start 2026-11-22T12:37:22.994Z
+start 2026-11-22T12:43:49.223Z
 goto
 loaded
 rows ready
@@ -9,6 +9,7 @@ ok books list
 saved 04-books-thumbs
 saved 04b-books-brief
 saved 04c-books-grid
+DEBUG grid display=grid cols=263.188px 263.203px 263.203px 263.203px 263.203px w=1440 justifyItems=normal alignItems=start | tile0 x=1158 w=263 h=195 disp=flex justify=auto contain=none cvW=96 cvH=144 cvWidthProp=96.5px cvAspect=2 / 3 wrapW=96 | tile1 x=873 w=263 h=159 disp=flex justify=auto contain=none cvW=72 cvH=109 cvWidthProp=72.7969px cvAspect=2 / 3 wrapW=72 | tile2 x=588 w=263 h=223 disp=flex justify=auto contain=none cvW=115 cvH=172 cvWidthProp=115.125px cvAspect=2 / 3 wrapW=115 | tile3 x=303 w=263 h=194 disp=flex justify=auto contain=none cvW=96 cvH=144 cvWidthProp=96.125px cvAspect=2 / 3 wrapW=96
 ok books tiles
 saved 05-reader-night
 ok reader
