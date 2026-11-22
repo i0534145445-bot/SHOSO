@@ -140,7 +140,10 @@ try {
   });
 
   await step('sepia mode', async () => {
-    await page.locator('.rs-mode[title="ספיה"]').click({ timeout: 6000 });
+    await page
+      .locator('.rs-block', { hasText: 'מצב צבע' })
+      .locator('select')
+      .selectOption('sepia', { timeout: 6000 });
     await page.waitForTimeout(600);
     await shot('07-reader-sepia');
   });
