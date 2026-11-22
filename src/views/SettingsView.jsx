@@ -61,7 +61,6 @@ function Stepper({ value, onDec, onInc }) {
 }
 
 const modeLabel = (id) => (COLOR_MODES.find((m) => m.id === id) || COLOR_MODES[2]).label;
-const fontLabel = (id) => (FONT_FAMILIES.find((f) => f.id === id) || FONT_FAMILIES[0]).label;
 
 const SORT_LABEL = {
   title: 'שם הספר', author: 'מחבר', added: 'תאריך הוספה', size: 'גודל', progress: 'התקדמות',
@@ -130,7 +129,6 @@ export default function SettingsView() {
         <Row
           label="גופן"
           desc="גופן הטקסט בעמוד הקריאה"
-          value={fontLabel(reader.fontFamily)}
         >
           <select
             className="settings-inline-select"
