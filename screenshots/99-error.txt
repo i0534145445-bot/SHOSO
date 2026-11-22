@@ -1,10 +1,10 @@
-step: sepia mode
-locator.click: Timeout 6000ms exceeded.
+step: book detail
+page.waitForSelector: Timeout 10000ms exceeded.
 Call log:
-  - waiting for locator('.rs-mode[title="ספיה"]')
+  - waiting for locator('.book-detail') to be visible
 
 {
   "rows": 0,
   "drawer": false,
-  "text": "הספר הישן הגדרות קריאה הגדרות קריאה EPUB · FB2 · MOBI · DOC · DOCX · PDF · TXT כיוון דפדוף אנכי אופקי אנכי מצב צבע לילה רגיל ספיה לילה קונסול גופן Merriweather Merriweather Noto Serif Hebrew Roboto Noto Sans Hebrew Monospace גודל גופן 18 עו"
+  "text": ""
 }
