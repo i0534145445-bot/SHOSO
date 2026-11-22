@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useStore } from '../lib/store.js';
 import BookCard, { BookTile } from './BookCard.jsx';
 import Cover from './Cover.jsx';
-import { openBookFrom, toggleSelect } from '../lib/store.js';
+import { toggleSelect, openBookDetails } from '../lib/store.js';
 import { IconCheck } from '../lib/icons.jsx';
 import { formatSize } from '../lib/format.js';
 
@@ -20,24 +20,47 @@ function BookBrief({ book, from }) {
   const selected = useStore((s) => s.selection.includes(book.id));
   const selecting = useStore((s) => s.selection.length > 0);
   const percent = Math.round(progress?.percent || 0);
+  const longPress = useRef(null);
+  const swallowed = useRef(false);
   return (
     <button
       className={`brief-row${selected ? ' selected' : ''}`}
       onClick={(event) => {
-        if (event.shiftKey) openBookFrom(book.id, from);
-        else toggleSelect(book.id);
+        if (swallowed.current) { swallowed.current = false; return; }
+        if (event.shiftKey || event.metaKey || event.ctrlKey || selecting) {
+          toggleSelect(book.id);
+          return;
+        }
+        openBookDetails(book.id);
       }}
-      onDoubleClick={() => openBookFrom(book.id, from)}
+      onPointerDown={() => {
+        clearTimeout(longPress.current);
+        swallowed.current = false;
+        longPress.current = setTimeout(() => {
+          swallowed.current = true;
+          toggleSelect(book.id);
+        }, 450);
+      }}
+      onPointerUp={() => clearTimeout(longPress.current)}
+      onPointerLeave={() => clearTimeout(longPress.current)}
+      onContextMenu={(e) => { e.preventDefault(); toggleSelect(book.id); }}
       aria-selected={selected}
       title={book.title}
     >
       <span className="brief-cover">
         <Cover book={book} size="xs" />
-        {selecting && (
-          <span className={`select-badge small${selected ? ' on' : ''}`} aria-hidden="true">
-            {selected && <IconCheck size={12} />}
-          </span>
-        )}
+        <span
+          role="button"
+          tabIndex={0}
+          className={`select-tick small${selected ? ' on' : ''}${selecting ? ' pinned' : ''}`}
+          title={selected ? 'הסר מהבחירה' : 'בחר את הספר'}
+          aria-label={selected ? 'הסר מהבחירה' : 'בחר את הספר'}
+          onClick={(e) => { e.stopPropagation(); toggleSelect(book.id); }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); toggleSelect(book.id); } }}
+        >
+          {selected && <IconCheck size={12} />}
+        </span>
       </span>
       <span className="brief-text">
         <span className="brief-title">{book.title}</span>

@@ -67,6 +67,7 @@ const DEFAULT_STATE = {
   currentBookId: null,
   view: 'home',
   detailBookId: null,
+  detailReturn: 'books', // where a detail screen was opened from
   theme: 'dark',
   accent: 'violet',
   sidebarCollapsed: false,
@@ -310,8 +311,29 @@ const indexOf = () => {
 
 export const bookById = (id) => (id ? indexOf().get(id) || null : null);
 
+/**
+ * Screens that hang off a list (a book, an author, a format, a shelf). They
+ * remember where they were opened from so the back arrow – and closing the
+ * reader – land where the reader expects.
+ */
+const DETAIL_VIEWS = new Set(['book', 'author', 'format', 'collection']);
+
 export function setView(view, detailBookId = null) {
-  setState({ view, detailBookId, selection: [] });
+  const patch = { view, detailBookId, selection: [] };
+  if (DETAIL_VIEWS.has(view)) {
+    patch.detailReturn = DETAIL_VIEWS.has(state.view) ? state.detailReturn || 'books' : state.view;
+  }
+  setState(patch);
+}
+
+/** Step back out of a detail screen, to wherever it was opened from. */
+export function goBack() {
+  setView(state.detailReturn || 'books');
+}
+
+/** The middle step between the library and the reader: the book description. */
+export function openBookDetails(bookId) {
+  setView('book', bookId);
 }
 
 export function setQuery(query) {

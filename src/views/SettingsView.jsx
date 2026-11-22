@@ -74,6 +74,7 @@ export default function SettingsView() {
   const sort = useStore((s) => s.sort);
   const bookCount = useStore((s) => s.books.length);
   const trashCount = useStore((s) => s.trash.length);
+  const recentCount = useStore((s) => s.recent.length);
   const folderCount = useStore((s) => s.folders.length);
   const [loadingDemo, setLoadingDemo] = useState(false);
 
@@ -175,6 +176,7 @@ export default function SettingsView() {
       <Section title="ספרייה">
         <Row label="ספרים בספרייה" desc="כל הספרים שנוספו" value={bookCount} />
         <Row label="אשפה" desc="ספרים שנמחקו – שחזור אפשרי" value={trashCount} onClick={() => setState({ view: 'trash' })} />
+        <Row label="היסטוריית קריאה" desc="הספרים שנפתחו לאחרונה" value={`${recentCount} ספרים`} onClick={() => setState({ view: 'history' })} />
       </Section>
 
       <Section title="מראה">

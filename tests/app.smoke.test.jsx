@@ -61,6 +61,36 @@ describe('SHOSO Books app', () => {
     act(() => setState({ favorites: [], view: 'home' }));
   });
 
+  it('opens the description screen on a tap, and the reader only from it', () => {
+    setState({ books: [makeBook(3)], view: 'library', query: '', selection: [], progress: {} });
+    const { container } = render(<App />);
+    const row = container.querySelector('.book-row');
+    fireEvent.click(row);
+    // the middle step: ReadEra's about-document screen
+    expect(getState().view).toBe('book');
+    expect(getState().detailBookId).toBe('b3');
+    expect(container.querySelector('.book-detail')).toBeTruthy();
+    const read = container.querySelector('.bd-read');
+    expect(read.textContent).toContain('קרא את הספר');
+    expect(container.querySelector('.bd-section-title').textContent).toBe('תיאור');
+    // and only the explicit action opens the book
+    fireEvent.click(read);
+    expect(getState().view).toBe('reader');
+    act(() => setView('library'));
+  });
+
+  it('selects books from the tick on the cover, not by tapping the row', () => {
+    setState({ books: [makeBook(4), makeBook(5)], view: 'library', query: '', selection: [], progress: {} });
+    const { container } = render(<App />);
+    const tick = container.querySelector('.book-row .select-tick');
+    fireEvent.click(tick);
+    expect(getState().selection).toEqual(['b4']);
+    expect(getState().view).toBe('library');
+    expect(container.querySelector('.selection-bar')).toBeTruthy();
+    expect(container.querySelectorAll('.book-row.selected').length).toBe(1);
+    act(() => setState({ selection: [] }));
+  });
+
   it('shows settings with demo loader', () => {
     setState({ books: [], view: 'settings' });
     render(<App />);

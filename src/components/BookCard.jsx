@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   useStore, openBookFrom, toggleFavorite, toggleToRead, toggleHaveRead,
-  setView, removeBook, toggleSelect, clearSelection,
+  setView, removeBook, toggleSelect, openBookDetails,
 } from '../lib/store.js';
 import { formatSize } from '../lib/format.js';
 import {
-  IconStar, IconClock, IconDoubleCheck, IconBars, IconMore,
-  IconInfo, IconTrash, IconCollection, IconCheck,
+  IconStar, IconClock, IconDoubleCheck, IconBook, IconMore,
+  IconInfo, IconTrash, IconCheck,
 } from '../lib/icons.jsx';
 import Cover from './Cover.jsx';
 
@@ -31,30 +31,57 @@ export default function BookCard({ book, from = 'books' }) {
   const isRead = Boolean(progress?.finished) || percent >= 100;
 
   const open = () => openBookFrom(book.id, from);
-  // ReadEra: a tap selects the book (checkbox on the cover, action bar on top),
-  // a double clip opens it. The row actions below stop propagation themselves.
+
+  /* ReadEra's flow: a tap opens the intermediate description screen, the tick
+     on the cover (or a long press / ⌘-click, or a second tap once something is
+     already selected) picks the book for a multi-book action. */
+  const longPress = useRef(null);
+  const swallowed = useRef(false);
+
+  const onPointerDown = () => {
+    clearTimeout(longPress.current);
+    swallowed.current = false;
+    longPress.current = setTimeout(() => {
+      swallowed.current = true;
+      toggleSelect(book.id);
+    }, 450);
+  };
+  const stopPress = () => clearTimeout(longPress.current);
+
   const onRowClick = (event) => {
-    if (event.shiftKey) { open(); return; }
-    toggleSelect(book.id);
+    if (swallowed.current) { swallowed.current = false; return; }
+    if (event.shiftKey || event.metaKey || event.ctrlKey || selecting) {
+      toggleSelect(book.id);
+      return;
+    }
+    openBookDetails(book.id);
   };
 
   return (
     <article
       className={`book-row${selected ? ' selected' : ''}`}
       onClick={onRowClick}
-      onDoubleClick={open}
+      onPointerDown={onPointerDown}
+      onPointerUp={stopPress}
+      onPointerLeave={stopPress}
+      onContextMenu={(e) => { e.preventDefault(); toggleSelect(book.id); }}
       aria-selected={selected}
     >
       <div className="row-cover" title={book.title}>
         <Cover book={book} size="sm" />
-        {selecting && (
-          <span className={`select-badge${selected ? ' on' : ''}`} aria-hidden="true">
-            {selected && <IconCheck size={15} />}
-          </span>
-        )}
+        <button
+          type="button"
+          className={`select-tick${selected ? ' on' : ''}${selecting ? ' pinned' : ''}`}
+          title={selected ? 'הסר מהבחירה' : 'בחר את הספר'}
+          aria-label={selected ? 'הסר מהבחירה' : 'בחר את הספר'}
+          onClick={(e) => { e.stopPropagation(); toggleSelect(book.id); }}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {selected && <IconCheck size={15} />}
+        </button>
       </div>
 
-      <div className="row-main" role="presentation" onDoubleClick={open}>
+      <div className="row-main" role="presentation">
         <h3 title={book.title}>{book.title}</h3>
         <p title={book.author}>{book.author || 'מחבר לא ידוע'}</p>
         <p className="row-format">
@@ -92,8 +119,8 @@ export default function BookCard({ book, from = 'books' }) {
           >
             <IconDoubleCheck size={21} />
           </button>
-          <button className="icon-btn" title="הוסף למדף" onClick={() => setView('collections')}>
-            <IconBars size={21} />
+          <button className="icon-btn" title="פתח לקריאה" onClick={open}>
+            <IconBook size={21} />
           </button>
           <div style={{ position: 'relative' }}>
             <button
@@ -112,9 +139,6 @@ export default function BookCard({ book, from = 'books' }) {
                 <div className="row-menu">
                   <button onClick={() => { setMenu(false); setView('book', book.id); }}>
                     <IconInfo size={16} /> פרטי הספר
-                  </button>
-                  <button onClick={() => { setMenu(false); setView('collections'); }}>
-                    <IconCollection size={16} /> הוסף למדף
                   </button>
                   <button className="danger" onClick={() => { setMenu(false); removeBook(book.id); }}>
                     <IconTrash size={16} /> העבר לאשפה
@@ -135,23 +159,46 @@ export function BookTile({ book, from = 'books', size = 'md' }) {
   const selected = useStore((s) => s.selection.includes(book.id));
   const selecting = useStore((s) => s.selection.length > 0);
   const percent = Math.round(progress?.percent || 0);
+  const longPress = useRef(null);
+  const swallowed = useRef(false);
   return (
     <button
       className={`book-tile tile-${size}${selected ? ' selected' : ''}`}
       onClick={(event) => {
-        if (event.shiftKey) openBookFrom(book.id, from);
-        else toggleSelect(book.id);
+        if (swallowed.current) { swallowed.current = false; return; }
+        if (event.shiftKey || event.metaKey || event.ctrlKey || selecting) {
+          toggleSelect(book.id);
+          return;
+        }
+        openBookDetails(book.id);
       }}
-      onDoubleClick={() => openBookFrom(book.id, from)}
+      onPointerDown={() => {
+        clearTimeout(longPress.current);
+        swallowed.current = false;
+        longPress.current = setTimeout(() => {
+          swallowed.current = true;
+          toggleSelect(book.id);
+        }, 450);
+      }}
+      onPointerUp={() => clearTimeout(longPress.current)}
+      onPointerLeave={() => clearTimeout(longPress.current)}
+      onContextMenu={(e) => { e.preventDefault(); toggleSelect(book.id); }}
       aria-selected={selected}
     >
       <span className="tile-cover">
         <Cover book={book} size="md" />
-        {selecting && (
-          <span className={`select-badge${selected ? ' on' : ''}`} aria-hidden="true">
-            {selected && <IconCheck size={15} />}
-          </span>
-        )}
+        <span
+          role="button"
+          tabIndex={0}
+          className={`select-tick${selected ? ' on' : ''}${selecting ? ' pinned' : ''}`}
+          title={selected ? 'הסר מהבחירה' : 'בחר את הספר'}
+          aria-label={selected ? 'הסר מהבחירה' : 'בחר את הספר'}
+          onClick={(e) => { e.stopPropagation(); toggleSelect(book.id); }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); toggleSelect(book.id); } }}
+        >
+          {selected && <IconCheck size={15} />}
+        </span>
       </span>
       <h3 title={book.title}>{book.title}</h3>
       <span className="tile-meta">{percent > 0 ? `${book.author} · ${percent}%` : book.author}</span>

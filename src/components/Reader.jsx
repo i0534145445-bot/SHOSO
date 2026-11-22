@@ -358,7 +358,20 @@ export default function Reader() {
                       <IconTts size={18} /> {tts.playing ? 'עצור הקראה' : 'הקרא בקול'}
                     </button>
                   )}
-                  <button onClick={() => { setMoreOpen(false); window.shoso?.toggleFullscreen?.(); }}>
+                  <button
+                    onClick={() => {
+                      setMoreOpen(false);
+                      // Desktop window chrome when the Electron bridge is there,
+                      // the browser's own fullscreen when it isn't – never a
+                      // button that does nothing.
+                      if (window.shoso?.toggleFullscreen) {
+                        window.shoso.toggleFullscreen();
+                        return;
+                      }
+                      if (document.fullscreenElement) document.exitFullscreen?.();
+                      else document.documentElement.requestFullscreen?.();
+                    }}
+                  >
                     <IconFullscreen size={18} /> מסך מלא
                   </button>
                 </div>

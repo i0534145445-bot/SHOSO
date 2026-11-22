@@ -129,12 +129,13 @@ try {
   });
 
   await step('reader', async () => {
-    // the EPUB demo book is the long one: tap selects it, then press "read" –
-    // exactly the two steps ReadEra asks for
+    // the EPUB demo book is the long one: a tap opens ReadEra's description
+    // screen, and only the explicit read button opens the book
     await ensureNoSelection();
     await page.locator('.book-row h3').filter({ hasText: 'הספר הישן' }).first().click();
-    await page.waitForSelector('.selection-bar', { timeout: 8000 });
-    await page.locator('.selection-bar [title="פתח לקריאה"]').click();
+    await page.waitForSelector('.book-detail', { timeout: 10000 });
+    await page.waitForSelector('.bd-read', { timeout: 6000 });
+    await page.locator('.bd-read').click();
     await page.waitForSelector('.book-scroll', { timeout: 45000 });
     await page.mouse.move(700, 450);
     await page.waitForTimeout(700);
@@ -208,8 +209,10 @@ try {
     await clickTitle('תפריט');
     await clickDrawerItem('ספרים ומסמכים');
     await page.waitForSelector('.book-row', { timeout: 10000 });
-    await page.locator('.book-row').nth(0).click();
-    await page.locator('.book-row').nth(1).click();
+    // selection starts from the tick on the cover – a row tap opens the book
+    await page.locator('.book-row').nth(0).hover();
+    await page.locator('.book-row').nth(0).locator('.select-tick').click();
+    await page.locator('.book-row').nth(1).locator('.select-tick').click();
     await page.waitForSelector('.selection-bar', { timeout: 6000 });
     await shot('13-selection');
     await clickTitle('בטל בחירה (Esc)');
@@ -217,12 +220,14 @@ try {
   });
 
   await step('book detail', async () => {
+    await ensureNoSelection();
     await clickTitle('תפריט');
     await clickDrawerItem('ספרים ומסמכים');
     await page.waitForSelector('.book-row', { timeout: 10000 });
-    await page.locator('.book-row .row-actions button').last().click();
-    await page.locator('.row-menu button', { hasText: 'פרטי הספר' }).first().click();
+    await page.locator('.book-row h3').filter({ hasText: 'הספר הישן' }).first().click();
     await page.waitForSelector('.book-detail', { timeout: 10000 });
+    // the annotation is read from the file itself – wait for it, not for a timer
+    await page.waitForSelector('.bd-desc:not(.loading)', { timeout: 15000 });
     await shot('12-book-detail');
   });
 } catch (err) {

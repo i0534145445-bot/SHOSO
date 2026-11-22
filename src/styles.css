@@ -475,23 +475,36 @@ svg { shape-rendering: geometricPrecision; }
 
 /* selection checkbox sitting on the cover, like ReadEra's tick badge */
 .row-cover, .tile-cover, .brief-cover { position: relative; display: block; }
-.select-badge {
+
+/* the tick that starts a selection – it appears on hover, and stays put while
+   anything is selected, exactly like ReadEra's checkbox */
+.select-tick {
   position: absolute;
-  top: 4px;
-  inset-inline-start: 4px;
+  top: 5px;
+  inset-inline-start: 5px;
+  z-index: 3;
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.14s, transform 0.14s, background 0.14s;
+  cursor: pointer;
 }
-.select-badge.on { background: var(--teal-light); border-color: var(--teal-light); }
-.select-badge.small { width: 16px; height: 16px; border-width: 1.5px; }
+.book-row:hover .select-tick,
+.book-tile:hover .select-tick,
+.brief-row:hover .select-tick,
+.select-tick:focus-visible,
+.select-tick.pinned,
+.select-tick.on { opacity: 1; transform: none; }
+.select-tick.on { background: var(--teal-light); border-color: var(--teal-light); }
+.select-tick.small { width: 16px; height: 16px; border-width: 1.5px; }
 .brief-row.selected { background: rgba(10, 115, 145, 0.22); }
 .book-tile.selected .cover { outline: 2px solid var(--teal-light); outline-offset: 1px; }
 .book-tile.selected h3 { color: #fff; }
@@ -854,79 +867,155 @@ svg { shape-rendering: geometricPrecision; }
 
 /* ReadEra's book-description page: centred cover, title, glyph row, meta list */
 .book-detail {
-  max-width: 620px;
-  margin-inline: auto;
-  padding: 14px 24px 56px;
+  padding: 24px 26px 72px;
+  display: flex;
+  justify-content: center;
+}
+
+/* ReadEra's About-document sheet: the cover on the right, the annotation and
+   the file's facts on the left (RTL mirrors automatically). */
+.bd-sheet {
+  width: 100%;
+  max-width: 1000px;
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  gap: 34px;
+  align-items: start;
+}
+
+.bd-cover {
+  position: sticky;
+  top: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
+.bd-cover .cover { box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5); cursor: pointer; }
 
-.bd-cover { margin: 8px 0 20px; cursor: pointer; }
-.bd-cover .cover { box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45); }
+.bd-info { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
 
 .bd-title {
   margin: 0;
-  font-size: 23px;
+  font-size: 26px;
   font-weight: 500;
-  line-height: 1.25;
-  text-align: center;
+  line-height: 1.24;
   letter-spacing: 0.1px;
+  text-align: start;
 }
-.bd-author { margin: 6px 0 0; font-size: 13.5px; color: var(--text-2); text-align: center; }
+.bd-author { margin: 7px 0 0; font-size: 14px; color: var(--text-2); }
 
-.bd-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 14px 0 6px;
-  padding: 4px 0;
-}
-.bd-actions button {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
+.bd-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.bd-chip {
+  font-size: 11.5px;
   color: var(--text-2);
+  background: var(--surface);
+  border-radius: 2px;
+  padding: 3px 9px;
 }
-.bd-actions button:hover { background: var(--bg-hover); color: var(--text); }
-.bd-actions button.on { color: var(--gold); }
-.bd-actions button.gold { color: var(--gold); }
-.bd-actions button.done.on { color: var(--gold); }
-.bd-actions button.danger:hover { color: #ef7a7a; }
 
-.bd-meta {
+.bd-state { width: 100%; max-width: 420px; margin-top: 18px; }
+.bd-state-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+.bd-state-when { color: var(--text-3); }
+.bd-state-rail { height: 3px; background: var(--surface-hi); border-radius: 2px; overflow: hidden; }
+.bd-state-rail span { display: block; height: 100%; background: var(--gold); }
+
+.bd-read {
+  margin-top: 20px;
+  min-width: 260px;
+  justify-content: center;
+  gap: 9px;
+}
+
+.bd-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.bd-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  transition: background 0.14s, color 0.14s;
+}
+.bd-tool:hover { background: var(--surface-hi); color: var(--text); }
+.bd-tool.on { color: var(--gold); }
+.bd-tool.danger:hover { color: #ef7a7a; }
+.bd-tool-wrap { position: relative; }
+.bd-shelf-pop { inset-inline-start: 0; inset-inline-end: auto; }
+
+.bd-section {
   width: 100%;
-  margin-top: 18px;
-  display: flex;
-  flex-direction: column;
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
 }
-.bd-meta-row {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 9px 0;
-}
-.bd-meta-label {
-  font-size: 11px;
-  letter-spacing: 0.5px;
+.bd-section-title {
+  margin: 0 0 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.6px;
   color: var(--text-3);
 }
-.bd-meta-value { font-size: 14px; line-height: 1.4; word-break: break-word; }
-.bd-meta-value.gold { color: var(--gold); }
-.bd-meta-value.mono { font-size: 12.5px; color: var(--text-2); word-break: break-all; }
-
-.bd-footer {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  margin-top: 22px;
-  align-items: center;
+.bd-desc {
+  margin: 0;
+  max-width: 70ch;
+  font-size: 14.5px;
+  line-height: 1.8;
+  color: var(--text);
+  white-space: pre-line;
 }
-.bd-footer .btn.large { width: 100%; justify-content: center; }
+.bd-desc.loading, .bd-desc.empty { color: var(--text-3); }
+.bd-publish { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 12px; color: var(--text-3); }
+
+.bd-bookmarks { display: flex; flex-direction: column; gap: 2px; }
+.bd-bookmark {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 11px;
+  border-radius: 2px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  text-align: start;
+}
+.bd-bookmark:hover { background: var(--surface-hi); color: var(--text); }
+.bd-bookmark em { margin-inline-start: auto; font-style: normal; font-size: 11.5px; color: var(--text-3); }
+
+.bd-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0 24px; }
+.bd-fact {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.bd-fact-label { color: var(--text-3); flex-shrink: 0; }
+.bd-fact-value { color: var(--text-2); text-align: end; word-break: break-word; }
+
+.bd-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 30px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.bd-back:hover { color: var(--text); }
+
+@media (max-width: 880px) {
+  .bd-sheet { grid-template-columns: 1fr; gap: 22px; }
+  .bd-cover { position: static; align-items: flex-start; }
+}
 
 .mono { font-family: Consolas, monospace; font-size: 11.5px; }
 

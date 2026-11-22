@@ -66,6 +66,7 @@ const FB2_CONTENT = `<?xml version="1.0" encoding="utf-8"?>
 <book-title>הבית על הגבעה</book-title>
 <lang>he</lang>
 <author><first-name>דוד</first-name><last-name>כהן</last-name></author>
+<annotation><p>בית אבן לבן עם גג אדום עמד על הגבעה מאה שנה, עד שיוסי חזר אליו מהצבא ומצא אותו ריק. בין הקירות שנשארו מאחור הוא מוצא יומן ילדות של אחיו, ומגלה שהבית מעולם לא היה רק קירות – הוא היה המקום שאליו תמיד חוזרים.</p></annotation>
 </title-info>
 </description>
 <body>
@@ -103,6 +104,9 @@ async function buildDemoEpub() {
 <dc:title>הספר הישן</dc:title>
 <dc:creator>מרים לוי</dc:creator>
 <dc:language>he</dc:language>
+<dc:publisher>הוצאת שושן</dc:publisher>
+<dc:date>2024-03-11</dc:date>
+<dc:description>מרים מוצאת בעליית הגג ספר ישן שדפיו כתובים בכמה כתבי יד – וכל אחד מהם מספר סיפור אחר. כשהסיפורים מתחילים לספר גם אותה, היא מבינה שהספר אינו אוסף של סיפורים אלא אוסף של אנשים, ושהיא כבר אחד מהם. רומן קצר על זיכרון, על כתיבה, ועל מה שנשאר ממי שקרא לפנינו.</dc:description>
 <dc:identifier id="BookID">urn:uuid:shoso-demo-1</dc:identifier>
 </metadata>
 <manifest>

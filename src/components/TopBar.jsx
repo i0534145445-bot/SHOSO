@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   useStore, setQuery, setLayout, setSort, importFolders, toggleSidebar, setView,
   clearSelection, openSelection, deleteSelection, selectAll, bookById,
-  addSelectionToCollection, createCollection,
+  addSelectionToCollection, createCollection, goBack,
 } from '../lib/store.js';
 import {
   IconMenu, IconSearch, IconMore, IconBack, IconCheck, IconBook, IconCollection,
@@ -66,6 +66,9 @@ export default function TopBar() {
   }, [query]);
 
   const title = TITLES[view] || 'SHOSO Books';
+  // Detail screens (a book, an author, a format, a shelf) open with a back
+  // arrow where the drawer button normally sits – the way ReadEra does it.
+  const isDetail = ['book', 'author', 'format', 'collection'].includes(view);
   const canSearch = ['home', 'books', 'library', 'favorites', 'toread', 'haveread', 'authors', 'formats', 'collections', 'trash'].includes(view);
   const selecting = selection.length > 0;
   const selectedTitles = selection.map((id) => bookById(id)?.title).filter(Boolean);
@@ -162,9 +165,15 @@ export default function TopBar() {
       ) : (
         <>
           <div className="topbar-menu">
-            <button className="icon-btn" onClick={toggleSidebar} title="תפריט">
-              <IconMenu size={22} />
-            </button>
+            {isDetail ? (
+              <button className="icon-btn" onClick={goBack} title="חזרה">
+                <IconBack size={22} />
+              </button>
+            ) : (
+              <button className="icon-btn" onClick={toggleSidebar} title="תפריט">
+                <IconMenu size={22} />
+              </button>
+            )}
           </div>
           <h1 className="topbar-title">{title}</h1>
           <div className="topbar-actions">
