@@ -325,8 +325,8 @@ async function walk(dir, out, depth = 0) {
   }
 }
 
-async function readBook(filePath) {
-  const stat = await fsp.stat(filePath).catch(() => null);
+async function readBook(filePath, statGiven) {
+  const stat = statGiven !== undefined ? statGiven : await fsp.stat(filePath).catch(() => null);
   const id = crypto.createHash('sha1').update(filePath).digest('hex').slice(0, 16);
   const ext = path.extname(filePath).toLowerCase();
   const format = ext.slice(1).toUpperCase();
@@ -373,7 +373,25 @@ async function readBook(filePath) {
   return book;
 }
 
-async function scanFolder(rootFolder, onProgress) {
+/** Runs `fn` over `items` with a bounded number of workers. */
+async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let cursor = 0;
+  const workers = Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, async () => {
+    for (;;) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= items.length) return;
+      out[index] = await fn(items[index], index);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
+
+const SCAN_WORKERS = 6;
+
+async function scanFolder(rootFolder, onProgress, known) {
   const files = [];
   const stat = await fsp.stat(rootFolder).catch(() => null);
   if (!stat) return [];
@@ -382,20 +400,30 @@ async function scanFolder(rootFolder, onProgress) {
   } else {
     await walk(rootFolder, files);
   }
-  const books = [];
+
   let done = 0;
-  for (const file of files) {
+  const books = await mapLimit(files, SCAN_WORKERS, async (file) => {
+    let book = null;
     try {
-      books.push(await readBook(file));
+      const st = await fsp.stat(file).catch(() => null);
+      const before = known && known.get(file);
+      // Unchanged since the last scan? Keep the entry we already have (title,
+      // author, cover) instead of re-parsing the file.
+      if (st && before && before.size === st.size && before.mtime === st.mtimeMs) {
+        book = before;
+      } else {
+        book = await readBook(file, st);
+      }
     } catch {
-      /* skip unreadable file */
+      book = null;
     }
     done += 1;
     if (onProgress && (done % 5 === 0 || done === files.length)) {
       onProgress({ done, total: files.length, file: path.basename(file) });
     }
-  }
-  return books;
+    return book;
+  });
+  return books.filter(Boolean);
 }
 
 /* ------------------------------------------------------------------ */
@@ -431,13 +459,18 @@ function registerIpc() {
     return res.canceled ? [] : res.filePaths;
   });
 
-  ipcMain.handle('library:scan', async (event, folders) => {
-    const list = Array.isArray(folders) ? folders : [folders];
+  ipcMain.handle('library:scan', async (event, payload) => {
+    // Accepts the legacy shape (array of folders) and the incremental one
+    // ({ folders, known }) so the renderer can skip unchanged files.
+    const folders = Array.isArray(payload) ? payload : (payload && payload.folders) || [];
+    const knownList = Array.isArray(payload && payload.known) ? payload.known : [];
+    const known = new Map(knownList.map((b) => [b.path, b]));
+
     const all = [];
-    for (const folder of list) {
+    for (const folder of folders) {
       const progress = (p) =>
         !event.sender.isDestroyed() && event.sender.send('library:progress', { folder, ...p });
-      const books = await scanFolder(folder, progress);
+      const books = await scanFolder(folder, progress, known);
       all.push(...books);
     }
     return all;

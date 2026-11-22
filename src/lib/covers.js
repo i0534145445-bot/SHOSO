@@ -25,11 +25,47 @@ const MIME = {
 
 const mimeOf = (path) => MIME[(extOf(path).slice(1) || 'jpg').toLowerCase()] || 'image/jpeg';
 
-/** Cache: bookId -> data URL | null (null = the file has no cover art). */
+/**
+ * Cache: bookId -> data URL | null (null = the file has no cover art).
+ * Bounded, so a 5 000-book library can't pin hundreds of megabytes of bitmaps;
+ * Map keeps insertion order, which gives us LRU semantics for free.
+ */
+const MAX_CACHED = 240;
 const cache = new Map();
 const pending = new Map();
 
-export const cachedCover = (id) => cache.get(id) || null;
+const remember = (id, value) => {
+  cache.delete(id);
+  cache.set(id, value);
+  while (cache.size > MAX_CACHED) cache.delete(cache.keys().next().value);
+};
+
+export const cachedCover = (id) => (cache.has(id) ? cache.get(id) : null);
+
+/**
+ * Only a few files are opened at a time: a library screen used to fire one
+ * unzip/PDF render per book on mount, which thrashed the disk and the main
+ * process. Extractions now queue up behind three workers.
+ */
+const QUEUE_LIMIT = 3;
+const queue = [];
+let running = 0;
+
+function pump() {
+  while (running < QUEUE_LIMIT && queue.length) {
+    const job = queue.shift();
+    running += 1;
+    job.task().then(job.resolve, job.reject).finally(() => {
+      running -= 1;
+      pump();
+    });
+  }
+}
+
+const schedule = (task) => new Promise((resolve, reject) => {
+  queue.push({ task, resolve, reject });
+  pump();
+});
 
 const blobToDataUrl = (blob) =>
   new Promise((resolve) => {
@@ -193,19 +229,19 @@ export async function coverFor(book) {
   if (cache.has(book.id)) return cache.get(book.id);
   if (pending.has(book.id)) return pending.get(book.id);
 
-  const job = (async () => {
+  const job = schedule(async () => {
     try {
       const buffer = await readBookBuffer(book);
       const dataUrl = await extractCover(buffer, extOf(book.fileName || book.path || ''));
-      cache.set(book.id, dataUrl);
+      remember(book.id, dataUrl);
       return dataUrl;
     } catch {
-      cache.set(book.id, null);
+      remember(book.id, null);
       return null;
     } finally {
       pending.delete(book.id);
     }
-  })();
+  });
 
   pending.set(book.id, job);
   return job;

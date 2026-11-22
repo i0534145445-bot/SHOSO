@@ -4,7 +4,6 @@
  * Creates: 1 EPUB (Hebrew story), 1 TXT (English), 1 FB2 (Hebrew).
  */
 
-import JSZip from 'jszip';
 import { registerFileHandle } from './platform.js';
 
 const EPUB_CHAPTERS = [
@@ -84,6 +83,7 @@ const FB2_CONTENT = `<?xml version="1.0" encoding="utf-8"?>
 </FictionBook>`;
 
 async function buildDemoEpub() {
+  const JSZip = (await import('jszip')).default;
   const zip = new JSZip();
   zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' });
   zip.folder('META-INF').file(

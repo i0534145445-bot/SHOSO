@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { colorFromString } from '../lib/format.js';
 import { cachedCover, coverFor } from '../lib/covers.js';
 
@@ -21,23 +21,42 @@ const CLOTH = [
 export default function Cover({ book, size = 'md' }) {
   // The file's own artwork wins; we extract it on first display and remember it.
   const [src, setSrc] = useState(() => book.cover || cachedCover(book.id) || null);
+  const ref = useRef(null);
+  const [nearView, setNearView] = useState(() => typeof IntersectionObserver === 'undefined');
+
+  // Reading a cover means opening (and partly parsing) the file, so it only
+  // starts once the cover is about to scroll into view — scrolling through a
+  // 500-book library no longer opens 500 files.
+  useEffect(() => {
+    if (nearView || !ref.current) return undefined;
+    if (typeof IntersectionObserver === 'undefined') { setNearView(true); return undefined; }
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        setNearView(true);
+        io.disconnect();
+      }
+    }, { rootMargin: '280px' });
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, [nearView]);
 
   useEffect(() => {
     let alive = true;
-    if (src) return undefined;
+    if (src || !nearView) return undefined;
     coverFor(book).then((found) => {
       if (alive && found) setSrc(found);
     });
     return () => { alive = false; };
-  }, [book, src]);
+  }, [book, src, nearView]);
 
   if (src) {
     return (
-      <div className={`cover cover-${size} has-img`}>
+      <div className={`cover cover-${size} has-img`} ref={ref}>
         <img
           src={src}
           alt={book.title}
           loading="lazy"
+          decoding="async"
           draggable="false"
           onError={() => setSrc(null)}
         />
@@ -51,6 +70,7 @@ export default function Cover({ book, size = 'md' }) {
 
   return (
     <div
+      ref={ref}
       className={`cover cover-${size} generated`}
       style={{ background: cloth.bg, color: cloth.ink, fontFamily: serif }}
     >

@@ -75,10 +75,23 @@ export const collate = (a, b) => hebrewCollator.compare(String(a || ''), String(
 export const normalize = (text) => stripNiqqud(text).toLowerCase().trim();
 
 /** Build a searchable haystack for a book. */
-export const bookHaystack = (book) =>
-  normalize([book.title, book.author, book.format, book.fileName, book.language]
+/**
+ * Normalised search text per book. Books are immutable value objects that get
+ * replaced when they change, so a WeakMap memo is safe and saves rebuilding the
+ * string for every book on every keystroke.
+ */
+const haystacks = new WeakMap();
+
+export const bookHaystack = (book) => {
+  if (!book || typeof book !== 'object') return '';
+  const cached = haystacks.get(book);
+  if (cached !== undefined) return cached;
+  const value = normalize([book.title, book.author, book.format, book.fileName, book.language]
     .filter(Boolean)
     .join(' '));
+  haystacks.set(book, value);
+  return value;
+};
 
 export const matchesQuery = (haystack, query) => {
   if (!query) return true;

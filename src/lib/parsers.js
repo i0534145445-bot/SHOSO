@@ -7,8 +7,18 @@
  * engine – the library still lists them with a graceful message).
  */
 
-import JSZip from 'jszip';
 import { escapeHtml, detectDirection } from './format.js';
+
+/**
+ * JSZip is ~95 kB and is only needed once an EPUB is actually opened, so it is
+ * pulled in on demand instead of riding along with the first paint. The boot
+ * bundle stays small and the unzip chunk is cached by the renderer.
+ */
+let zipModule = null;
+const loadZip = async () => {
+  if (!zipModule) zipModule = (await import('jszip')).default;
+  return zipModule;
+};
 
 export const SUPPORTED_EXT = new Set(['.epub', '.pdf', '.txt', '.fb2', '.html', '.htm', '.md']);
 export const DETECTED_ONLY_EXT = new Set(['.mobi', '.djvu']);
@@ -317,6 +327,7 @@ function opfText(doc, tag) {
 }
 
 export async function parseEpub(buffer) {
+  const JSZip = await loadZip();
   const zip = await JSZip.loadAsync(buffer);
   const names = Object.keys(zip.files);
 
@@ -402,28 +413,41 @@ export async function parseEpub(buffer) {
       const file = zip.file(full);
       if (file) {
         const blob = await file.async('blob');
-        imageUrls.set(item.href, URL.createObjectURL(blob));
-        imageUrls.set(full, URL.createObjectURL(blob));
-        imageUrls.set(id, URL.createObjectURL(blob));
+        // One object URL per image, referenced under every alias it can be
+        // addressed by – three separate URLs would triple the blob memory and
+        // never be revoked.
+        const url = URL.createObjectURL(blob);
+        imageUrls.set(item.href, url);
+        imageUrls.set(full, url);
+        imageUrls.set(id, url);
       }
     }
   }
 
-  // Chapters from spine
-  const chapters = [];
+  // Chapters from spine. The zip deflate step is I/O- and CPU-bound per file,
+  // so all spine documents are decompressed concurrently and then assembled in
+  // reading order – a 300-chapter book opens several times faster.
+  const spineDocs = [];
   const seen = new Set();
   for (const idref of spineIds) {
     const item = manifest.get(idref);
-    if (!item) continue;
+    if (!item || !item.href) continue;
     const full = resolveHref(item.href);
     if (seen.has(full)) continue;
     seen.add(full);
     const file = zip.file(full);
-    if (!file) continue;
-    let xhtml;
-    try {
-      xhtml = await file.async('string');
-    } catch { continue; }
+    if (file) spineDocs.push({ item, full, file });
+  }
+
+  const spineXml = await Promise.all(
+    spineDocs.map(({ file }) => file.async('string').catch(() => null)),
+  );
+
+  const chapters = [];
+  for (let si = 0; si < spineDocs.length; si += 1) {
+    const { item, full } = spineDocs[si];
+    const xhtml = spineXml[si];
+    if (!xhtml) continue;
     const doc = new DOMParser().parseFromString(xhtml, 'application/xhtml+xml');
     // Title: first h1/h2 or <title>
     let chTitle = doc.querySelector('h1, h2')?.textContent.trim() || doc.querySelector('title')?.textContent.trim() || '';

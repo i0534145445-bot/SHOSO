@@ -143,12 +143,23 @@ export default function Reader() {
   }, [measurePages, parsed?.format, parsed?.chapters?.length, readerSettings.fontSize, readerSettings.lineHeight, readerSettings.maxWidth, readerSettings.margins]);
 
   /* ---------- scroll progress (EPUB/TXT/...) ---------- */
+  const scrollFrame = useRef(0);
   const onScroll = useCallback(() => {
+    // One measurement per painted frame: reading scrollTop + every chapter's
+    // offsetTop on each native scroll event forced a layout per event.
+    if (scrollFrame.current) return;
+    scrollFrame.current = requestAnimationFrame(() => {
+      scrollFrame.current = 0;
+      measureScroll();
+    });
+  }, [parsed, book?.id]);
+
+  const measureScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el || !parsed || parsed.format === 'PDF') return;
     const max = el.scrollHeight - el.clientHeight;
     const pct = max > 0 ? Math.round((el.scrollTop / max) * 100) : 0;
-    setPercent(pct);
+    setPercent((prev) => (prev === pct ? prev : pct));
     // current chapter via refs
     let idx = 0;
     chapterRefs.current.forEach((ref, i) => {
@@ -185,6 +196,8 @@ export default function Reader() {
     pokeUi();
     return () => clearTimeout(uiTimer.current);
   }, [pokeUi, panel]);
+
+  useEffect(() => () => cancelAnimationFrame(scrollFrame.current), []);
 
   /* ---------- reading time ---------- */
   useEffect(() => {

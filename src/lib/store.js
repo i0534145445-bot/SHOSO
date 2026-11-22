@@ -91,19 +91,27 @@ export function subscribe(fn) {
   return () => listeners.delete(fn);
 }
 
+const PERSISTED = new Set([
+  'folders', 'collections', 'favorites', 'toRead', 'trash', 'recent',
+  'progress', 'bookmarks', 'readingStats', 'view', 'theme', 'accent',
+  'sidebarCollapsed', 'sort', 'layout', 'reader', 'currentBookId',
+]);
+
 function notify() {
   listeners.forEach((fn) => fn());
 }
 
-function emit() {
+function emit(changedKeys) {
   notify();
-  scheduleSave();
+  // Transient UI state (query, drawer, toasts, scrolling) must not trigger a
+  // disk write – serialising the whole library on every keystroke was pure I/O.
+  if (!changedKeys || changedKeys.some((key) => PERSISTED.has(key))) scheduleSave();
 }
 
 export function setState(patch) {
   const next = typeof patch === 'function' ? patch(state) : patch;
   state = { ...state, ...next };
-  emit();
+  emit(Object.keys(next));
 }
 
 /* ------------------------------------------------------------------ */
@@ -152,6 +160,7 @@ const PERSIST_KEYS = [
   'progress', 'bookmarks', 'readingStats', 'view', 'theme', 'accent',
   'sidebarCollapsed', 'sort', 'layout', 'reader', 'currentBookId',
 ];
+
 
 const serialize = () => {
   const out = {};
@@ -286,7 +295,19 @@ export function toast(message, kind = 'info') {
 /* Library actions                                                     */
 /* ------------------------------------------------------------------ */
 
-export const bookById = (id) => state.books.find((b) => b.id === id) || null;
+/** id -> book index, rebuilt only when the books array itself is replaced. */
+let indexSource = null;
+let bookIndex = new Map();
+
+const indexOf = () => {
+  if (indexSource !== state.books) {
+    indexSource = state.books;
+    bookIndex = new Map(state.books.map((b) => [b.id, b]));
+  }
+  return bookIndex;
+};
+
+export const bookById = (id) => (id ? indexOf().get(id) || null : null);
 
 export function setView(view, detailBookId = null) {
   setState({ view, detailBookId });
@@ -378,7 +399,9 @@ async function platformScan(paths) {
     setState({ scanStatus: { phase: 'scanning', done: p.done, total: p.total, file: p.file } });
   });
   try {
-    return await bridge.scan(paths);
+    // Hand the previous entries over so an unchanged file is not re-parsed.
+    const known = state.books.filter((b) => b.path).map((b) => ({ path: b.path, size: b.size, mtime: b.mtime, ...b }));
+    return await bridge.scan(paths, known);
   } finally {
     if (typeof onProgress === 'function') onProgress();
   }
@@ -582,8 +605,25 @@ export function removeBookmark(bookId, bookmarkId) {
 /* Derived helpers                                                     */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The library screen asks for this on every render; the result only changes when
+ * one of its inputs does, so the filter + sort (O(n log n)) runs once per change
+ * instead of once per repaint.
+ */
+let filterCache = null;
+
 export function filteredBooks() {
   const { books, query, sort, favorites, view } = state;
+  const key = `${query}\u0000${view}\u0000${sort.key}\u0000${sort.dir}`;
+  if (
+    filterCache
+    && filterCache.books === books
+    && filterCache.favorites === favorites
+    && filterCache.progress === state.progress
+    && filterCache.key === key
+  ) {
+    return filterCache.list;
+  }
   let list = [...books];
   if (view === 'favorites') list = list.filter((b) => favorites.includes(b.id));
   if (query) {
@@ -609,6 +649,7 @@ export function filteredBooks() {
     }
     return cmp * dir;
   });
+  filterCache = { books, favorites, progress: state.progress, key, list };
   return list;
 }
 

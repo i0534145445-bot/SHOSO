@@ -19,7 +19,7 @@ contextBridge.exposeInMainWorld('shoso', {
   info: () => ipcRenderer.invoke('app:info'),
   pickFolders: () => ipcRenderer.invoke('dialog:pickFolders'),
   pickFiles: () => ipcRenderer.invoke('dialog:pickFiles'),
-  scan: (folders) => ipcRenderer.invoke('library:scan', folders),
+  scan: (folders, known) => ipcRenderer.invoke('library:scan', { folders, known }),
   onScanProgress: (cb) => on('library:progress', cb),
   refreshBook: (filePath) => ipcRenderer.invoke('book:refresh', filePath),
   loadState: () => ipcRenderer.invoke('state:load'),

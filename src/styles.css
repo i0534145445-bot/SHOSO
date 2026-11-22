@@ -447,6 +447,8 @@ svg { shape-rendering: geometricPrecision; }
 }
 
 .book-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 134px;
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -590,6 +592,8 @@ svg { shape-rendering: geometricPrecision; }
 /* brief view: one compact line per book, like ReadEra's brief list */
 .book-list.brief { display: flex; flex-direction: column; gap: 0; padding: 0; }
 .brief-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 56px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -612,7 +616,14 @@ svg { shape-rendering: geometricPrecision; }
 }
 .brief-meta { font-size: 11.5px; color: var(--text-2); }
 
-.book-tile { display: flex; flex-direction: column; gap: 8px; text-align: start; }
+.book-tile {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: start;
+}
 .book-tile .cover { width: 100%; }
 .book-tile h3 {
   margin: 0;
