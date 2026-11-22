@@ -9,7 +9,7 @@ import { FONT_FAMILIES, COLOR_MODES } from '../lib/store.js';
 import {
   IconBack, IconToc, IconSearch, IconBookmark, IconTts, IconFullscreen,
   IconClose, IconZoomIn, IconZoomOut, IconStop,
-  IconMore, IconSettings, IconBookmarkSolid,
+  IconMore, IconSettings, IconBookmarkSolid, IconChevron,
 } from '../lib/icons.jsx';
 
 /** Readera's colour-mode swatches. */
