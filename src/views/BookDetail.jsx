@@ -31,7 +31,6 @@ export default function BookDetail() {
   const book = bookById(bookId);
   const favorites = useStore((s) => s.favorites);
   const toRead = useStore((s) => s.toRead);
-  const haveRead = useStore((s) => s.haveRead);
   const progress = useStore((s) => s.progress[bookId]);
   const stats = useStore((s) => s.readingStats[bookId] || 0);
 
@@ -46,8 +45,8 @@ export default function BookDetail() {
 
   const isFav = favorites.includes(book.id);
   const inToRead = toRead.includes(book.id);
-  const isRead = haveRead.includes(book.id);
   const percent = progress?.percent || 0;
+  const isRead = Boolean(progress?.finished) || percent >= 100;
   const status = percent >= 100 || isRead
     ? 'הקריאה הסתיימה'
     : percent > 0
