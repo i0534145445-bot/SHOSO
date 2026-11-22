@@ -112,12 +112,12 @@ export default function BookCard({ book, from = 'books' }) {
 }
 
 /** Cover-first tile used by the "thumbnails" library layout. */
-export function BookTile({ book, from = 'books' }) {
+export function BookTile({ book, from = 'books', size = 'md' }) {
   const progress = useStore((s) => s.progress[book.id]);
   const percent = Math.round(progress?.percent || 0);
   return (
-    <button className="book-tile" onClick={() => openBookFrom(book.id, from)}>
-      <Cover book={book} size="md" />
+    <button className={`book-tile tile-${size}`} onClick={() => openBookFrom(book.id, from)}>
+      <Cover book={book} size={size} />
       <h3 title={book.title}>{book.title}</h3>
       <span>{percent > 0 ? `${book.author} · ${percent}%` : book.author}</span>
     </button>

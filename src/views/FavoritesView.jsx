@@ -1,7 +1,7 @@
 import React from 'react';
 import { useStore } from '../lib/store.js';
 import { IconStar } from '../lib/icons.jsx';
-import BookCard from '../components/BookCard.jsx';
+import BookList from '../components/BookList.jsx';
 
 /** Readera's "Favorites" list. */
 export default function FavoritesView() {
@@ -18,9 +18,5 @@ export default function FavoritesView() {
     );
   }
 
-  return (
-    <div className="book-list">
-      {books.map((b) => <BookCard key={b.id} book={b} from="favorites" />)}
-    </div>
-  );
+  return <BookList books={books} from="favorites" />;
 }

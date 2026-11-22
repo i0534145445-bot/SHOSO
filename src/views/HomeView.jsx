@@ -3,7 +3,7 @@ import {
   useStore, continuingBooks, importFolders, setView,
 } from '../lib/store.js';
 import { IconReadingNow, IconPlus } from '../lib/icons.jsx';
-import BookCard from '../components/BookCard.jsx';
+import BookList from '../components/BookList.jsx';
 
 /**
  * Readera's landing screen: "Reading Now" — the books you have open, each one
@@ -42,9 +42,7 @@ export default function HomeView() {
       {inProgress.length > 0 && (
         <>
           <h2 className="section-title">המשך קריאה</h2>
-          <div className="book-list">
-            {inProgress.map((b) => <BookCard key={b.id} book={b} from="home" />)}
-          </div>
+          <BookList books={inProgress} from="home" />
         </>
       )}
 
@@ -54,9 +52,7 @@ export default function HomeView() {
             <h2>{inProgress.length ? 'עוד בספרייה' : 'בספרייה'}</h2>
             <button className="btn ghost small" onClick={() => setView('books')}>הצג הכול</button>
           </div>
-          <div className="book-list">
-            {rest.map((b) => <BookCard key={b.id} book={b} from="home" />)}
-          </div>
+          <BookList books={rest} from="home" />
         </>
       )}
     </div>

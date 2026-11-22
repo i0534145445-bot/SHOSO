@@ -1,7 +1,7 @@
 import React from 'react';
 import { useStore, toReadBooks, setView } from '../lib/store.js';
 import { IconClock } from '../lib/icons.jsx';
-import BookCard from '../components/BookCard.jsx';
+import BookList from '../components/BookList.jsx';
 
 /** Readera's "To Read" list. */
 export default function ToReadView() {
@@ -21,10 +21,5 @@ export default function ToReadView() {
     );
   }
 
-  return (
-    <div className="book-list">
-      {books.map((b) => <BookCard key={b.id} book={b} from="toread" />)}
-      {toRead.length === 0 && null}
-    </div>
-  );
+  return <BookList books={books} from="toread" />;
 }

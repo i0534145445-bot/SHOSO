@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { colorFromString } from '../lib/format.js';
+import { cachedCover, coverFor } from '../lib/covers.js';
 
 /**
  * Book cover: the real artwork when the file has one, otherwise a generated
@@ -18,10 +19,28 @@ const CLOTH = [
 ];
 
 export default function Cover({ book, size = 'md' }) {
-  if (book.cover) {
+  // The file's own artwork wins; we extract it on first display and remember it.
+  const [src, setSrc] = useState(() => book.cover || cachedCover(book.id) || null);
+
+  useEffect(() => {
+    let alive = true;
+    if (src) return undefined;
+    coverFor(book).then((found) => {
+      if (alive && found) setSrc(found);
+    });
+    return () => { alive = false; };
+  }, [book, src]);
+
+  if (src) {
     return (
       <div className={`cover cover-${size} has-img`}>
-        <img src={book.cover} alt={book.title} loading="lazy" />
+        <img
+          src={src}
+          alt={book.title}
+          loading="lazy"
+          draggable="false"
+          onError={() => setSrc(null)}
+        />
       </div>
     );
   }

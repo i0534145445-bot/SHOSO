@@ -6,6 +6,7 @@ import {
 import { createDemoBooks } from '../lib/demo.js';
 import { IconChevron } from '../lib/icons.jsx';
 import { appInfo } from '../lib/platform.js';
+import { VIEW_MODES } from '../components/BookList.jsx';
 
 /**
  * ReadEra's Settings screen, row for row:
@@ -107,9 +108,12 @@ export default function SettingsView() {
         />
         <Row
           label="תצוגת ספרייה"
-          desc="רשימה מפורטת או כריכות"
-          onClick={() => setLayout(layout === 'list' ? 'grid' : 'list')}
-          value={layout === 'list' ? 'רשימה' : 'כריכות'}
+          desc={VIEW_MODES.find((m) => m.id === layout)?.hint}
+          value={VIEW_MODES.find((m) => m.id === layout)?.label}
+          onClick={() => {
+            const idx = VIEW_MODES.findIndex((m) => m.id === layout);
+            setLayout(VIEW_MODES[(idx + 1) % VIEW_MODES.length].id);
+          }}
         />
         <Row
           label="מיון לפי"

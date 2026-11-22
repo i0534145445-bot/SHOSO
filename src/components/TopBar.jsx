@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   useStore, setQuery, setLayout, setSort, importFolders, toggleSidebar, setView,
 } from '../lib/store.js';
-import { IconMenu, IconSearch, IconMore, IconBack } from '../lib/icons.jsx';
+import { IconMenu, IconSearch, IconMore, IconBack, IconCheck } from '../lib/icons.jsx';
+import { VIEW_MODES } from './BookList.jsx';
 
 /**
  * Readera's app bar: one solid teal strip – menu, left-aligned screen title,
@@ -128,18 +129,17 @@ export default function TopBar() {
                     </button>
                     <span className="pop-sep" />
                     <span className="pop-label">תצוגת ספרייה</span>
-                    <button
-                      className={layout === 'list' ? 'checked' : ''}
-                      onClick={() => { setLayout('list'); setMenuOpen(false); }}
-                    >
-                      רשימה{layout === 'list' ? ' ✓' : ''}
-                    </button>
-                    <button
-                      className={layout === 'grid' ? 'checked' : ''}
-                      onClick={() => { setLayout('grid'); setMenuOpen(false); }}
-                    >
-                      כריכות{layout === 'grid' ? ' ✓' : ''}
-                    </button>
+                    {VIEW_MODES.map((mode) => (
+                      <button
+                        key={mode.id}
+                        className={layout === mode.id ? 'checked' : ''}
+                        title={mode.hint}
+                        onClick={() => { setLayout(mode.id); setMenuOpen(false); }}
+                      >
+                        {mode.label}
+                        {layout === mode.id && <IconCheck size={15} />}
+                      </button>
+                    ))}
                     <span className="pop-sep" />
                     <button onClick={() => { setMenuOpen(false); importFolders(); }}>הוסף תיקיות…</button>
                     <button onClick={() => { setMenuOpen(false); setView('settings'); }}>הגדרות</button>

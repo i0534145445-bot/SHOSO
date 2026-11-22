@@ -1,7 +1,7 @@
 import React from 'react';
 import { useStore, haveReadBooks, setView } from '../lib/store.js';
 import { IconDoubleCheck } from '../lib/icons.jsx';
-import BookCard from '../components/BookCard.jsx';
+import BookList from '../components/BookList.jsx';
 
 /** Readera's "Have Read" list. */
 export default function HaveReadView() {
@@ -20,9 +20,5 @@ export default function HaveReadView() {
     );
   }
 
-  return (
-    <div className="book-list">
-      {books.map((b) => <BookCard key={b.id} book={b} from="haveread" />)}
-    </div>
-  );
+  return <BookList books={books} from="haveread" />;
 }

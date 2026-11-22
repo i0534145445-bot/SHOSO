@@ -98,13 +98,25 @@ try {
   });
 
   await step('books tiles', async () => {
+    // ReadEra's four library views are all reachable from the overflow menu
+    await clickTitle('עוד');
+    await page.locator('.topbar-menu-pop button').filter({ hasText: 'תמונות ממוזערות' }).click();
+    await page.waitForSelector('.book-grid.thumbs .book-tile', { timeout: 6000 });
+    await shot('04-books-thumbs');
+
+    await clickTitle('עוד');
+    await page.locator('.topbar-menu-pop button').filter({ hasText: 'תצוגה תמציתית' }).click();
+    await page.waitForSelector('.brief-row', { timeout: 6000 });
+    await shot('04b-books-brief');
+
     await clickTitle('עוד');
     await page.locator('.topbar-menu-pop button').filter({ hasText: 'כריכות' }).click();
-    await page.waitForSelector('.book-tile', { timeout: 6000 });
-    await shot('04-books-tiles');
+    await page.waitForSelector('.book-grid.tiles .book-tile', { timeout: 6000 });
+    await shot('04c-books-grid');
+
     await clickTitle('עוד');
-    await page.locator('.topbar-menu-pop button').filter({ hasText: 'רשימה' }).click();
-    await page.waitForSelector('.book-list', { timeout: 6000 });
+    await page.locator('.topbar-menu-pop button').filter({ hasText: 'תצוגה מלאה' }).click();
+    await page.waitForSelector('.book-row', { timeout: 6000 });
   });
 
   await step('reader', async () => {

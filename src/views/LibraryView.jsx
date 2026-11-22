@@ -1,11 +1,10 @@
 import React from 'react';
 import { useStore, filteredBooks, importFolders } from '../lib/store.js';
 import { IconBooksDocs, IconPlus } from '../lib/icons.jsx';
-import BookCard, { BookTile } from '../components/BookCard.jsx';
+import BookList from '../components/BookList.jsx';
 
 /** Readera's "Books & documents" — a list of rows, or a cover thumbnail grid. */
 export default function LibraryView() {
-  const layout = useStore((s) => s.layout);
   const query = useStore((s) => s.query);
   const books = filteredBooks();
 
@@ -32,15 +31,7 @@ export default function LibraryView() {
 
   return (
     <div className="library-view">
-      {layout === 'grid' ? (
-        <div className="book-grid tiles">
-          {books.map((b) => <BookTile key={b.id} book={b} from="books" />)}
-        </div>
-      ) : (
-        <div className="book-list">
-          {books.map((b) => <BookCard key={b.id} book={b} from="books" />)}
-        </div>
-      )}
+      <BookList books={books} from="books" />
     </div>
   );
 }

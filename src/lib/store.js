@@ -73,7 +73,7 @@ const DEFAULT_STATE = {
   drawerOpen: false,
   query: '',
   sort: { key: 'title', dir: 'asc' },
-  layout: 'list', // 'grid' | 'list'
+  layout: 'full', // ReadEra views: full | brief | thumbs | grid
   reader: { ...DEFAULT_READER },
   scanStatus: null,
   toasts: [],
@@ -231,7 +231,9 @@ export async function bootstrap() {
       createdAt: c.createdAt || Date.now(),
     }));
   if (!['dark', 'light'].includes(patch.theme)) patch.theme = 'dark';
-  if (!['grid', 'list'].includes(patch.layout)) patch.layout = 'list';
+  if (patch.layout === 'list') patch.layout = 'full';
+  if (patch.layout === 'thumbnails') patch.layout = 'thumbs';
+  if (!['full', 'brief', 'thumbs', 'grid'].includes(patch.layout)) patch.layout = 'full';
 
   state = { ...state, ...patch };
   applyTheme();
