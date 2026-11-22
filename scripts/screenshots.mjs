@@ -54,7 +54,16 @@ const showUi = async () => {
   await page.waitForTimeout(250);
 };
 
+/** The library is in selection mode? Escape first so the normal bar is back. */
+const ensureNoSelection = async () => {
+  if (await page.locator('.selection-bar').count()) {
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(250);
+  }
+};
+
 const clickTitle = async (title) => {
+  await ensureNoSelection();
   const el = page.locator(`[title="${title}"]`).first();
   await el.waitFor({ state: 'visible', timeout: 8000 });
   await el.click();
@@ -120,8 +129,12 @@ try {
   });
 
   await step('reader', async () => {
-    // the EPUB demo book is the long one – open it by title
+    // the EPUB demo book is the long one: tap selects it, then press "read" –
+    // exactly the two steps ReadEra asks for
+    await ensureNoSelection();
     await page.locator('.book-row h3').filter({ hasText: 'הספר הישן' }).first().click();
+    await page.waitForSelector('.selection-bar', { timeout: 8000 });
+    await page.locator('.selection-bar [title="פתח לקריאה"]').click();
     await page.waitForSelector('.book-scroll', { timeout: 45000 });
     await page.mouse.move(700, 450);
     await page.waitForTimeout(700);
@@ -191,6 +204,7 @@ try {
   });
 
   await step('selection', async () => {
+    await ensureNoSelection();
     await clickTitle('תפריט');
     await clickDrawerItem('ספרים ומסמכים');
     await page.waitForSelector('.book-row', { timeout: 10000 });
