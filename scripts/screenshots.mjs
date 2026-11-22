@@ -190,6 +190,18 @@ try {
     await shot('01-reading-now');
   });
 
+  await step('selection', async () => {
+    await clickTitle('תפריט');
+    await clickDrawerItem('ספרים ומסמכים');
+    await page.waitForSelector('.book-row', { timeout: 10000 });
+    await page.locator('.book-row').nth(0).click();
+    await page.locator('.book-row').nth(1).click();
+    await page.waitForSelector('.selection-bar', { timeout: 6000 });
+    await shot('13-selection');
+    await clickTitle('בטל בחירה (Esc)');
+    await page.waitForTimeout(300);
+  });
+
   await step('book detail', async () => {
     await clickTitle('תפריט');
     await clickDrawerItem('ספרים ומסמכים');

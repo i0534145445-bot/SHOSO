@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import {
   useStore, openBookFrom, toggleFavorite, toggleToRead, toggleHaveRead,
-  setView, removeBook,
+  setView, removeBook, toggleSelect, clearSelection,
 } from '../lib/store.js';
 import { formatSize } from '../lib/format.js';
 import {
   IconStar, IconClock, IconDoubleCheck, IconBars, IconMore,
-  IconInfo, IconTrash, IconCollection,
+  IconInfo, IconTrash, IconCollection, IconCheck,
 } from '../lib/icons.jsx';
 import Cover from './Cover.jsx';
 
@@ -21,6 +21,7 @@ export default function BookCard({ book, from = 'books' }) {
   const favorites = useStore((s) => s.favorites);
   const toRead = useStore((s) => s.toRead);
   const progress = useStore((s) => s.progress[book.id]);
+  const selected = useStore((s) => s.selection.includes(book.id));
   const [menu, setMenu] = useState(false);
 
   const isFav = favorites.includes(book.id);
@@ -29,14 +30,26 @@ export default function BookCard({ book, from = 'books' }) {
   const isRead = Boolean(progress?.finished) || percent >= 100;
 
   const open = () => openBookFrom(book.id, from);
+  // ReadEra: a tap selects the book (checkbox on the cover, action bar on top),
+  // a double clip opens it. The row actions below stop propagation themselves.
+  const onRowClick = (event) => {
+    if (event.shiftKey) { open(); return; }
+    toggleSelect(book.id);
+  };
 
   return (
-    <article className="book-row" onDoubleClick={open}>
-      <div className="row-cover" onClick={open} title="פתח לקריאה">
+    <article
+      className={`book-row${selected ? ' selected' : ''}`}
+      onClick={onRowClick}
+      onDoubleClick={open}
+      aria-selected={selected}
+    >
+      <div className="row-cover" title={book.title}>
         <Cover book={book} size="sm" />
+        <span className="select-badge" aria-hidden="true">{selected && <IconCheck size={15} />}</span>
       </div>
 
-      <div className="row-main" onClick={open} role="presentation">
+      <div className="row-main" role="presentation" onDoubleClick={open}>
         <h3 title={book.title}>{book.title}</h3>
         <p title={book.author}>{book.author || 'מחבר לא ידוע'}</p>
         <p className="row-format">
@@ -114,10 +127,22 @@ export default function BookCard({ book, from = 'books' }) {
 /** Cover-first tile used by the "thumbnails" library layout. */
 export function BookTile({ book, from = 'books', size = 'md' }) {
   const progress = useStore((s) => s.progress[book.id]);
+  const selected = useStore((s) => s.selection.includes(book.id));
   const percent = Math.round(progress?.percent || 0);
   return (
-    <button className={`book-tile tile-${size}`} onClick={() => openBookFrom(book.id, from)}>
-      <Cover book={book} size="md" />
+    <button
+      className={`book-tile tile-${size}${selected ? ' selected' : ''}`}
+      onClick={(event) => {
+        if (event.shiftKey) openBookFrom(book.id, from);
+        else toggleSelect(book.id);
+      }}
+      onDoubleClick={() => openBookFrom(book.id, from)}
+      aria-selected={selected}
+    >
+      <span className="tile-cover">
+        <Cover book={book} size="md" />
+        <span className="select-badge" aria-hidden="true">{selected && <IconCheck size={15} />}</span>
+      </span>
       <h3 title={book.title}>{book.title}</h3>
       <span>{percent > 0 ? `${book.author} · ${percent}%` : book.author}</span>
     </button>

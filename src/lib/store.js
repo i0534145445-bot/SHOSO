@@ -71,6 +71,7 @@ const DEFAULT_STATE = {
   accent: 'violet',
   sidebarCollapsed: false,
   drawerOpen: false,
+  selection: [], // library selection mode, like ReadEra
   query: '',
   sort: { key: 'title', dir: 'asc' },
   layout: 'full', // ReadEra views: full | brief | thumbs | grid
@@ -310,7 +311,7 @@ const indexOf = () => {
 export const bookById = (id) => (id ? indexOf().get(id) || null : null);
 
 export function setView(view, detailBookId = null) {
-  setState({ view, detailBookId });
+  setState({ view, detailBookId, selection: [] });
 }
 
 export function setQuery(query) {
@@ -336,6 +337,71 @@ export function setAccent(accent) {
 }
 
 /** Readera's navigation drawer (overlay, not a docked column). */
+/* ------------------------------------------------------------------ */
+/* Selection (ReadEra's tap-to-select in the library)                  */
+/* ------------------------------------------------------------------ */
+
+export const selectionIds = () => state.selection;
+
+export function toggleSelect(bookId) {
+  const has = state.selection.includes(bookId);
+  setState({ selection: has ? state.selection.filter((id) => id !== bookId) : [...state.selection, bookId] });
+}
+
+export function clearSelection() {
+  if (state.selection.length) setState({ selection: [] });
+}
+
+export function selectAll(ids) {
+  setState({ selection: [...ids] });
+}
+
+export function openSelection() {
+  const id = state.selection[0];
+  if (!id) return;
+  setState({ selection: [] });
+  openBookFrom(id, state.view);
+}
+
+export function deleteSelection() {
+  const ids = state.selection;
+  if (!ids.length) return;
+  const books = state.books.filter((b) => !ids.includes(b.id));
+  const progress = { ...state.progress };
+  const bookmarks = { ...state.bookmarks };
+  ids.forEach((id) => {
+    delete progress[id];
+    delete bookmarks[id];
+  });
+  const removed = state.books.filter((b) => ids.includes(b.id)).map((b) => ({ ...b, removedAt: Date.now() }));
+  setState({
+    books,
+    progress,
+    bookmarks,
+    trash: [...removed, ...state.trash].slice(0, 200),
+    favorites: state.favorites.filter((id) => !ids.includes(id)),
+    toRead: state.toRead.filter((id) => !ids.includes(id)),
+    recent: state.recent.filter((id) => !ids.includes(id)),
+    collections: state.collections.map((c) => ({ ...c, bookIds: c.bookIds.filter((id) => !ids.includes(id)) })),
+    selection: [],
+  });
+  scheduleLibrarySave();
+  toast(ids.length === 1 ? 'הספר הועבר לאשפה' : `${ids.length} ספרים הועברו לאשפה`, 'info');
+}
+
+export function addSelectionToCollection(collectionId) {
+  const ids = state.selection;
+  if (!ids.length) return;
+  setState({
+    collections: state.collections.map((c) => (
+      c.id === collectionId ? { ...c, bookIds: [...new Set([...c.bookIds, ...ids])] } : c
+    )),
+    selection: [],
+  });
+  const name = state.collections.find((c) => c.id === collectionId)?.name || 'מדף';
+  toast(`נוסף ל${name}`, 'success');
+}
+
 export function toggleSidebar(force) {
   const next = typeof force === 'boolean' ? force : !state.drawerOpen;
   setState({ drawerOpen: next });

@@ -1,8 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   useStore, setQuery, setLayout, setSort, importFolders, toggleSidebar, setView,
+  clearSelection, openSelection, deleteSelection, selectAll, bookById,
+  addSelectionToCollection, createCollection,
 } from '../lib/store.js';
-import { IconMenu, IconSearch, IconMore, IconBack, IconCheck } from '../lib/icons.jsx';
+import {
+  IconMenu, IconSearch, IconMore, IconBack, IconCheck, IconBook, IconCollection,
+  IconTrash, IconClose, IconPlus,
+} from '../lib/icons.jsx';
 import { VIEW_MODES } from './BookList.jsx';
 
 /**
@@ -44,8 +49,12 @@ export default function TopBar() {
   const view = useStore((s) => s.view);
   const layout = useStore((s) => s.layout);
   const sort = useStore((s) => s.sort);
+  const selection = useStore((s) => s.selection);
+  const books = useStore((s) => s.books);
+  const collections = useStore((s) => s.collections);
   const [searching, setSearching] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [shelfOpen, setShelfOpen] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -58,6 +67,75 @@ export default function TopBar() {
 
   const title = TITLES[view] || 'SHOSO Books';
   const canSearch = ['home', 'books', 'library', 'favorites', 'toread', 'haveread', 'authors', 'formats', 'collections', 'trash'].includes(view);
+  const selecting = selection.length > 0;
+  const selectedTitles = selection.map((id) => bookById(id)?.title).filter(Boolean);
+
+  /* ReadEra's contextual bar: replaces the normal app bar while books are
+     selected – close, count, then read / shelf / delete / overflow. */
+  if (selecting) {
+    return (
+      <header className="topbar selection-bar">
+        <button className="icon-btn" title="בטל בחירה (Esc)" onClick={clearSelection}>
+          <IconClose size={21} />
+        </button>
+        <h1 className="topbar-title">
+          {selection.length === 1 ? selectedTitles[0] || 'ספר נבחר' : `${selection.length} נבחרו`}
+        </h1>
+        <div className="topbar-actions">
+          <button className="icon-btn" title="פתח לקריאה" onClick={openSelection}>
+            <IconBook size={21} />
+          </button>
+          <div style={{ position: 'relative' }}>
+            <button
+              className="icon-btn"
+              title="הוסף למדף"
+              onClick={() => setShelfOpen((v) => !v)}
+            >
+              <IconCollection size={21} />
+            </button>
+            {shelfOpen && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setShelfOpen(false)} />
+                <div className="topbar-menu-pop">
+                  <span className="pop-label">הוסף למדף</span>
+                  {collections.length === 0 && <button disabled>אין מדפים עדיין</button>}
+                  {collections.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => { addSelectionToCollection(c.id); setShelfOpen(false); }}
+                    >
+                      {c.name}
+                      <span className="pop-count">{c.bookIds.length}</span>
+                    </button>
+                  ))}
+                  <span className="pop-sep" />
+                  <button
+                    onClick={() => {
+                      const id = createCollection('מדף חדש');
+                      addSelectionToCollection(id);
+                      setShelfOpen(false);
+                    }}
+                  >
+                    <IconPlus size={15} /> מדף חדש
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+          <button className="icon-btn" title="העבר לאשפה" onClick={deleteSelection}>
+            <IconTrash size={21} />
+          </button>
+          <button
+            className="icon-btn"
+            title="עוד"
+            onClick={() => (selection.length === books.length ? clearSelection() : selectAll(books.map((b) => b.id)))}
+          >
+            <IconMore size={20} />
+          </button>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="topbar">

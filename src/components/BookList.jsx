@@ -2,7 +2,8 @@ import React from 'react';
 import { useStore } from '../lib/store.js';
 import BookCard, { BookTile } from './BookCard.jsx';
 import Cover from './Cover.jsx';
-import { openBookFrom } from '../lib/store.js';
+import { openBookFrom, toggleSelect } from '../lib/store.js';
+import { IconCheck } from '../lib/icons.jsx';
 import { formatSize } from '../lib/format.js';
 
 /** ReadEra's four library views, in its order. */
@@ -16,10 +17,23 @@ export const VIEW_MODES = [
 /** Compact row used by the "brief" view – cover, title and author on one line. */
 function BookBrief({ book, from }) {
   const progress = useStore((s) => s.progress[book.id]);
+  const selected = useStore((s) => s.selection.includes(book.id));
   const percent = Math.round(progress?.percent || 0);
   return (
-    <button className="brief-row" onClick={() => openBookFrom(book.id, from)} title={book.title}>
-      <span className="brief-cover"><Cover book={book} size="xs" /></span>
+    <button
+      className={`brief-row${selected ? ' selected' : ''}`}
+      onClick={(event) => {
+        if (event.shiftKey) openBookFrom(book.id, from);
+        else toggleSelect(book.id);
+      }}
+      onDoubleClick={() => openBookFrom(book.id, from)}
+      aria-selected={selected}
+      title={book.title}
+    >
+      <span className="brief-cover">
+        <Cover book={book} size="xs" />
+        <span className="select-badge small" aria-hidden="true">{selected && <IconCheck size={12} />}</span>
+      </span>
       <span className="brief-text">
         <span className="brief-title">{book.title}</span>
         <span className="brief-meta">
