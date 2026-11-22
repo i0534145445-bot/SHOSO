@@ -3,6 +3,7 @@ import { useStore } from '../lib/store.js';
 import BookCard, { BookTile } from './BookCard.jsx';
 import Cover from './Cover.jsx';
 import { openBookFrom } from '../lib/store.js';
+import { formatSize } from '../lib/format.js';
 
 /** ReadEra's four library views, in its order. */
 export const VIEW_MODES = [
@@ -22,10 +23,11 @@ function BookBrief({ book, from }) {
       <span className="brief-text">
         <span className="brief-title">{book.title}</span>
         <span className="brief-meta">
-          {book.author || 'ללא מחבר'}{percent > 0 ? ` · ${percent}%` : ''}
+          {[book.format, book.size ? formatSize(book.size) : null, book.author || 'ללא מחבר']
+            .filter(Boolean).join(' · ')}
+          {percent > 0 ? ` · ${percent}%` : ''}
         </span>
       </span>
-      <span className="brief-format">{book.format}</span>
     </button>
   );
 }

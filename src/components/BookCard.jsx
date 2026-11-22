@@ -117,7 +117,7 @@ export function BookTile({ book, from = 'books', size = 'md' }) {
   const percent = Math.round(progress?.percent || 0);
   return (
     <button className={`book-tile tile-${size}`} onClick={() => openBookFrom(book.id, from)}>
-      <Cover book={book} size={size} />
+      <Cover book={book} size="md" />
       <h3 title={book.title}>{book.title}</h3>
       <span>{percent > 0 ? `${book.author} · ${percent}%` : book.author}</span>
     </button>
