@@ -1,10 +1,11 @@
-step: sepia mode
-locator.click: Timeout 6000ms exceeded.
+step: book detail
+locator.waitFor: Timeout 8000ms exceeded.
 Call log:
-  - waiting for locator('.rs-mode[title="ספיה"]')
+  - waiting for locator('[title="תפריט"]').first() to be visible
 
 {
-  "rows": 0,
+  "view": "הספר הישן",
+  "rows": 8,
   "drawer": false,
-  "text": "הספר הישן הגדרות קריאה הגדרות קריאה EPUB · FB2 · MOBI · DOC · DOCX · PDF · TXT כיוון דפדוף אנכי אופקי אנכי מצב צבע לילה רגיל ספיה לילה קונסול גופן Merriweather Merriweather Noto Serif Hebrew Roboto Noto Sans Hebrew Monospace גודל גופן 18 עו"
+  "text": "הספר הישן FB2 הבית על הגבעה דוד כהן הבית על הגבעה דוד כהן FB2, 1.6 KB EPUB הספר הישן מרים לוי הספר הישן מרים לוי EPUB, 4.6 KB HTML זיכרונות של ספרייה רחל בן-עמי זיכרונות של ספרייה רחל בן-עמי HTML, 820 B MD מדריך הגן הקטן עמוס גבע מ"
 }
