@@ -188,12 +188,28 @@ export default function SettingsView() {
         </Row>
       </Section>
 
-      <Section title="ספרי דמו">
+      <Section title="אחסון ומיקום">
         <Row
-          label={loadingDemo ? 'טוען…' : 'טען ספרי דמו'}
-          desc="EPUB · FB2 · TXT · MD · HTML"
-          onClick={loadingDemo ? undefined : loadDemo}
+          label="תיקיית הנתונים"
+          desc={appInfo.desktop ? appInfo.userData : 'בדפדפן הספרייה נשמרת בזיכרון המקומי'}
+          value={appInfo.desktop ? (appInfo.portable ? 'נייד' : 'מותקן') : 'דפדפן'}
+          onClick={appInfo.desktop && window.shoso?.openDataFolder ? () => window.shoso.openDataFolder() : undefined}
         />
+        <Row
+          label="הקבצים לא מועתקים"
+          desc="הספרייה מצביעה על הספרים במקומם – הסרה מהספרייה או לאשפה לא מוחקת קובץ מהמחשב"
+        />
+        <Row
+          label="הסרת תיקייה"
+          desc="מסירה מהספרייה את הספרים שבאו ממנה ומעבירה אותם לאשפה, משם אפשר לשחזר"
+        />
+        {!appInfo.desktop && (
+          <Row
+            label={loadingDemo ? 'טוען…' : 'טען ספרי דמו'}
+            desc="EPUB · FB2 · TXT · MD · HTML – רק בתצוגת הדפדפן"
+            onClick={loadingDemo ? undefined : loadDemo}
+          />
+        )}
       </Section>
 
       <Section title="אודות">

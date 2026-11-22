@@ -94,7 +94,7 @@ describe('SHOSO Books app', () => {
   it('shows settings with demo loader', () => {
     setState({ books: [], view: 'settings' });
     render(<App />);
-    expect(screen.getAllByText('ספרי דמו').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('אחסון ומיקום').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/טען ספרי דמו/).length).toBeGreaterThan(0);
     act(() => setView('home'));
   });

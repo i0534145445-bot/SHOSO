@@ -10,7 +10,7 @@
  *  - Persist the library and reading state inside %APPDATA%/SHOSO Books.
  */
 
-const { app, BrowserWindow, ipcMain, protocol, dialog, shell, Menu, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, protocol, dialog, shell, Menu, nativeTheme, screen } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
@@ -20,6 +20,15 @@ const { Readable } = require('node:stream');
 const BOOK_EXT = new Set(['.epub', '.pdf', '.txt', '.fb2', '.html', '.htm', '.md', '.mobi', '.djvu']);
 const COVER_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 
+/**
+ * A portable copy keeps its library beside the .exe instead of writing into
+ * %APPDATA%, so it can sit on a USB stick without sharing (or overwriting) the
+ * library of an installed copy. Must run before anything reads userData.
+ */
+if (process.env.PORTABLE_EXECUTABLE_DIR) {
+  app.setPath('userData', path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'SHOSO Books Data'));
+}
+
 const isDev = !app.isPackaged;
 let mainWindow = null;
 let JSZip = null;
@@ -28,6 +37,50 @@ const userData = () => app.getPath('userData');
 const coversDir = () => path.join(userData(), 'covers');
 const stateFile = () => path.join(userData(), 'state.json');
 const libraryFile = () => path.join(userData(), 'library.json');
+const windowStateFile = () => path.join(userData(), 'window.json');
+
+const DEFAULT_WINDOW = { width: 1280, height: 820 };
+
+/** Where the window was last time – the app opens the way it was left. */
+function readWindowState() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(windowStateFile(), 'utf8'));
+    if (!raw || typeof raw !== 'object') return null;
+    const clamp = (value, fallback) => (Number.isFinite(value) ? Math.round(value) : fallback);
+    return {
+      x: Number.isFinite(raw.x) ? Math.round(raw.x) : undefined,
+      y: Number.isFinite(raw.y) ? Math.round(raw.y) : undefined,
+      width: Math.max(940, clamp(raw.width, DEFAULT_WINDOW.width)),
+      height: Math.max(620, clamp(raw.height, DEFAULT_WINDOW.height)),
+      maximized: Boolean(raw.maximized),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** A window saved on a monitor that is gone must not open off-screen. */
+function onScreen(state) {
+  if (!state || state.x === undefined || state.y === undefined) return state;
+  const rect = { x: state.x, y: state.y, width: state.width, height: state.height };
+  const area = screen.getDisplayMatching(rect).workArea;
+  const visible = rect.x < area.x + area.width - 80
+    && rect.x + rect.width > area.x + 80
+    && rect.y < area.y + area.height - 60
+    && rect.y + rect.height > area.y;
+  return visible ? state : { ...state, x: undefined, y: undefined };
+}
+
+function saveWindowState() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  try {
+    const bounds = mainWindow.getNormalBounds();
+    fs.mkdirSync(userData(), { recursive: true });
+    fs.writeFileSync(windowStateFile(), JSON.stringify({ ...bounds, maximized: mainWindow.isMaximized() }));
+  } catch {
+    /* the window position is a convenience, never a fatal error */
+  }
+}
 
 async function getZip() {
   if (!JSZip) {
@@ -435,10 +488,17 @@ function registerIpc() {
     platform: process.platform,
     version: app.getVersion(),
     userData: userData(),
+    exePath: process.execPath,
+    portable: Boolean(process.env.PORTABLE_EXECUTABLE_DIR),
     electron: process.versions.electron,
     chrome: process.versions.chrome,
     isPackaged: app.isPackaged,
   }));
+
+  ipcMain.handle('shell:openDataFolder', async () => {
+    fs.mkdirSync(userData(), { recursive: true });
+    return shell.openPath(userData());
+  });
 
   ipcMain.handle('dialog:pickFolders', async () => {
     const res = await dialog.showOpenDialog(mainWindow, {
@@ -564,9 +624,11 @@ const resolveIcon = () => {
 };
 
 function createWindow() {
+  const saved = onScreen(readWindowState());
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 820,
+    width: saved?.width || DEFAULT_WINDOW.width,
+    height: saved?.height || DEFAULT_WINDOW.height,
+    ...(saved && saved.x !== undefined ? { x: saved.x, y: saved.y } : {}),
     minWidth: 940,
     minHeight: 620,
     show: false,
@@ -584,7 +646,25 @@ function createWindow() {
     },
   });
 
-  mainWindow.once('ready-to-show', () => mainWindow.show());
+  mainWindow.once('ready-to-show', () => {
+    if (saved?.maximized) mainWindow.maximize();
+    mainWindow.show();
+  });
+
+  // Remember the window as the reader leaves it (debounced – resize fires a lot).
+  let windowTimer = null;
+  const remember = () => {
+    clearTimeout(windowTimer);
+    windowTimer = setTimeout(saveWindowState, 400);
+  };
+  mainWindow.on('resize', remember);
+  mainWindow.on('move', remember);
+  mainWindow.on('maximize', remember);
+  mainWindow.on('unmaximize', remember);
+  mainWindow.on('close', () => {
+    clearTimeout(windowTimer);
+    saveWindowState();
+  });
 
   const devUrl = process.env.SHOSO_DEV_URL;
   if (devUrl) {

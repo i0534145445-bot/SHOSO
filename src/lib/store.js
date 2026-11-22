@@ -200,6 +200,9 @@ export async function bootstrap() {
     patch.books = savedLibrary.books;
   }
   if (patch.books) {
+    // Older desktop builds saved the browser demo books (blob: paths that die
+    // with the process). They can never be opened again – drop them on load.
+    patch.books = patch.books.filter((b) => !(isDesktop && b && b.dir === 'ספרי דמו' && String(b.path || '').startsWith('blob:')));
     const ids = new Set(patch.books.map((b) => b.id));
     patch.favorites = (patch.favorites || []).filter((id) => ids.has(id));
     patch.recent = (patch.recent || []).filter((id) => ids.has(id));
@@ -261,6 +264,10 @@ export async function bootstrap() {
 async function seedDemoIfEmpty() {
   if (typeof window === 'undefined') return;
   if (import.meta.env && import.meta.env.VITEST) return;
+  // Demo books belong to the browser preview only. In the installed app they
+  // looked like real books that the reader never added – and they came back
+  // every time the library was emptied.
+  if (isDesktop) return;
   if (state.books.length) return;
   if (window.localStorage?.getItem('shoso:no-demo') === '1') return;
   try {
@@ -598,9 +605,43 @@ export function toggleHaveRead(bookId) {
   });
 }
 
+/**
+ * Removing a watched folder removes the books that came with it – otherwise the
+ * library kept listing books from a folder nobody was watching any more. The
+ * files themselves are never touched, and the books land in the trash.
+ */
 export function removeFolder(folder) {
-  setState({ folders: state.folders.filter((f) => f !== folder) });
-  toast('התיקייה הוסרה מהרשימה (הקבצים לא נמחקו)', 'info');
+  const flat = (p) => String(p || '').replace(/\\/g, '/').replace(/\/+$/, '');
+  const foldered = flat(folder);
+  const inside = (b) => {
+    const bookPath = flat(b && b.path);
+    if (!bookPath || bookPath.startsWith('blob:')) return false;
+    return bookPath === foldered || bookPath.startsWith(`${foldered}/`);
+  };
+  const leaving = state.books.filter(inside);
+  const ids = leaving.map((b) => b.id);
+  const trash = [...leaving.map((b) => ({ ...b, removedAt: Date.now() })), ...state.trash].slice(0, 200);
+  const progress = { ...state.progress };
+  const bookmarks = { ...state.bookmarks };
+  ids.forEach((id) => { delete progress[id]; delete bookmarks[id]; });
+  setState({
+    folders: state.folders.filter((f) => f !== folder),
+    books: state.books.filter((b) => !ids.includes(b.id)),
+    trash,
+    progress,
+    bookmarks,
+    favorites: state.favorites.filter((id) => !ids.includes(id)),
+    toRead: state.toRead.filter((id) => !ids.includes(id)),
+    recent: state.recent.filter((id) => !ids.includes(id)),
+    collections: state.collections.map((c) => ({ ...c, bookIds: c.bookIds.filter((id) => !ids.includes(id)) })),
+  });
+  scheduleLibrarySave();
+  toast(
+    ids.length
+      ? `התיקייה הוסרה · ${ids.length} ספרים עברו לאשפה (הקבצים עצמם לא נמחקו)`
+      : 'התיקייה הוסרה מהרשימה (הקבצים לא נמחקו)',
+    'info',
+  );
 }
 
 export function toggleFavorite(bookId) {

@@ -4,7 +4,7 @@ import {
   toggleFavorite, createCollection, toggleInCollection, deleteCollection,
   openBook, closeBook, saveProgress, addBookmark, removeBookmark,
   filteredBooks, authorsList, formatsList, continueReading,
-  removeBook, updateReader, bookById,
+  removeBook, updateReader, bookById, removeFolder, restoreBook,
 } from '../src/lib/store.js';
 
 const makeBook = (i, overrides = {}) => ({
@@ -91,6 +91,45 @@ describe('favorites & collections', () => {
     expect(getState().collections[0].bookIds).not.toContain('b1');
     deleteCollection(id);
     expect(getState().collections).toHaveLength(0);
+  });
+});
+
+describe('library membership', () => {
+  it('removing a scanned folder moves its books to the trash, not into nothing', () => {
+    setState({
+      books: [
+        makeBook(1, { path: '/books/a.epub', folders: [] }),
+        makeBook(2, { path: '/other/b.epub' }),
+      ],
+      folders: ['/books', '/other'],
+      trash: [],
+      favorites: ['b1', 'b2'],
+      progress: {},
+      bookmarks: {},
+      recent: ['b1'],
+      collections: [{ id: 's1', name: 'מדף', bookIds: ['b1', 'b2'], createdAt: 1 }],
+    });
+    removeFolder('/books');
+    const state = getState();
+    expect(state.books.map((b) => b.id)).toEqual(['b2']);
+    expect(state.trash.map((b) => b.id)).toEqual(['b1']);
+    expect(state.folders).toEqual(['/other']);
+    // nothing the reader saved about that book is left behind
+    expect(state.favorites).toEqual(['b2']);
+    expect(state.recent).toEqual([]);
+    expect(state.collections[0].bookIds).toEqual(['b2']);
+    // and it can be brought back
+    restoreBook('b1');
+    expect(getState().books.map((b) => b.id).sort()).toEqual(['b1', 'b2']);
+  });
+
+  it('removing a book keeps it restorable in the trash', () => {
+    setState({ books: [makeBook(7, { path: '/books/seven.epub' })], trash: [], favorites: [], recent: [], collections: [], progress: {}, bookmarks: {} });
+    removeBook('b7');
+    expect(getState().books.length).toBe(0);
+    expect(getState().trash.length).toBe(1);
+    restoreBook('b7');
+    expect(getState().books.length).toBe(1);
   });
 });
 

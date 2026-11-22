@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('shoso', {
   loadLibrary: () => ipcRenderer.invoke('library:load'),
   saveLibrary: (library) => ipcRenderer.invoke('library:save', library),
   reveal: (filePath) => ipcRenderer.invoke('shell:reveal', filePath),
+  openDataFolder: () => ipcRenderer.invoke('shell:openDataFolder'),
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
   toggleFullscreen: () => ipcRenderer.invoke('window:toggleFullscreen'),
   minimize: () => ipcRenderer.invoke('window:minimize'),
