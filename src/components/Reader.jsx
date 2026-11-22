@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   useStore, getState, bookById, closeBook, saveProgress, markFinished,
-  addBookmark, removeBookmark, updateReader, addReadingTime, toast,
+  addBookmark, removeBookmark, updateReader, addReadingTime, toast, setState,
 } from '../lib/store.js';
 import { readBookBuffer } from '../lib/platform.js';
 import { parseBookBuffer, searchChapters, renderPdfPage, loadPdf, DETECTED_ONLY_EXT, extOf } from '../lib/parsers.js';
@@ -9,7 +9,8 @@ import { FONT_FAMILIES, COLOR_MODES } from '../lib/store.js';
 import {
   IconBack, IconToc, IconSearch, IconBookmark, IconTts, IconFullscreen,
   IconClose, IconZoomIn, IconZoomOut, IconStop,
-  IconMore, IconSettings, IconBookmarkSolid, IconChevron,
+  IconMore, IconSettings, IconBookmarkSolid,
+  IconArrowDropDown, IconAddCircleOutline, IconRemoveCircleOutline,
 } from '../lib/icons.jsx';
 
 /** Readera's colour-mode swatches. */
@@ -449,144 +450,144 @@ export default function Reader() {
 
             {panel === 'settings' && (
               <div className="reader-settings">
-                {/* ReadEra's reading-settings sheet, section for section */}
-                <div className="rs-group">כיוון דפדוף</div>
-                <div className="rs-flip">
-                  <button
-                    className={readerSettings.mode === 'paginated' ? 'active' : ''}
-                    onClick={() => updateReader({ mode: 'paginated' })}
-                  >
-                    אופקי
-                  </button>
-                  <button
-                    className={readerSettings.mode === 'scroll' ? 'active' : ''}
-                    onClick={() => updateReader({ mode: 'scroll' })}
-                  >
-                    אנכי
-                  </button>
+                <div className="rs-head">
+                  <span className="rs-head-title">הגדרות קריאה</span>
+                  <span className="rs-head-formats">EPUB · FB2 · MOBI · DOC · DOCX · PDF · TXT</span>
                 </div>
 
-                <div className="rs-group">מצב צבע</div>
-                <div className="rs-modes">
-                  {COLOR_MODES.map((m) => {
-                    const sw = MODE_SWATCH[m.id] || MODE_SWATCH.dark;
-                    return (
-                      <button
-                        key={m.id}
-                        className={`rs-mode ${readerSettings.theme === m.id ? 'active' : ''}`}
-                        onClick={() => updateReader({ theme: m.id })}
-                        title={m.label}
-                      >
-                        <span className="rs-swatch" style={{ background: sw.bg }}>
-                          <span style={{ width: 13, height: 13, borderRadius: '50%', background: sw.fg, display: 'block' }} />
-                        </span>
-                        <span>{m.label}</span>
-                      </button>
-                    );
-                  })}
+                <div className="rs-block">
+                  <div className="rs-cap">כיוון דפדוף</div>
+                  <div className="rs-value-row">
+                    <span>{readerSettings.mode === 'scroll' ? 'אנכי' : 'אופקי'}</span>
+                    <IconArrowDropDown size={22} />
+                    <select value={readerSettings.mode} onChange={(e) => updateReader({ mode: e.target.value })}>
+                      <option value="paginated">אופקי</option>
+                      <option value="scroll">אנכי</option>
+                    </select>
+                  </div>
                 </div>
 
-                <div className="rs-group">גופן</div>
-                <div className="rs-field">
-                  <select
-                    className="rs-select"
-                    value={readerSettings.fontFamily}
-                    onChange={(e) => updateReader({ fontFamily: e.target.value })}
-                  >
-                    {FONT_FAMILIES.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
-                  </select>
-                  <IconChevron size={18} className="rs-field-chevron" />
+                <div className="rs-block">
+                  <div className="rs-cap">מצב צבע</div>
+                  <div className="rs-value-row">
+                    <span>{COLOR_MODES.find((m) => m.id === readerSettings.theme)?.label || 'רגיל'}</span>
+                    <IconArrowDropDown size={22} />
+                    <select value={readerSettings.theme} onChange={(e) => updateReader({ theme: e.target.value })}>
+                      {COLOR_MODES.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                    </select>
+                  </div>
                 </div>
 
-                <div className="rs-group">גודל גופן</div>
-                <div className="rs-stepper center">
-                  <button onClick={() => updateReader({ fontSize: Math.max(12, readerSettings.fontSize - 1) })}>−</button>
-                  <em>{readerSettings.fontSize}</em>
-                  <button onClick={() => updateReader({ fontSize: Math.min(32, readerSettings.fontSize + 1) })}>+</button>
+                <div className="rs-block">
+                  <div className="rs-cap">גופן</div>
+                  <div className="rs-value-row">
+                    <span>{FONT_FAMILIES.find((f) => f.id === readerSettings.fontFamily)?.label}</span>
+                    <IconArrowDropDown size={22} />
+                    <select value={readerSettings.fontFamily} onChange={(e) => updateReader({ fontFamily: e.target.value })}>
+                      {FONT_FAMILIES.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+                    </select>
+                  </div>
                 </div>
 
-                <div className="rs-group">עובי גופן</div>
-                <input
-                  type="range"
-                  min="300"
-                  max="700"
-                  step="100"
-                  value={readerSettings.fontWeight || 400}
-                  onChange={(e) => updateReader({ fontWeight: Number(e.target.value) })}
-                />
-
-                <div className="rs-group">ריווח שורות</div>
-                <div className="rs-stepper center">
-                  <button onClick={() => updateReader({ lineHeight: Math.max(1.2, Number((readerSettings.lineHeight - 0.1).toFixed(1))) })}>−</button>
-                  <em>{Math.round((readerSettings.lineHeight / 1.7) * 100)}%</em>
-                  <button onClick={() => updateReader({ lineHeight: Math.min(2.4, Number((readerSettings.lineHeight + 0.1).toFixed(1))) })}>+</button>
+                <div className="rs-block">
+                  <div className="rs-cap">גודל גופן</div>
+                  <div className="rs-step">
+                    <button onClick={() => updateReader({ fontSize: Math.max(12, readerSettings.fontSize - 1) })} title="הקטן">
+                      <IconRemoveCircleOutline size={24} />
+                    </button>
+                    <em>{readerSettings.fontSize}</em>
+                    <button onClick={() => updateReader({ fontSize: Math.min(32, readerSettings.fontSize + 1) })} title="הגדל">
+                      <IconAddCircleOutline size={24} />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="rs-group">יישור טקסט</div>
-                <div className="rs-field">
-                  <select
-                    className="rs-select"
-                    value={readerSettings.justify ? 'justify' : 'natural'}
-                    onChange={(e) => updateReader({ justify: e.target.value === 'justify' })}
-                  >
-                    <option value="justify">מיושר לשני הצדדים</option>
-                    <option value="natural">טבעי</option>
-                  </select>
-                  <IconChevron size={18} className="rs-field-chevron" />
+                <div className="rs-block">
+                  <div className="rs-cap">עובי גופן</div>
+                  <input
+                    type="range"
+                    min="300"
+                    max="700"
+                    step="100"
+                    value={readerSettings.fontWeight || 400}
+                    style={{ '--pct': `${(((readerSettings.fontWeight || 400) - 300) / 400) * 100}%` }}
+                    onChange={(e) => updateReader({ fontWeight: Number(e.target.value) })}
+                  />
                 </div>
 
-                <div className="rs-group">שולי עמוד</div>
-                <input
-                  type="range"
-                  min="0"
-                  max="120"
-                  step="4"
-                  value={readerSettings.margins}
-                  onChange={(e) => updateReader({ margins: Number(e.target.value) })}
-                />
-
-                <div className="rs-divider" />
-
-                <div className="rs-group">הגדרות כלליות</div>
-                <div className="rs-field">
-                  <span className="rs-field-label">רוחב טור</span>
-                  <span className="rs-field-value">{readerSettings.maxWidth}px</span>
+                <div className="rs-block">
+                  <div className="rs-cap">ריווח שורות</div>
+                  <div className="rs-step">
+                    <button
+                      onClick={() => updateReader({ lineHeight: Math.max(1.2, Number((readerSettings.lineHeight - 0.1).toFixed(1))) })}
+                      title="הקטן"
+                    >
+                      <IconRemoveCircleOutline size={24} />
+                    </button>
+                    <em>{Math.round((readerSettings.lineHeight / 1.7) * 100)}%</em>
+                    <button
+                      onClick={() => updateReader({ lineHeight: Math.min(2.4, Number((readerSettings.lineHeight + 0.1).toFixed(1))) })}
+                      title="הגדל"
+                    >
+                      <IconAddCircleOutline size={24} />
+                    </button>
+                  </div>
                 </div>
-                <input
-                  type="range"
-                  min="480"
-                  max="1100"
-                  step="20"
-                  value={readerSettings.maxWidth}
-                  onChange={(e) => updateReader({ maxWidth: Number(e.target.value) })}
-                />
-                <label className="rs-switch-row">
+
+                <div className="rs-block">
+                  <div className="rs-cap">יישור טקסט</div>
+                  <div className="rs-value-row">
+                    <span>{readerSettings.justify ? 'מיושר לשני הצדדים' : 'טבעי'}</span>
+                    <IconArrowDropDown size={22} />
+                    <select
+                      value={readerSettings.justify ? 'justify' : 'natural'}
+                      onChange={(e) => updateReader({ justify: e.target.value === 'justify' })}
+                    >
+                      <option value="justify">מיושר לשני הצדדים</option>
+                      <option value="natural">טבעי</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="rs-block">
+                  <div className="rs-cap">שולי עמוד</div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="120"
+                    step="4"
+                    value={readerSettings.margins}
+                    style={{ '--pct': `${(readerSettings.margins / 120) * 100}%` }}
+                    onChange={(e) => updateReader({ margins: Number(e.target.value) })}
+                  />
+                </div>
+
+                <div className="rs-block switch">
                   <span>מקפים אוטומטיים</span>
-                  <input
-                    type="checkbox"
-                    checked={readerSettings.hyphenation}
-                    onChange={(e) => updateReader({ hyphenation: e.target.checked })}
-                  />
-                </label>
-                <label className="rs-switch-row">
-                  <span>הקראה בקול (TTS)</span>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(tts.playing)}
-                    onChange={() => (tts.playing ? stopTts() : speakChapter(currentChapter))}
-                  />
-                </label>
+                  <label className="rs-switch">
+                    <input
+                      type="checkbox"
+                      checked={readerSettings.hyphenation}
+                      onChange={(e) => updateReader({ hyphenation: e.target.checked })}
+                    />
+                    <i />
+                  </label>
+                </div>
 
-                <div className="rs-divider" />
+                <div className="rs-block switch">
+                  <span>הקראה בקול</span>
+                  <label className="rs-switch">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(tts.playing)}
+                      onChange={() => (tts.playing ? stopTts() : speakChapter(currentChapter))}
+                    />
+                    <i />
+                  </label>
+                </div>
 
-                <div className="rs-group">סימניות, ציטוטים והערות</div>
-                <button className="rs-link" onClick={() => setPanel('bookmarks')}>
-                  <IconBookmark size={19} /> סימניות ({bookmarks.length})
-                  <IconChevron size={17} className="rs-link-chevron" />
-                </button>
-                <button className="rs-link" onClick={() => setPanel('search')}>
-                  <IconSearch size={19} /> חיפוש בספר
-                  <IconChevron size={17} className="rs-link-chevron" />
+                <button className="rs-general" onClick={() => { closeBook(); setState({ view: 'settings' }); }}>
+                  הגדרות כלליות
                 </button>
               </div>
             )}
