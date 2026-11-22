@@ -1,4 +1,4 @@
-start 2026-11-21T23:46:17.160Z
+start 2026-11-22T08:34:24.068Z
 goto
 loaded
 rows ready
@@ -10,18 +10,11 @@ saved 04-books-tiles
 ok books tiles
 saved 05-reader-night
 ok reader
-saved 06-reader-settings
-ok reader settings
-saved 07-reader-sepia
-ok sepia mode
-saved 08-reader-toc
-ok toc
-saved 09-authors
-ok authors
-saved 10-settings
-ok settings
-saved 11-trash
-ok trash
-saved 01-reading-now
-ok reading now
+FAIL reader settings — page.waitForSelector: Timeout 6000ms exceeded.
+FAIL sepia mode — locator.click: Timeout 6000ms exceeded.
+FAIL toc — locator.waitFor: Timeout 8000ms exceeded.
+FAIL authors — locator.waitFor: Timeout 8000ms exceeded.
+FAIL settings — locator.waitFor: Timeout 8000ms exceeded.
+FAIL trash — locator.waitFor: Timeout 8000ms exceeded.
+FAIL reading now — locator.waitFor: Timeout 8000ms exceeded.
 done
