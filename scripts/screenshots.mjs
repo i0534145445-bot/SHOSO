@@ -174,6 +174,16 @@ try {
     await page.waitForSelector('.book-row', { timeout: 10000 });
     await shot('01-reading-now');
   });
+
+  await step('book detail', async () => {
+    await clickTitle('תפריט');
+    await clickDrawerItem('ספרים ומסמכים');
+    await page.waitForSelector('.book-row', { timeout: 10000 });
+    await page.locator('.book-row .row-actions button').last().click();
+    await page.locator('.row-menu button', { hasText: 'פרטי הספר' }).first().click();
+    await page.waitForSelector('.book-detail', { timeout: 10000 });
+    await shot('12-book-detail');
+  });
 } catch (err) {
   console.error('screenshot run failed:', err.message);
   writeFileSync(`${OUT}/99-error.txt`, `fatal: ${err.message}\n`, 'utf8');
