@@ -24,29 +24,32 @@ import { bookHaystack, matchesQuery, collate, normalize } from './format.js';
 
 export const READER_THEMES = ['light', 'sepia', 'dark', 'night', 'console'];
 /** Readera colour modes, in Readera's own order. */
+/** ReadEra's four colour modes, in ReadEra's order: Normal, Sepia, Night, Console. */
 export const COLOR_MODES = [
   { id: 'light', label: 'רגיל' },
   { id: 'sepia', label: 'ספיה' },
   { id: 'dark', label: 'לילה' },
-  { id: 'night', label: 'שחור' },
   { id: 'console', label: 'קונסול' },
 ];
+/** The reader's font list, mirroring ReadEra's FONT FACE options. */
 export const FONT_FAMILIES = [
-  { id: 'serif', label: 'סריף (ברירת מחדל)', value: "Georgia, 'Times New Roman', 'David', serif" },
-  { id: 'sans', label: 'ללא סריף', value: "'Segoe UI', 'Rubik', 'Heebo', system-ui, sans-serif" },
-  { id: 'hebrew', label: 'עברי קלאסי', value: "'David', 'Frank Ruehl', 'Times New Roman', serif" },
-  { id: 'mono', label: 'מונוספייס', value: "'Consolas', 'Courier New', monospace" },
+  { id: 'serif', label: 'Merriweather', value: "'Merriweather', 'Noto Serif Hebrew', Georgia, serif" },
+  { id: 'hebrew-serif', label: 'Noto Serif Hebrew', value: "'Noto Serif Hebrew', 'Merriweather', Georgia, serif" },
+  { id: 'sans', label: 'Roboto', value: "'Roboto', 'Noto Sans Hebrew', system-ui, sans-serif" },
+  { id: 'hebrew-sans', label: 'Noto Sans Hebrew', value: "'Noto Sans Hebrew', 'Roboto', system-ui, sans-serif" },
+  { id: 'mono', label: 'Monospace', value: "'Consolas', 'Courier New', monospace" },
 ];
 
 export const DEFAULT_READER = {
   theme: 'dark',
   fontSize: 18,
+  fontWeight: 400,
   lineHeight: 1.7,
   fontFamily: 'serif',
   margins: 48,
   justify: false,
   hyphenation: true,
-  mode: 'scroll', // 'scroll' | 'paginated'
+  mode: 'scroll', // 'scroll' (אנכי) | 'paginated' (אופקי)
   maxWidth: 900,
 };
 
@@ -205,6 +208,7 @@ export async function bootstrap() {
   patch.reader = { ...DEFAULT_READER, ...(patch.reader || {}) };
   patch.reader.fontSize = num(patch.reader.fontSize, 18, 12, 32);
   patch.reader.lineHeight = num(patch.reader.lineHeight, 1.7, 1.2, 2.4);
+  patch.reader.fontWeight = num(patch.reader.fontWeight, 400, 300, 700);
   patch.reader.margins = num(patch.reader.margins, 48, 0, 120);
   patch.reader.maxWidth = num(patch.reader.maxWidth, 900, 480, 1100);
   if (!READER_THEMES.includes(patch.reader.theme)) patch.reader.theme = 'dark';

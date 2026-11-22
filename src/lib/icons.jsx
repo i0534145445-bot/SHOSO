@@ -1,228 +1,184 @@
 import React from 'react';
+import raw_menu from '@material-design-icons/svg/filled/menu.svg?raw';
+import raw_search from '@material-design-icons/svg/filled/search.svg?raw';
+import raw_more from '@material-design-icons/svg/filled/more_vert.svg?raw';
+import raw_back from '@material-design-icons/svg/filled/arrow_back.svg?raw';
+import raw_forward from '@material-design-icons/svg/filled/arrow_forward.svg?raw';
+import raw_readingNow from '@material-design-icons/svg/filled/autorenew.svg?raw';
+import raw_booksDocs from '@material-design-icons/svg/filled/book.svg?raw';
+import raw_clock from '@material-design-icons/svg/outlined/schedule.svg?raw';
+import raw_doubleCheck from '@material-design-icons/svg/filled/done_all.svg?raw';
+import raw_bars from '@material-design-icons/svg/filled/equalizer.svg?raw';
+import raw_author from '@material-design-icons/svg/filled/person.svg?raw';
+import raw_series from '@material-design-icons/svg/filled/label.svg?raw';
+import raw_collection from '@material-design-icons/svg/filled/equalizer.svg?raw';
+import raw_format from '@material-design-icons/svg/filled/layers.svg?raw';
+import raw_folder from '@material-design-icons/svg/filled/folder.svg?raw';
+import raw_download from '@material-design-icons/svg/filled/download.svg?raw';
+import raw_trash from '@material-design-icons/svg/filled/delete.svg?raw';
+import raw_settings from '@material-design-icons/svg/filled/settings.svg?raw';
+import raw_feedback from '@material-design-icons/svg/filled/feedback.svg?raw';
+import raw_restore from '@material-design-icons/svg/filled/restore.svg?raw';
+import raw_toc from '@material-design-icons/svg/filled/toc.svg?raw';
+import raw_fullscreen from '@material-design-icons/svg/filled/fullscreen.svg?raw';
+import raw_font from '@material-design-icons/svg/filled/format_size.svg?raw';
+import raw_home from '@material-design-icons/svg/filled/home.svg?raw';
+import raw_library from '@material-design-icons/svg/filled/local_library.svg?raw';
+import raw_history from '@material-design-icons/svg/filled/history.svg?raw';
+import raw_info from '@material-design-icons/svg/filled/info.svg?raw';
+import raw_edit from '@material-design-icons/svg/filled/edit.svg?raw';
+import raw_plus from '@material-design-icons/svg/filled/add.svg?raw';
+import raw_close from '@material-design-icons/svg/filled/close.svg?raw';
+import raw_chevron from '@material-design-icons/svg/filled/chevron_right.svg?raw';
+import raw_chevronLeft from '@material-design-icons/svg/filled/chevron_left.svg?raw';
+import raw_sort from '@material-design-icons/svg/filled/sort.svg?raw';
+import raw_grid from '@material-design-icons/svg/filled/grid_view.svg?raw';
+import raw_list from '@material-design-icons/svg/filled/view_list.svg?raw';
+import raw_zoomIn from '@material-design-icons/svg/filled/zoom_in.svg?raw';
+import raw_zoomOut from '@material-design-icons/svg/filled/zoom_out.svg?raw';
+import raw_play from '@material-design-icons/svg/filled/play_arrow.svg?raw';
+import raw_pause from '@material-design-icons/svg/filled/pause.svg?raw';
+import raw_stop from '@material-design-icons/svg/filled/stop.svg?raw';
+import raw_sparkle from '@material-design-icons/svg/filled/auto_awesome.svg?raw';
+import raw_external from '@material-design-icons/svg/filled/open_in_new.svg?raw';
+import raw_moon from '@material-design-icons/svg/filled/dark_mode.svg?raw';
+import raw_sun from '@material-design-icons/svg/filled/light_mode.svg?raw';
+import raw_keyboard from '@material-design-icons/svg/filled/keyboard.svg?raw';
+import raw_tts from '@material-design-icons/svg/filled/record_voice_over.svg?raw';
+import raw_check from '@material-design-icons/svg/filled/check.svg?raw';
+import raw_bookmark from '@material-design-icons/svg/filled/bookmark.svg?raw';
+import raw_bookmarkBorder from '@material-design-icons/svg/filled/bookmark_border.svg?raw';
+import raw_starFilled from '@material-design-icons/svg/filled/star.svg?raw';
+import raw_starBorder from '@material-design-icons/svg/outlined/star_border.svg?raw';
+import raw_heartFilled from '@material-design-icons/svg/filled/favorite.svg?raw';
+import raw_heartBorder from '@material-design-icons/svg/outlined/favorite_border.svg?raw';
+import raw_book from '@material-design-icons/svg/filled/book.svg?raw';
+import raw_refresh from '@material-design-icons/svg/filled/refresh.svg?raw';
+import raw_devices from '@material-design-icons/svg/filled/devices.svg?raw';
+import raw_tune from '@material-design-icons/svg/filled/tune.svg?raw';
+import raw_storefront from '@material-design-icons/svg/filled/storefront.svg?raw';
+import raw_storage from '@material-design-icons/svg/filled/storage.svg?raw';
+import raw_textFields from '@material-design-icons/svg/filled/text_fields.svg?raw';
+import raw_formatLineSpacing from '@material-design-icons/svg/filled/format_line_spacing.svg?raw';
+import raw_formatAlignJustify from '@material-design-icons/svg/filled/format_align_justify.svg?raw';
+import raw_margin from '@material-design-icons/svg/filled/aspect_ratio.svg?raw';
+import raw_swapHoriz from '@material-design-icons/svg/filled/swap_horiz.svg?raw';
+import raw_swapVert from '@material-design-icons/svg/filled/swap_vert.svg?raw';
+import raw_palette from '@material-design-icons/svg/filled/palette.svg?raw';
+import raw_translate from '@material-design-icons/svg/filled/translate.svg?raw';
+import raw_colorLens from '@material-design-icons/svg/filled/color_lens.svg?raw';
+import raw_import from '@material-design-icons/svg/filled/file_download.svg?raw';
 
-const Svg = ({ children, size = 20, ...rest }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.7"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    {...rest}
-  >
-    {children}
-  </svg>
-);
+/**
+ * Real Material Design icons (Apache-2.0) – the same icon language ReadEra
+ * uses. Each component renders the official 24dp path so sizes, corners and
+ * optical weights match the Android app instead of being hand-drawn lookalikes.
+ */
 
-export const IconMenu = (p) => (
-  <Svg {...p}><path d="M3 12h18M3 6h18M3 18h18" /></Svg>
-);
-export const IconHome = (p) => (
-  <Svg {...p}><path d="M3 10.5 12 3l9 7.5" /><path d="M5.5 9.5V21h13V9.5" /><path d="M9.5 21v-6.5h5V21" /></Svg>
-);
-export const IconBook = (p) => (
-  <Svg {...p}><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5Z" /><path d="M4 18.5V5.5" /><path d="M8 7h8" /></Svg>
-);
-export const IconLibrary = (p) => (
-  <Svg {...p}><path d="M5 4v16" /><path d="M9.5 4v16" /><path d="M14 4.5 18 19" /><path d="M17.5 4.5 21 19" /></Svg>
-);
-export const IconAuthor = (p) => (
-  <Svg {...p}><circle cx="12" cy="8" r="3.6" /><path d="M4.5 20.5c1.3-4 4-6 7.5-6s6.2 2 7.5 6" /></Svg>
-);
-export const IconCollection = (p) => (
-  <Svg {...p}><path d="M4 7h11" /><path d="M4 12h11" /><path d="M4 17h7" /><circle cx="18" cy="16" r="2.4" /><path d="M20.4 16V8.5l1.6-.5" /></Svg>
-);
-export const IconHeart = ({ filled, ...p }) => (
-  <Svg {...p} fill={filled ? 'currentColor' : 'none'}>
-    <path d="M12 20s-7.5-4.6-7.5-9.6A4.4 4.4 0 0 1 12 7.3a4.4 4.4 0 0 1 7.5 3.1C19.5 15.4 12 20 12 20Z" />
-  </Svg>
-);
-export const IconFolder = (p) => (
-  <Svg {...p}><path d="M3 7.5A2 2 0 0 1 5 5.5h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /></Svg>
-);
-export const IconClock = (p) => (
-  <Svg {...p}><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></Svg>
-);
-export const IconHistory = (p) => (
-  <Svg {...p}><path d="M4 12a8 8 0 1 1 2.3 5.6" /><path d="M4 12H2.5M4 12l-1.5-2M12 8v4l3 2" /></Svg>
-);
-export const IconSettings = (p) => (
-  <Svg {...p}><circle cx="12" cy="12" r="3" /><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6" /></Svg>
-);
-export const IconPlus = (p) => (
-  <Svg {...p}><path d="M12 5v14M5 12h14" /></Svg>
-);
-export const IconFormat = (p) => (
-  <Svg {...p}><path d="M6 3h9l4 4v14H6Z" /><path d="M15 3v4h4" /><path d="M9 12h6M9 16h6" /></Svg>
-);
-export const IconSearch = (p) => (
-  <Svg {...p}><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></Svg>
-);
-export const IconClose = (p) => (
-  <Svg {...p}><path d="m6 6 12 12M18 6 6 18" /></Svg>
-);
-export const IconChevron = (p) => (
-  <Svg {...p}><path d="m9 6 6 6-6 6" /></Svg>
-);
-export const IconChevronLeft = (p) => (
-  <Svg {...p}><path d="m15 6-6 6 6 6" /></Svg>
-);
-export const IconSort = (p) => (
-  <Svg {...p}><path d="M7 4v16" /><path d="m3.5 16.5 3.5 3.5 3.5-3.5" /><path d="M13 7h7" /><path d="M13 12h5" /><path d="M13 17h3" /></Svg>
-);
-export const IconFullscreen = (p) => (
-  <Svg {...p}><path d="M4 9V4h5" /><path d="M20 15v5h-5" /><path d="M15 4h5v5" /><path d="M9 20H4v-5" /></Svg>
-);
-export const IconBookmark = ({ filled, ...p }) => (
-  <Svg {...p} fill={filled ? 'currentColor' : 'none'}>
-    <path d="M7 4h10v16l-5-3.5L7 20Z" />
-  </Svg>
-);
-export const IconToc = (p) => (
-  <Svg {...p}><path d="M9 6h11M9 12h11M9 18h11" /><path d="M4 6h.01M4 12h.01M4 18h.01" /></Svg>
-);
-export const IconFont = (p) => (
-  <Svg {...p}><path d="M5 19 12 5l7 14" /><path d="M8 14h8" /></Svg>
-);
-export const IconTts = (p) => (
-  <Svg {...p}><path d="M4 10v4h3l4 3.5v-11L7 10Z" /><path d="M15 9.5a4 4 0 0 1 0 5" /><path d="M17.5 7a7.5 7.5 0 0 1 0 10" /></Svg>
-);
-export const IconGrid = (p) => (
-  <Svg {...p}><rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><rect x="13" y="13" width="7" height="7" rx="1.5" /></Svg>
-);
-export const IconList = (p) => (
-  <Svg {...p}><path d="M9 6h11M9 12h11M9 18h11" /><path d="M4 6h.01M4 12h.01M4 18h.01" /></Svg>
-);
-export const IconTrash = (p) => (
-  <Svg {...p}><path d="M4.5 7h15" /><path d="M9.5 7V4.8h5V7" /><path d="M6.5 7l1 12.2h9l1-12.2" /><path d="M10.5 10.5v6M13.5 10.5v6" /></Svg>
-);
-export const IconRefresh = (p) => (
-  <Svg {...p}><path d="M20 11a8 8 0 1 0-2.5 6" /><path d="M20 5v6h-6" /></Svg>
-);
-export const IconMore = (p) => (
-  <Svg {...p} fill="currentColor" stroke="none"><circle cx="12" cy="5.5" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="12" cy="18.5" r="1.7" /></Svg>
-);
-export const IconKeyboard = (p) => (
-  <Svg {...p}><rect x="3" y="6.5" width="18" height="11" rx="2" /><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10" /></Svg>
-);
-export const IconBack = (p) => (
-  <Svg {...p}><path d="M15 5l-7 7 7 7" /></Svg>
-);
-export const IconForward = (p) => (
-  <Svg {...p}><path d="M9 5l7 7-7 7" /></Svg>
-);
-export const IconZoomIn = (p) => (
-  <Svg {...p}><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /><path d="M11 8.5v5M8.5 11h5" /></Svg>
-);
-export const IconZoomOut = (p) => (
-  <Svg {...p}><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /><path d="M8.5 11h5" /></Svg>
-);
-export const IconPlay = (p) => (
-  <Svg {...p} fill="currentColor" stroke="none"><path d="M8 5.5v13l11-6.5Z" /></Svg>
-);
-export const IconPause = (p) => (
-  <Svg {...p} fill="currentColor" stroke="none"><rect x="7" y="5" width="3.6" height="14" rx="1.2" /><rect x="13.4" y="5" width="3.6" height="14" rx="1.2" /></Svg>
-);
-export const IconStop = (p) => (
-  <Svg {...p} fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2" /></Svg>
-);
-export const IconSparkle = (p) => (
-  <Svg {...p}><path d="M12 3.5 13.8 9l5.7 1.8-5.7 1.8L12 18l-1.8-5.4L4.5 10.8 10.2 9Z" /></Svg>
-);
-export const IconInfo = (p) => (
-  <Svg {...p}><circle cx="12" cy="12" r="8.5" /><path d="M12 11v5" /><path d="M12 8h.01" /></Svg>
-);
-export const IconEdit = (p) => (
-  <Svg {...p}><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17Z" /><path d="m13.5 6.5 3 3" /></Svg>
-);
-export const IconCheck = (p) => (
-  <Svg {...p}><path d="m5 12.5 4.5 4.5L19 7.5" /></Svg>
-);
-export const IconExternal = (p) => (
-  <Svg {...p}><path d="M14 4h6v6" /><path d="M20 4 11 13" /><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" /></Svg>
-);
-export const IconMoon = (p) => (
-  <Svg {...p}><path d="M20 13.5A8.5 8.5 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5Z" /></Svg>
-);
-export const IconSun = (p) => (
-  <Svg {...p}><circle cx="12" cy="12" r="4" /><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" /></Svg>
-);
+/** Strip the outer <svg> wrapper so the path can be inlined. */
+const inner = (raw) => {
+  const start = raw.indexOf('>', raw.indexOf('<svg'));
+  const end = raw.lastIndexOf('</svg>');
+  return raw.slice(start + 1, end);
+};
 
-/* ---- Readera icon set ------------------------------------------------- */
+const cache = new Map();
 
-/** "Reading Now" – a circular arrow, exactly as in Readera's drawer. */
-export const IconReadingNow = (p) => (
-  <Svg {...p}>
-    <path d="M20 12a8 8 0 1 1-2.4-5.7" />
-    <path d="M20 4.2V9h-4.8" />
-    <path d="M12 9.2v3.4l2.4 1.5" />
-  </Svg>
-);
+const materialIcon = (raw) => {
+  const markup = cache.get(raw) || inner(raw);
+  cache.set(raw, markup);
+  const Component = ({ size = 20, style, className, ...rest }) => (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      style={{ display: 'block', flexShrink: 0, ...style }}
+      aria-hidden="true"
+      {...rest}
+      dangerouslySetInnerHTML={{ __html: markup }}
+    />
+  );
+  return Component;
+};
 
-/** "Books & documents" – open book with two pages. */
-export const IconBooksDocs = (p) => (
-  <Svg {...p}>
-    <path d="M12 6.4C10.6 5.2 8.7 4.6 6.2 4.6H3.4v12.8h2.8c2.5 0 4.4.6 5.8 1.8 1.4-1.2 3.3-1.8 5.8-1.8h2.8V4.6h-2.8c-2.5 0-4.4.6-5.8 1.8Z" />
-    <path d="M12 6.4v12.8" />
-  </Svg>
-);
+export const IconMenu = materialIcon(raw_menu);
+export const IconSearch = materialIcon(raw_search);
+export const IconMore = materialIcon(raw_more);
+export const IconBack = materialIcon(raw_back);
+export const IconForward = materialIcon(raw_forward);
+export const IconReadingNow = materialIcon(raw_readingNow);
+export const IconBooksDocs = materialIcon(raw_booksDocs);
+export const IconClock = materialIcon(raw_clock);
+export const IconDoubleCheck = materialIcon(raw_doubleCheck);
+export const IconBars = materialIcon(raw_bars);
+export const IconAuthor = materialIcon(raw_author);
+export const IconSeries = materialIcon(raw_series);
+export const IconCollection = materialIcon(raw_collection);
+export const IconFormat = materialIcon(raw_format);
+export const IconFolder = materialIcon(raw_folder);
+export const IconDownload = materialIcon(raw_download);
+export const IconTrash = materialIcon(raw_trash);
+export const IconSettings = materialIcon(raw_settings);
+export const IconFeedback = materialIcon(raw_feedback);
+export const IconRestore = materialIcon(raw_restore);
+export const IconToc = materialIcon(raw_toc);
+export const IconFullscreen = materialIcon(raw_fullscreen);
+export const IconFont = materialIcon(raw_font);
+export const IconHome = materialIcon(raw_home);
+export const IconLibrary = materialIcon(raw_library);
+export const IconHistory = materialIcon(raw_history);
+export const IconInfo = materialIcon(raw_info);
+export const IconEdit = materialIcon(raw_edit);
+export const IconPlus = materialIcon(raw_plus);
+export const IconClose = materialIcon(raw_close);
+export const IconChevron = materialIcon(raw_chevron);
+export const IconChevronLeft = materialIcon(raw_chevronLeft);
+export const IconSort = materialIcon(raw_sort);
+export const IconGrid = materialIcon(raw_grid);
+export const IconList = materialIcon(raw_list);
+export const IconZoomIn = materialIcon(raw_zoomIn);
+export const IconZoomOut = materialIcon(raw_zoomOut);
+export const IconPlay = materialIcon(raw_play);
+export const IconPause = materialIcon(raw_pause);
+export const IconStop = materialIcon(raw_stop);
+export const IconSparkle = materialIcon(raw_sparkle);
+export const IconExternal = materialIcon(raw_external);
+export const IconMoon = materialIcon(raw_moon);
+export const IconSun = materialIcon(raw_sun);
+export const IconKeyboard = materialIcon(raw_keyboard);
+export const IconTts = materialIcon(raw_tts);
+export const IconCheck = materialIcon(raw_check);
+export const IconBookmarkSolid = materialIcon(raw_bookmark);
+export const IconBookmarkBorder = materialIcon(raw_bookmarkBorder);
+export const IconStarFilled = materialIcon(raw_starFilled);
+export const IconStarBorder = materialIcon(raw_starBorder);
+export const IconHeartFilled = materialIcon(raw_heartFilled);
+export const IconHeartBorder = materialIcon(raw_heartBorder);
+export const IconBook = materialIcon(raw_book);
+export const IconRefresh = materialIcon(raw_refresh);
+export const IconDevices = materialIcon(raw_devices);
+export const IconTune = materialIcon(raw_tune);
+export const IconStorefront = materialIcon(raw_storefront);
+export const IconStorage = materialIcon(raw_storage);
+export const IconTextFields = materialIcon(raw_textFields);
+export const IconFormatLineSpacing = materialIcon(raw_formatLineSpacing);
+export const IconFormatAlignJustify = materialIcon(raw_formatAlignJustify);
+export const IconMargin = materialIcon(raw_margin);
+export const IconSwapHoriz = materialIcon(raw_swapHoriz);
+export const IconSwapVert = materialIcon(raw_swapVert);
+export const IconPalette = materialIcon(raw_palette);
+export const IconTranslate = materialIcon(raw_translate);
+export const IconColorLens = materialIcon(raw_colorLens);
+export const IconImport = materialIcon(raw_import);
 
-/** Star – Readera's favourite marker. */
-export const IconStar = ({ filled, ...p }) => (
-  <Svg {...p} fill={filled ? 'currentColor' : 'none'}>
-    <path d="m12 3.6 2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.8l5.9-.8Z" />
-  </Svg>
-);
+/* Toggle pairs – ReadEra switches between the filled and the outlined glyph. */
+export const IconStar = ({ filled, size, ...rest }) =>
+  (filled ? <IconStarFilled size={size} {...rest} /> : <IconStarBorder size={size} {...rest} />);
 
-/** Double check – "Have Read". */
-export const IconDoubleCheck = (p) => (
-  <Svg {...p}>
-    <path d="m2.6 12.6 3.6 3.6L14 8.4" />
-    <path d="m10.2 15.6 1.4 1.4L21.4 7.2" />
-  </Svg>
-);
+export const IconHeart = ({ filled, size, ...rest }) =>
+  (filled ? <IconHeartFilled size={size} {...rest} /> : <IconHeartBorder size={size} {...rest} />);
 
-/** Reading-position bars (fourth icon in Readera's row action strip). */
-export const IconBars = (p) => (
-  <Svg {...p}>
-    <path d="M7 6.5v11" />
-    <path d="M12 4.2v15.6" />
-    <path d="M17 8.4v7.2" />
-  </Svg>
-);
-
-/** Series / label tag. */
-export const IconSeries = (p) => (
-  <Svg {...p}>
-    <path d="M4 6.2A1.6 1.6 0 0 1 5.6 4.6h6.1l7.7 7.7a1.6 1.6 0 0 1 0 2.3l-4.8 4.8a1.6 1.6 0 0 1-2.3 0L4.6 11.7Z" />
-    <path d="M8.6 8.6h.01" />
-  </Svg>
-);
-
-/** Downloads – arrow into a tray. */
-export const IconDownload = (p) => (
-  <Svg {...p}>
-    <path d="M12 4v10.4" />
-    <path d="m8 10.6 4 4 4-4" />
-    <path d="M4.5 17.4v1.4a1.6 1.6 0 0 0 1.6 1.6h11.8a1.6 1.6 0 0 0 1.6-1.6v-1.4" />
-  </Svg>
-);
-
-/** Send feedback – speech bubble. */
-export const IconFeedback = (p) => (
-  <Svg {...p}>
-    <path d="M20.4 12.4c0 3.9-3.8 7-8.4 7-1 0-2-.1-2.9-.4L4.4 20.4l1.4-3.6a6.6 6.6 0 0 1-2.2-4.4c0-3.9 3.8-7 8.4-7s8.4 3.1 8.4 7Z" />
-    <path d="M8.4 12.4h.01M12 12.4h.01M15.6 12.4h.01" />
-  </Svg>
-);
-
-/** Restore from trash. */
-export const IconRestore = (p) => (
-  <Svg {...p}>
-    <path d="M4.6 12a7.4 7.4 0 1 0 2.2-5.2" />
-    <path d="M4.6 4.4V9h4.6" />
-  </Svg>
-);
+export const IconBookmark = ({ filled, size, ...rest }) =>
+  (filled ? <IconBookmarkSolid size={size} {...rest} /> : <IconBookmarkBorder size={size} {...rest} />);

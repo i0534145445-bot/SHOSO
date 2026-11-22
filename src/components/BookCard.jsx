@@ -44,7 +44,11 @@ export default function BookCard({ book, from = 'books' }) {
           {book.size ? `, ${formatSize(book.size)}` : ''}
         </p>
 
-        <div className="row-rail" title={percent > 0 ? `${percent}%` : 'לא התחלת לקרוא'}>
+        <div
+          className="row-rail"
+          style={{ '--p': `${percent}%` }}
+          title={percent > 0 ? `${percent}%` : 'לא התחלת לקרוא'}
+        >
           <span style={{ width: `${percent}%` }} />
         </div>
 
@@ -54,24 +58,24 @@ export default function BookCard({ book, from = 'books' }) {
             title={isFav ? 'הסר ממועדפים' : 'הוסף למועדפים'}
             onClick={() => toggleFavorite(book.id)}
           >
-            <IconStar size={19} filled={isFav} />
+            <IconStar size={21} filled={isFav} />
           </button>
           <button
             className={`icon-btn ${isToRead ? 'active' : ''}`}
             title={isToRead ? 'הסר מהרשימה "לקריאה"' : 'הוסף לרשימת "לקריאה"'}
             onClick={() => toggleToRead(book.id)}
           >
-            <IconClock size={19} />
+            <IconClock size={21} />
           </button>
           <button
             className={`icon-btn ${isRead ? 'active' : ''}`}
             title={isRead ? 'סמן כלא נקרא' : 'סמן כנקרא'}
             onClick={() => toggleHaveRead(book.id)}
           >
-            <IconDoubleCheck size={19} />
+            <IconDoubleCheck size={21} />
           </button>
-          <button className="icon-btn" title="פתח לקריאה" onClick={open}>
-            <IconBars size={19} />
+          <button className="icon-btn" title="הוסף למדף" onClick={() => setView('collections')}>
+            <IconBars size={21} />
           </button>
           <div style={{ position: 'relative' }}>
             <button
@@ -79,7 +83,7 @@ export default function BookCard({ book, from = 'books' }) {
               title="עוד אפשרויות"
               onClick={() => setMenu((v) => !v)}
             >
-              <IconMore size={19} />
+              <IconMore size={21} />
             </button>
             {menu && (
               <>
