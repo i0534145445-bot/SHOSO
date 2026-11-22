@@ -1,7 +1,7 @@
 {
   "name": "shoso-books",
   "productName": "SHOSO Books",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "SHOSO Books - קורא ספרים שולחני לווינדוס (Windows only) - חלופה ל-Readera",
   "author": "SHOSO",
   "license": "MIT",
@@ -55,8 +55,18 @@
     ],
     "win": {
       "target": [
-        "nsis",
-        "portable"
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "artifactName": "SHOSO-Books-${version}-${arch}.${ext}"
     },
@@ -65,8 +75,12 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "SHOSO Books"
+      "shortcutName": "SHOSO Books",
+      "artifactName": "SHOSO-Books-Setup-${version}.${ext}"
     },
-    "publish": null
+    "publish": null,
+    "portable": {
+      "artifactName": "SHOSO-Books-Portable-${version}.${ext}"
+    }
   }
 }
