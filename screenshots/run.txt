@@ -1,4 +1,4 @@
-start 2026-11-22T08:39:44.847Z
+start 2026-11-22T08:42:41.751Z
 goto
 loaded
 rows ready
@@ -20,6 +20,8 @@ saved 09-authors
 ok authors
 saved 10-settings
 ok settings
-FAIL trash — locator.click: Timeout 30000ms exceeded.
-FAIL reading now — locator.click: Timeout 30000ms exceeded.
+saved 11-trash
+ok trash
+saved 01-reading-now
+ok reading now
 done
