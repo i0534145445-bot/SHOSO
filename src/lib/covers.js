@@ -13,10 +13,13 @@
  *   HTML/MD/TXT – no embedded art, so the caller keeps the generated cover
  */
 
-import { readBookBuffer } from './platform.js';
+import { readBookBuffer, saveCoverData, isDesktop } from './platform.js';
 import { extOf, loadPdf } from './parsers.js';
 
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|svg)$/i;
+
+/** Only these formats can carry artwork; the rest keep their printed cover. */
+const HAS_ART = new Set(['.epub', '.fb2', '.pdf']);
 
 const MIME = {
   jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif',
@@ -228,12 +231,18 @@ export async function coverFor(book) {
   if (book.cover) return book.cover;
   if (cache.has(book.id)) return cache.get(book.id);
   if (pending.has(book.id)) return pending.get(book.id);
+  // A plain text file has no artwork to look for – don't open it for nothing.
+  if (!HAS_ART.has(extOf(book.fileName || book.path || ''))) {
+    remember(book.id, null);
+    return null;
+  }
 
   const job = schedule(async () => {
     try {
       const buffer = await readBookBuffer(book);
       const dataUrl = await extractCover(buffer, extOf(book.fileName || book.path || ''));
       remember(book.id, dataUrl);
+      if (dataUrl && isDesktop) persistCover(book.id, dataUrl);
       return dataUrl;
     } catch {
       remember(book.id, null);
@@ -245,4 +254,26 @@ export async function coverFor(book) {
 
   pending.set(book.id, job);
   return job;
+}
+
+/**
+ * A cover that had to be extracted while reading the shelf (a PDF's first page,
+ * or an EPUB whose package file the scan could not read) is written into the
+ * app's covers folder, so the same book never has to be parsed twice and the
+ * cover is there on the next start – not just while this window is open.
+ */
+let coverSink = null;
+
+/** The store registers itself here, so this module stays free of it. */
+export function onCoverExtracted(cb) {
+  coverSink = cb;
+}
+
+function persistCover(bookId, dataUrl) {
+  if (!dataUrl || !/^data:image\//.test(dataUrl)) return;
+  saveCoverData(dataUrl)
+    .then((url) => {
+      if (url && coverSink) coverSink(bookId, url);
+    })
+    .catch(() => { /* the cover still shows in this window */ });
 }

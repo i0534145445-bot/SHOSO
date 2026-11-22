@@ -20,6 +20,10 @@ contextBridge.exposeInMainWorld('shoso', {
   pickFolders: () => ipcRenderer.invoke('dialog:pickFolders'),
   pickFiles: () => ipcRenderer.invoke('dialog:pickFiles'),
   scan: (folders, known) => ipcRenderer.invoke('library:scan', { folders, known }),
+  // A folder changed on disk – the renderer decides what to do about it.
+  onLibraryChanged: (cb) => on('library:changed', cb),
+  // Covers the renderer had to draw itself (PDF page 1) are stored like the rest.
+  saveCover: (dataUrl) => ipcRenderer.invoke('cover:save', { dataUrl }),
   onScanProgress: (cb) => on('library:progress', cb),
   refreshBook: (filePath) => ipcRenderer.invoke('book:refresh', filePath),
   loadState: () => ipcRenderer.invoke('state:load'),

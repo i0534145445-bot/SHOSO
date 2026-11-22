@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   useStore, setTheme, updateReader, setState, getState, setSort,
-  setLayout, importFolders, toast, COLOR_MODES, FONT_FAMILIES,
+  setLayout, importFolders, toast, COLOR_MODES, FONT_FAMILIES, rescanLibrary,
 } from '../lib/store.js';
 import { createDemoBooks } from '../lib/demo.js';
 import { IconChevron } from '../lib/icons.jsx';
@@ -76,6 +76,7 @@ export default function SettingsView() {
   const trashCount = useStore((s) => s.trash.length);
   const recentCount = useStore((s) => s.recent.length);
   const folderCount = useStore((s) => s.folders.length);
+  const scanStatus = useStore((s) => s.scanStatus);
   const [loadingDemo, setLoadingDemo] = useState(false);
 
   const loadDemo = async () => {
@@ -177,6 +178,12 @@ export default function SettingsView() {
         <Row label="ספרים בספרייה" desc="כל הספרים שנוספו" value={bookCount} />
         <Row label="אשפה" desc="ספרים שנמחקו – שחזור אפשרי" value={trashCount} onClick={() => setState({ view: 'trash' })} />
         <Row label="היסטוריית קריאה" desc="הספרים שנפתחו לאחרונה" value={`${recentCount} ספרים`} onClick={() => setState({ view: 'history' })} />
+        <Row
+          label={scanStatus ? 'סורק את הספרייה…' : 'סרוק את הספרייה עכשיו'}
+          desc="קבצים חדשים בתיקיות נכנסים, קבצים שנמחקו יורדים מהרשימה"
+          value={`${folderCount} תיקיות`}
+          onClick={scanStatus ? undefined : () => rescanLibrary()}
+        />
       </Section>
 
       <Section title="מראה">

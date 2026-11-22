@@ -4,7 +4,7 @@ import {
   toggleFavorite, createCollection, toggleInCollection, deleteCollection,
   openBook, closeBook, saveProgress, addBookmark, removeBookmark,
   filteredBooks, authorsList, formatsList, continueReading,
-  removeBook, updateReader, bookById, removeFolder, restoreBook,
+  removeBook, updateReader, bookById, removeFolder, restoreBook, reconcileBooks,
 } from '../src/lib/store.js';
 
 const makeBook = (i, overrides = {}) => ({
@@ -130,6 +130,49 @@ describe('library membership', () => {
     expect(getState().trash.length).toBe(1);
     restoreBook('b7');
     expect(getState().books.length).toBe(1);
+  });
+});
+
+describe('reconciling a scan with the library', () => {
+  const inLib = (id, extra = {}) => ({ ...makeBook(0), id, path: `/books/${id}.epub`, ...extra });
+
+  it('adds new files, refreshes changed ones and keeps the reader history', () => {
+    const old = inLib('a', { mtime: 1, title: 'ישן', addedAt: 111 });
+    const result = reconcileBooks({
+      books: [old],
+      scanned: [{ ...old, mtime: 2, title: 'חדש', cover: 'shoso-media://cover/?p=x' }],
+      folders: ['/books'],
+    });
+    expect(result.added).toBe(0);
+    expect(result.removed).toBe(0);
+    expect(result.books).toHaveLength(1);
+    expect(result.books[0].title).toBe('חדש');
+    expect(result.books[0].cover).toContain('shoso-media');
+    // when the reader added it is not lost just because the file was re-read
+    expect(result.books[0].addedAt).toBe(111);
+  });
+
+  it('drops books whose file disappeared, and reports them', () => {
+    const result = reconcileBooks({
+      books: [inLib('a'), inLib('b')],
+      scanned: [inLib('a')],
+      folders: ['/books'],
+    });
+    expect(result.removed).toBe(1);
+    expect(result.removedIds).toEqual(['b']);
+    expect(result.books.map((b) => b.id)).toEqual(['a']);
+  });
+
+  it('never touches books outside the scanned folders, or a folder that did not answer', () => {
+    const manual = { ...makeBook(0), id: 'm', path: 'C:/Downloads/one.pdf' };
+    const elsewhere = inLib('x', { path: '/other/x.epub' });
+    const result = reconcileBooks({ books: [inLib('a'), manual, elsewhere], scanned: [inLib('a')], folders: ['/books'] });
+    expect(result.books.map((b) => b.id).sort()).toEqual(['a', 'm', 'x']);
+    expect(result.removed).toBe(0);
+    // an unplugged drive: nothing answered, so nothing is dropped
+    const empty = reconcileBooks({ books: [elsewhere], scanned: [], folders: [] });
+    expect(empty.removed).toBe(0);
+    expect(empty.books).toHaveLength(1);
   });
 });
 

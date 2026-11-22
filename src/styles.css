@@ -829,6 +829,7 @@ svg { shape-rendering: geometricPrecision; }
   user-select: text;
 }
 .create-row input:focus { border-color: var(--teal-light); }
+.create-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .folders-list { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
 .folder-item {

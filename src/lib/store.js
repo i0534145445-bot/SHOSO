@@ -19,8 +19,10 @@ import {
   pickFolders,
   pickFiles,
   pathForFile,
+  onLibraryChanged,
 } from './platform.js';
 import { bookHaystack, matchesQuery, collate, normalize } from './format.js';
+import { onCoverExtracted } from './covers.js';
 
 export const READER_THEMES = ['light', 'sepia', 'dark', 'night', 'console'];
 /** Readera colour modes, in Readera's own order. */
@@ -253,7 +255,29 @@ export async function bootstrap() {
   applyTheme();
   emit();
   await seedDemoIfEmpty();
+  followDisk();
   return state;
+}
+
+/**
+ * The disk can change behind the reader's back: files copied into a watched
+ * folder, renamed, deleted, or a folder that is not mounted right now. The
+ * main-process scan is the single owner of that truth, so the library is
+ * reconciled on start-up and whenever a folder reports a change.
+ */
+let following = false;
+function followDisk() {
+  if (!isDesktop || following) return;
+  following = true;
+  onLibraryChanged?.((folder) => {
+    rescanLibrary({ folders: [folder], silent: true }).catch(() => {});
+  });
+  // A cover drawn at display time (a PDF's first page) is kept with the book.
+  onCoverExtracted((bookId, url) => setBookCover(bookId, url));
+  if (state.folders.length) {
+    // after the first paint, so the window is usable immediately
+    setTimeout(() => { rescanLibrary({ silent: true }).catch(() => {}); }, 400);
+  }
 }
 
 /**
@@ -467,8 +491,7 @@ export async function importFolders() {
     }
     if (paths.length) {
       setState({ scanStatus: { phase: 'scanning', done: 0, total: 0 } });
-      const { default: platform } = await import('./platform.js');
-      const scanned = await platformScan(paths);
+      const scanned = (await runScan(paths)).books;
       const added = mergeBooks(scanned);
       setState({
         folders: [...new Set([...state.folders, ...paths])],
@@ -487,19 +510,128 @@ export async function importFolders() {
   }
 }
 
-async function platformScan(paths) {
+/**
+ * The main process owns scanning: it walks the folders, reads each file once
+ * (metadata + cover) and says which folders it could actually read. This
+ * wrapper only forwards the request and normalises the answer.
+ */
+async function runScan(paths) {
   const bridge = typeof window !== 'undefined' && window.shoso;
-  if (!bridge) return [];
+  if (!bridge) return { books: [], folders: [] };
   const onProgress = bridge.onScanProgress?.((p) => {
     setState({ scanStatus: { phase: 'scanning', done: p.done, total: p.total, file: p.file } });
   });
   try {
     // Hand the previous entries over so an unchanged file is not re-parsed.
-    const known = state.books.filter((b) => b.path).map((b) => ({ path: b.path, size: b.size, mtime: b.mtime, ...b }));
-    return await bridge.scan(paths, known);
+    const known = state.books.filter((b) => b.path).map((b) => ({ ...b }));
+    const result = await bridge.scan(paths, known);
+    return Array.isArray(result) ? { books: result, folders: paths } : { books: result.books || [], folders: result.folders || [] };
   } finally {
     if (typeof onProgress === 'function') onProgress();
   }
+}
+
+const flatPath = (value) => String(value || '').replace(/\\/g, '/').replace(/\/+$/, '');
+
+const underFolder = (bookPath, folder) => {
+  const book = flatPath(bookPath);
+  const root = flatPath(folder);
+  return Boolean(book && root) && (book === root || book.startsWith(`${root}/`));
+};
+
+/**
+ * Pure reconciliation step: given what the library holds and what a scan found,
+ * decide what stays, what is new and what is gone. Books that were imported one
+ * by one (not from a scanned folder) are never touched, and a folder that did
+ * not answer keeps its books.
+ */
+export function reconcileBooks({ books, scanned, folders }) {
+  const seen = new Set(scanned.map((b) => b.id));
+  const existing = new Map(books.map((b) => [b.id, b]));
+  const reachable = folders && folders.length ? folders : [];
+  const fromScanned = (book) => reachable.some((folder) => underFolder(book.path, folder));
+
+  let added = 0;
+  const merged = [];
+  for (const book of scanned) {
+    const before = existing.get(book.id);
+    if (before) merged.push({ ...before, ...book, addedAt: before.addedAt || book.addedAt });
+    else {
+      added += 1;
+      merged.push(book);
+    }
+  }
+
+  const gone = books.filter((b) => (
+    b.path
+    && !String(b.path).startsWith('blob:')
+    && !seen.has(b.id)
+    && fromScanned(b)
+  ));
+  const goneIds = new Set(gone.map((b) => b.id));
+  const kept = books.filter((b) => !goneIds.has(b.id) && !fromScanned(b));
+
+  return { books: [...merged, ...kept], added, removed: gone.length, removedIds: [...goneIds] };
+}
+
+/**
+ * Bring the library in line with what is on disk: new files appear, changed
+ * files are refreshed, and books whose file is gone leave the library – but
+ * only for folders that answered, so an unplugged drive never empties it.
+ */
+export async function rescanLibrary({ folders = null, silent = false } = {}) {
+  if (!isDesktop) return { added: 0, removed: 0 };
+  const targets = folders && folders.length ? folders : state.folders;
+  if (!targets.length) return { added: 0, removed: 0 };
+
+  setState({ scanStatus: { phase: 'scanning', done: 0, total: 0 } });
+  let added = 0;
+  let removed = 0;
+  try {
+    const { books: scanned, folders: reachable } = await runScan(targets);
+    if (!reachable.length) return { added: 0, removed: 0 };
+
+    const result = reconcileBooks({ books: state.books, scanned, folders: reachable });
+    const books = result.books;
+    added = result.added;
+    removed = result.removed;
+
+    const ids = new Set(books.map((b) => b.id));
+    const without = (list) => list.filter((id) => ids.has(id));
+
+    setState({
+      books,
+      favorites: without(state.favorites),
+      toRead: without(state.toRead),
+      recent: without(state.recent),
+      collections: state.collections.map((c) => ({ ...c, bookIds: c.bookIds.filter((id) => ids.has(id)) })),
+      scanStatus: null,
+    });
+    scheduleLibrarySave();
+
+    if (!silent && (added || removed)) {
+      const parts = [];
+      if (added) parts.push(`נוספו ${added}`);
+      if (removed) parts.push(`הוסרו ${removed} שקבציהם לא נמצאו`);
+      toast(parts.join(' · '), 'info');
+    }
+    return { added, removed };
+  } catch (err) {
+    setState({ scanStatus: null });
+    if (!silent) toast(`שגיאה בסריקה: ${err.message}`, 'error');
+    return { added: 0, removed: 0 };
+  }
+}
+
+/** A cover extracted at display time (a PDF's first page) is stored for good. */
+export function setBookCover(bookId, coverUrl) {
+  if (!coverUrl) return;
+  const current = bookById(bookId);
+  if (!current || current.cover === coverUrl || String(current.cover || '').startsWith('data:')) return;
+  setState({
+    books: state.books.map((b) => (b.id === bookId ? { ...b, cover: coverUrl, coverChecked: true } : b)),
+  });
+  scheduleLibrarySave();
 }
 
 export async function importFiles() {
@@ -507,7 +639,7 @@ export async function importFiles() {
     const { paths, files } = await pickFiles();
     if (!paths.length && !files.length) return;
     if (paths.length) {
-      const scanned = await platformScan(paths);
+      const scanned = (await runScan(paths)).books;
       const added = mergeBooks(scanned);
       toast(added.length ? `נוספו ${added.length} ספרים לספרייה` : 'לא נמצאו ספרים חדשים', added.length ? 'success' : 'info');
     } else if (files.length) {
@@ -528,7 +660,7 @@ export async function handleDrop(event) {
   // Desktop: use real paths when available
   const paths = files.map((f) => pathForFile(f)).filter(Boolean);
   if (paths.length) {
-    const scanned = await platformScan(paths);
+    const scanned = (await runScan(paths)).books;
     const added = mergeBooks(scanned);
     toast(added.length ? `נוספו ${added.length} ספרים לספרייה` : 'לא נמצאו ספרים חדשים', added.length ? 'success' : 'info');
     return;

@@ -254,23 +254,38 @@ async function readEpubMeta(filePath) {
     meta.title = xmlText(opfXml, 'dc:title') || xmlText(opfXml, 'title');
     meta.author = xmlText(opfXml, 'dc:creator') || xmlText(opfXml, 'creator');
     meta.language = xmlText(opfXml, 'dc:language') || xmlText(opfXml, 'language');
-    // cover: manifest item with properties="cover-image" or id="cover"
-    let coverHref = '';
+    // Cover, in the order EPUB itself defines it:
+    //   1. EPUB3 – manifest item with properties="cover-image"
+    //   2. EPUB2 – <meta name="cover" content="ITEM-ID"/> (very common, and the
+    //      reason books used to stay cover-less forever)
+    //   3. <guide><reference type="cover" href="…"/>
+    //   4. an image whose file name or item id says "cover"
     const manifestMatch = /<manifest[\s\S]*?<\/manifest>/i.exec(opfXml);
     const manifest = manifestMatch ? manifestMatch[0] : opfXml;
     const items = [...manifest.matchAll(/<item[^>]*>/gi)].map((m) => m[0]);
-    for (const item of items) {
-      const props = xmlAttr(item, 'item', 'properties');
-      const id = xmlAttr(item, 'item', 'id');
-      const href = xmlAttr(item, 'item', 'href');
-      if (/cover-image/i.test(props) || /^cover$/i.test(id)) { coverHref = href; break; }
+    const attr = (item, name) => xmlAttr(item, 'item', name);
+    let coverHref = '';
+    const epub3 = items.find((i) => /cover-image/i.test(attr(i, 'properties')));
+    if (epub3) coverHref = attr(epub3, 'href');
+    if (!coverHref) {
+      const metaCover = /<meta[^>]*name\s*=\s*["']cover["'][^>]*>/i.exec(opfXml);
+      const metaId = metaCover ? xmlAttr(metaCover[0], 'meta', 'content') : '';
+      const match = metaId ? items.find((i) => attr(i, 'id') === metaId) : null;
+      if (match) coverHref = attr(match, 'href');
     }
     if (!coverHref) {
-      for (const item of items) {
-        const href = xmlAttr(item, 'item', 'href');
-        const media = xmlAttr(item, 'item', 'media-type');
-        if (/image\/(jpeg|png)/i.test(media) && /cover/i.test(href)) { coverHref = href; break; }
+      const guide = /<guide[\s\S]*?<\/guide>/i.exec(opfXml);
+      if (guide) {
+        const ref = [...guide[0].matchAll(/<reference[^>]*>/gi)]
+          .map((m) => m[0])
+          .find((r) => /cover/i.test(xmlAttr(r, 'reference', 'type')));
+        if (ref) coverHref = xmlAttr(ref, 'reference', 'href');
       }
+    }
+    if (!coverHref) {
+      const byName = items.find((i) => /image\//i.test(attr(i, 'media-type'))
+        && /cover|front|titlepage|artwork/i.test(`${attr(i, 'href')} ${attr(i, 'id')}`));
+      if (byName) coverHref = attr(byName, 'href');
     }
     // spine count = chapters
     const spineMatch = /<spine[\s\S]*?<\/spine>/i.exec(opfXml);
@@ -308,7 +323,8 @@ async function readFb2Meta(filePath) {
       const bin = binRe.exec(text);
       if (bin) {
         const data = Buffer.from(bin[1].replace(/\s/g, ''), 'base64');
-        meta.cover = await saveCover(data, 'image/jpeg');
+        const type = /<binary[^>]*content-type\s*=\s*["']([^"']+)["']/i.exec(text);
+        meta.cover = await saveCover(data, type ? type[1] : 'image/jpeg');
       }
     }
   } catch {
@@ -423,6 +439,9 @@ async function readBook(filePath, statGiven) {
   }
 
   if (!book.cover) book.cover = await folderCover(book.dir);
+  // The scan owns covers: a book is only skipped on the next scan when the
+  // cover question has actually been answered for it.
+  book.coverChecked = true;
   return book;
 }
 
@@ -444,6 +463,55 @@ async function mapLimit(items, limit, fn) {
 
 const SCAN_WORKERS = 6;
 
+/* ------------------------------------------------------------------ */
+/* Folder watching                                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Adding a book to a folder used to do nothing until the folder was added
+ * again. Each scanned folder is now watched (recursively on macOS/Windows) and
+ * a change only asks the renderer for a fresh scan – the renderer stays the one
+ * that decides what enters the library.
+ */
+const watchers = new Map();
+const watchTimers = new Map();
+
+function watchFolders(folders) {
+  for (const folder of folders) {
+    if (watchers.has(folder)) continue;
+    try {
+      const watcher = fs.watch(folder, { recursive: true, persistent: false }, () => {
+        clearTimeout(watchTimers.get(folder));
+        watchTimers.set(folder, setTimeout(() => {
+          if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('library:changed', folder);
+        }, 1500));
+      });
+      watcher.on('error', () => {
+        watchers.delete(folder);
+        try { watcher.close(); } catch { /* already gone */ }
+      });
+      watchers.set(folder, watcher);
+    } catch {
+      /* recursive watching is not available everywhere – the manual rescan
+         and the start-up scan still keep the library in step */
+    }
+  }
+  for (const [folder, watcher] of watchers) {
+    if (folders.includes(folder)) continue;
+    try { watcher.close(); } catch { /* ignore */ }
+    watchers.delete(folder);
+  }
+}
+
+function closeWatchers() {
+  for (const watcher of watchers.values()) {
+    try { watcher.close(); } catch { /* ignore */ }
+  }
+  watchers.clear();
+  for (const timer of watchTimers.values()) clearTimeout(timer);
+  watchTimers.clear();
+}
+
 async function scanFolder(rootFolder, onProgress, known) {
   const files = [];
   const stat = await fsp.stat(rootFolder).catch(() => null);
@@ -462,7 +530,7 @@ async function scanFolder(rootFolder, onProgress, known) {
       const before = known && known.get(file);
       // Unchanged since the last scan? Keep the entry we already have (title,
       // author, cover) instead of re-parsing the file.
-      if (st && before && before.size === st.size && before.mtime === st.mtimeMs) {
+      if (st && before && before.size === st.size && before.mtime === st.mtimeMs && before.coverChecked) {
         book = before;
       } else {
         book = await readBook(file, st);
@@ -519,6 +587,14 @@ function registerIpc() {
     return res.canceled ? [] : res.filePaths;
   });
 
+  /**
+   * The one owner of the library: every scan – the first import, the rescan on
+   * start-up, the one a folder watcher triggers – comes through here, so a
+   * book's metadata and cover have exactly one source.
+   * Returns the books plus the folders that were actually readable; the
+   * renderer only removes books from folders that answered, so an unplugged
+   * drive never wipes a library.
+   */
   ipcMain.handle('library:scan', async (event, payload) => {
     // Accepts the legacy shape (array of folders) and the incremental one
     // ({ folders, known }) so the renderer can skip unchanged files.
@@ -527,13 +603,36 @@ function registerIpc() {
     const known = new Map(knownList.map((b) => [b.path, b]));
 
     const all = [];
+    const scanned = [];
     for (const folder of folders) {
+      const exists = await fsp.stat(folder).catch(() => null);
       const progress = (p) =>
         !event.sender.isDestroyed() && event.sender.send('library:progress', { folder, ...p });
       const books = await scanFolder(folder, progress, known);
       all.push(...books);
+      if (exists) scanned.push(folder);
     }
-    return all;
+    watchFolders(scanned);
+    return { books: all, folders: scanned };
+  });
+
+  /**
+   * A cover the renderer had to produce itself (a PDF's first page, which only
+   * pdf.js can draw) is written next to the others and comes back as a stable
+   * shoso-media URL, so it survives restarts like every scanned cover.
+   */
+  ipcMain.handle('cover:save', async (_event, payload) => {
+    const dataUrl = payload && payload.dataUrl;
+    if (typeof dataUrl !== 'string') return null;
+    const m = /^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/i.exec(dataUrl);
+    if (!m) return null;
+    try {
+      const data = Buffer.from(m[2], 'base64');
+      if (data.length > 12 * 1024 * 1024) return null;
+      return await saveCover(data, `image/${m[1].toLowerCase()}`);
+    } catch {
+      return null;
+    }
   });
 
   ipcMain.handle('book:refresh', async (_event, filePath) => readBook(filePath));
@@ -725,7 +824,9 @@ if (!singleInstance) {
     });
   });
 
-  app.on('window-all-closed', () => {
+  app.on('before-quit', closeWatchers);
+
+app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
   });
 }

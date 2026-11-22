@@ -149,6 +149,19 @@ export async function openExternal(url) {
 }
 
 export const onScanProgress = (cb) => (bridge ? bridge.onScanProgress(cb) : () => {});
+
+/** A folder changed on disk – only the desktop build has watchers. */
+export const onLibraryChanged = (cb) => (bridge?.onLibraryChanged ? bridge.onLibraryChanged(cb) : () => {});
+
+/** Hand a renderer-drawn cover (a PDF's first page) to the main process. */
+export const saveCoverData = async (dataUrl) => {
+  if (!bridge?.saveCover) return null;
+  try {
+    return await bridge.saveCover(dataUrl);
+  } catch {
+    return null;
+  }
+};
 export const setNativeTheme = (theme) => (bridge ? bridge.setTheme(theme) : null);
 export const pathForFile = (file) => (bridge ? bridge.pathForFile(file) : null);
 
