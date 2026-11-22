@@ -48,6 +48,12 @@ const step = async (label, fn) => {
   }
 };
 
+/** The reader hides its chrome after a few idle seconds – wiggle the pointer. */
+const showUi = async () => {
+  await page.mouse.move(720, 420);
+  await page.waitForTimeout(250);
+};
+
 const clickTitle = async (title) => {
   const el = page.locator(`[title="${title}"]`).first();
   await el.waitFor({ state: 'visible', timeout: 8000 });
@@ -109,6 +115,7 @@ try {
   });
 
   await step('reader settings', async () => {
+    await showUi();
     await clickTitle('הגדרות קריאה (A)');
     await page.waitForSelector('.reader-settings', { timeout: 6000 });
     await shot('06-reader-settings');
@@ -123,7 +130,7 @@ try {
   await step('toc', async () => {
     await page.keyboard.press('Escape');
     await page.waitForTimeout(400);
-    await page.mouse.move(700, 450);
+    await showUi();
     await clickTitle('תוכן עניינים (T)');
     await page.waitForSelector('.toc-list', { timeout: 6000 });
     await shot('08-reader-toc');
@@ -132,7 +139,7 @@ try {
   });
 
   await step('authors', async () => {
-    await page.mouse.move(700, 450);
+    await showUi();
     await clickTitle('חזרה (Esc)');
     await page.waitForSelector('.book-list', { timeout: 10000 });
     await clickTitle('תפריט');

@@ -176,13 +176,14 @@ export default function Reader() {
   const pokeUi = useCallback(() => {
     setUiVisible(true);
     clearTimeout(uiTimer.current);
-    uiTimer.current = setTimeout(() => setUiVisible(false), 3500);
-  }, []);
+    // keep the chrome on screen while a panel is open
+    if (!panel) uiTimer.current = setTimeout(() => setUiVisible(false), 5000);
+  }, [panel]);
 
   useEffect(() => {
     pokeUi();
     return () => clearTimeout(uiTimer.current);
-  }, [pokeUi]);
+  }, [pokeUi, panel]);
 
   /* ---------- reading time ---------- */
   useEffect(() => {
