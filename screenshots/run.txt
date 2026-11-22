@@ -1,4 +1,4 @@
-start 2026-11-22T09:43:43.694Z
+start 2026-11-22T10:33:14.952Z
 goto
 loaded
 rows ready
@@ -6,7 +6,9 @@ saved 02-drawer
 ok drawer
 saved 03-books-list
 ok books list
-saved 04-books-tiles
+saved 04-books-thumbs
+saved 04b-books-brief
+saved 04c-books-grid
 ok books tiles
 saved 05-reader-night
 ok reader
