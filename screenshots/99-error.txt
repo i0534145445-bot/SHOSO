@@ -1,34 +1,10 @@
-step: reading now
-locator.click: Timeout 30000ms exceeded.
+step: sepia mode
+locator.click: Timeout 6000ms exceeded.
 Call log:
-  - waiting for locator('[title="תפריט"]').first()
-    - locator resolved to <button title="תפריט" class="icon-btn">…</button>
-  - attempting click action
-    2 × waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <path fill="#eaf4f7" d="M24 17.5c-2.4-2-5.6-3-9.4-3H11v19h3.6c3.8 0 7 1 9.4 3 2.4-2 5.6-3 9.4-3H37v-19h-3.6c-3.8 0-7 1-9.4 3Z"></path> from <aside role="dialog" class="drawer" aria-label="ניווט">…</aside> subtree intercepts pointer events
-    - retrying click action
-    - waiting 20ms
-    2 × waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <path fill="#eaf4f7" d="M24 17.5c-2.4-2-5.6-3-9.4-3H11v19h3.6c3.8 0 7 1 9.4 3 2.4-2 5.6-3 9.4-3H37v-19h-3.6c-3.8 0-7 1-9.4 3Z"></path> from <aside role="dialog" class="drawer" aria-label="ניווט">…</aside> subtree intercepts pointer events
-    - retrying click action
-      - waiting 100ms
-    58 × waiting for element to be visible, enabled and stable
-       - element is visible, enabled and stable
-       - scrolling into view if needed
-       - done scrolling
-       - <path fill="#eaf4f7" d="M24 17.5c-2.4-2-5.6-3-9.4-3H11v19h3.6c3.8 0 7 1 9.4 3 2.4-2 5.6-3 9.4-3H37v-19h-3.6c-3.8 0-7 1-9.4 3Z"></path> from <aside role="dialog" class="drawer" aria-label="ניווט">…</aside> subtree intercepts pointer events
-     - retrying click action
-       - waiting 500ms
+  - waiting for locator('.rs-mode[title="ספיה"]')
 
 {
-  "view": "הגדרות",
   "rows": 0,
-  "drawer": true,
-  "text": "הגדרות קריאה מצב צבע ספיה גופן Merriweather Noto Serif Hebrew Roboto Noto Sans Hebrew Monospace גודל גופן − 18 + ריווח שורות − 100% + שולי עמוד 48px יישור טקסט כיוון דפדוף אופקי אנכי ספרייה תצוגת ספרייה רשימה כריכות מיון לפי שם הספר תיקיות "
+  "drawer": false,
+  "text": "הספר הישן הגדרות קריאה הגדרות קריאה EPUB · FB2 · MOBI · DOC · DOCX · PDF · TXT כיוון דפדוף אנכי אופקי אנכי מצב צבע לילה רגיל ספיה לילה קונסול גופן Merriweather Merriweather Noto Serif Hebrew Roboto Noto Sans Hebrew Monospace גודל גופן 18 עו"
 }
