@@ -154,7 +154,7 @@ export function BookTile({ book, from = 'books', size = 'md' }) {
         )}
       </span>
       <h3 title={book.title}>{book.title}</h3>
-      <span>{percent > 0 ? `${book.author} · ${percent}%` : book.author}</span>
+      <span className="tile-meta">{percent > 0 ? `${book.author} · ${percent}%` : book.author}</span>
     </button>
   );
 }
