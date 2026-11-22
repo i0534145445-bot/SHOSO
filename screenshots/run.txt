@@ -1,4 +1,4 @@
-start 2026-11-22T10:33:14.952Z
+start 2026-11-22T10:35:52.820Z
 goto
 loaded
 rows ready
@@ -14,7 +14,8 @@ saved 05-reader-night
 ok reader
 saved 06-reader-settings
 ok reader settings
-FAIL sepia mode — locator.click: Timeout 6000ms exceeded.
+saved 07-reader-sepia
+ok sepia mode
 saved 08-reader-toc
 ok toc
 saved 09-authors
