@@ -1,4 +1,4 @@
-start 2026-11-22T08:56:18.088Z
+start 2026-11-22T08:59:16.824Z
 goto
 loaded
 rows ready
@@ -23,5 +23,6 @@ saved 11-trash
 ok trash
 saved 01-reading-now
 ok reading now
-FAIL book detail — page.waitForSelector: Timeout 10000ms exceeded.
+saved 12-book-detail
+ok book detail
 done
