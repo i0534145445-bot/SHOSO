@@ -585,7 +585,7 @@ svg { shape-rendering: geometricPrecision; }
 .book-grid.thumbs { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 18px 14px; padding: 18px 16px; }
 .book-grid.thumbs .book-tile { gap: 6px; }
 .book-grid.thumbs .book-tile h3 { font-size: 11.5px; line-height: 1.25; max-height: 2.5em; }
-.book-grid.thumbs .book-tile span { display: none; }
+.book-grid.thumbs .book-tile > span { display: none; }
 
 /* brief view: one compact line per book, like ReadEra's brief list */
 .book-list.brief { display: flex; flex-direction: column; gap: 0; padding: 0; }
