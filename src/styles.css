@@ -808,23 +808,23 @@ svg { shape-rendering: geometricPrecision; }
    Settings
    ========================================================================== */
 
-/* ReadEra's Settings screen: section headers + flat list rows */
+/* ReadEra's Settings screen: gold section captions + two-line rows */
 .settings-view {
-  max-width: 860px;
+  max-width: 760px;
   margin-inline: auto;
-  padding: 8px 0 60px;
+  padding: 6px 0 64px;
   display: flex;
   flex-direction: column;
 }
 
-.settings-section { padding: 0 16px; }
+.settings-section { padding: 0 20px; }
 .settings-section-title {
-  margin: 22px 0 8px;
-  font-size: 13px;
+  margin: 24px 0 6px;
+  font-size: 11.5px;
   font-weight: 500;
-  letter-spacing: 0.6px;
+  letter-spacing: 1px;
   text-transform: uppercase;
-  color: var(--text-2);
+  color: var(--gold);
 }
 
 .settings-rows { display: flex; flex-direction: column; }
@@ -832,44 +832,48 @@ svg { shape-rendering: geometricPrecision; }
 .settings-row {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   width: 100%;
-  min-height: 52px;
-  padding: 8px 4px;
+  min-height: 58px;
+  padding: 10px 0;
   text-align: start;
   color: var(--text);
-  font-size: 15px;
-  border-bottom: 1px solid var(--line);
 }
-.settings-rows .settings-row:last-child { border-bottom: none; }
-button.settings-row:hover { background: var(--bg-hover); }
-.settings-row-icon { display: flex; color: var(--text-2); }
-.settings-row-label { flex: 1; min-width: 0; }
+.settings-row.tap:hover { background: var(--bg-hover); }
+.settings-row-text { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.settings-row-label { font-size: 15px; font-weight: 500; letter-spacing: 0.1px; }
+.settings-row-desc {
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .settings-row-value {
   font-size: 13.5px;
   color: var(--text-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 46%;
+  max-width: 40%;
+  flex-shrink: 0;
 }
 .settings-row-chevron { color: var(--text-3); flex-shrink: 0; }
+.settings-row:last-child { padding-bottom: 12px; }
 
-.settings-seg { display: flex; gap: 6px; }
+.settings-seg { display: flex; gap: 6px; flex-shrink: 0; }
 .settings-seg button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
   height: 30px;
-  padding: 0 12px;
+  padding: 0 13px;
   border-radius: 2px;
   background: var(--surface-hi);
   color: var(--text-2);
   font-size: 13px;
+  font-weight: 500;
 }
 .settings-seg button.active { background: var(--teal); color: #fff; }
 
-.settings-stepper { display: flex; align-items: center; gap: 12px; }
+.settings-stepper { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .settings-stepper button {
   width: 28px;
   height: 28px;
@@ -880,12 +884,13 @@ button.settings-row:hover { background: var(--bg-hover); }
   align-items: center;
   justify-content: center;
   font-size: 15px;
+  line-height: 1;
 }
 .settings-stepper button:hover { background: var(--bg-hover); }
 .settings-stepper em {
   font-style: normal;
   font-size: 14px;
-  min-width: 46px;
+  min-width: 44px;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -900,7 +905,7 @@ button.settings-row:hover { background: var(--bg-hover); }
   outline: none;
   cursor: pointer;
   text-align: end;
-  max-width: 190px;
+  max-width: 170px;
 }
 .settings-inline-select option { background: var(--surface); color: var(--text); }
 
@@ -927,7 +932,7 @@ button.settings-row:hover { background: var(--bg-hover); }
   background: #fff;
   transition: transform 0.15s;
 }
-.settings-switch:checked { background: var(--teal-light); }
+.settings-switch:checked { background: var(--gold); }
 .settings-switch:checked::after { transform: translateX(-18px); }
 [dir='ltr'] .settings-switch:checked::after { transform: translateX(18px); }
 

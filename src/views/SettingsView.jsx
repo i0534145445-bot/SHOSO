@@ -1,21 +1,18 @@
 import React, { useState } from 'react';
 import {
-  useStore, setTheme, updateReader, toast, setState, getState, setSort,
-  setLayout, importFolders, COLOR_MODES, FONT_FAMILIES,
+  useStore, setTheme, updateReader, setState, getState, setSort,
+  setLayout, importFolders, toast, COLOR_MODES, FONT_FAMILIES,
 } from '../lib/store.js';
 import { createDemoBooks } from '../lib/demo.js';
-import {
-  IconChevron, IconBooksDocs, IconTrash, IconFolder, IconSparkle,
-  IconPalette, IconTextFields, IconFormatLineSpacing, IconFormatAlignJustify,
-  IconMargin, IconSwapHoriz, IconSwapVert, IconGrid, IconList, IconSort,
-  IconInfo, IconStorage,
-} from '../lib/icons.jsx';
+import { IconChevron } from '../lib/icons.jsx';
 import { appInfo } from '../lib/platform.js';
 
 /**
- * ReadEra's Settings screen: section headers with a single list of rows –
- * label on the start side, current value and a chevron on the end side,
- * switches for booleans. No cards, no gradients.
+ * ReadEra's Settings screen, row for row:
+ *   • small gold uppercase section captions ("GENERAL", "LIBRARY", …)
+ *   • rows are two lines – a bold-ish label and a dim description
+ *   • the current value / control sits at the end of the row
+ *   • no leading icons, no cards, hairline-free spacing
  */
 
 function Section({ title, children }) {
@@ -27,12 +24,14 @@ function Section({ title, children }) {
   );
 }
 
-function Row({ icon, label, value, onClick, children, chevron = true }) {
+function Row({ label, desc, value, onClick, children, chevron = true }) {
   const Tag = onClick ? 'button' : 'div';
   return (
-    <Tag className="settings-row" onClick={onClick}>
-      {icon && <span className="settings-row-icon">{icon}</span>}
-      <span className="settings-row-label">{label}</span>
+    <Tag className={`settings-row${onClick ? ' tap' : ''}`} onClick={onClick} type={onClick ? 'button' : undefined}>
+      <span className="settings-row-text">
+        <span className="settings-row-label">{label}</span>
+        {desc && <span className="settings-row-desc">{desc}</span>}
+      </span>
       {children}
       {value !== undefined && <span className="settings-row-value">{value}</span>}
       {onClick && chevron && <IconChevron size={18} className="settings-row-chevron" />}
@@ -51,8 +50,22 @@ function Switch({ checked, onChange }) {
   );
 }
 
+function Stepper({ value, onDec, onInc }) {
+  return (
+    <div className="settings-stepper">
+      <button type="button" onClick={onDec}>−</button>
+      <em>{value}</em>
+      <button type="button" onClick={onInc}>+</button>
+    </div>
+  );
+}
+
 const modeLabel = (id) => (COLOR_MODES.find((m) => m.id === id) || COLOR_MODES[2]).label;
 const fontLabel = (id) => (FONT_FAMILIES.find((f) => f.id === id) || FONT_FAMILIES[0]).label;
+
+const SORT_LABEL = {
+  title: 'שם הספר', author: 'מחבר', added: 'תאריך הוספה', size: 'גודל', progress: 'התקדמות',
+};
 
 export default function SettingsView() {
   const theme = useStore((s) => s.theme);
@@ -81,15 +94,44 @@ export default function SettingsView() {
 
   const cycleMode = () => {
     const idx = COLOR_MODES.findIndex((m) => m.id === reader.theme);
-    const next = COLOR_MODES[(idx + 1) % COLOR_MODES.length];
-    updateReader({ theme: next.id });
+    updateReader({ theme: COLOR_MODES[(idx + 1) % COLOR_MODES.length].id });
   };
 
   return (
     <div className="settings-view">
+      <Section title="כללי">
+        <Row
+          label="מצב צבע"
+          desc="ערכת הצבעים של דף הקריאה"
+          value={modeLabel(reader.theme)}
+          onClick={cycleMode}
+        />
+        <Row
+          label="תצוגת ספרייה"
+          desc="רשימה מפורטת או כריכות"
+          onClick={() => setLayout(layout === 'list' ? 'grid' : 'list')}
+          value={layout === 'list' ? 'רשימה' : 'כריכות'}
+        />
+        <Row
+          label="מיון לפי"
+          desc="סדר הספרים ברשימה"
+          value={SORT_LABEL[sort.key] || 'שם הספר'}
+          onClick={() => setSort({ key: sort.key === 'title' ? 'added' : 'title', dir: 'asc' })}
+        />
+        <Row
+          label="תיקיות לסריקה"
+          desc="הוספת תיקייה מהמחשב לספרייה"
+          value={folderCount ? `${folderCount} תיקיות` : 'לא נוספו'}
+          onClick={() => importFolders()}
+        />
+      </Section>
+
       <Section title="קריאה">
-        <Row icon={<IconPalette size={20} />} label="מצב צבע" value={modeLabel(reader.theme)} onClick={cycleMode} />
-        <Row icon={<IconTextFields size={20} />} label="גופן">
+        <Row
+          label="גופן"
+          desc="גופן הטקסט בעמוד הקריאה"
+          value={fontLabel(reader.fontFamily)}
+        >
           <select
             className="settings-inline-select"
             value={reader.fontFamily}
@@ -98,57 +140,43 @@ export default function SettingsView() {
             {FONT_FAMILIES.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
           </select>
         </Row>
-        <Row icon={<IconTextFields size={20} />} label="גודל גופן">
-          <div className="settings-stepper">
-            <button onClick={() => updateReader({ fontSize: Math.max(12, reader.fontSize - 1) })}>−</button>
-            <em>{reader.fontSize}</em>
-            <button onClick={() => updateReader({ fontSize: Math.min(32, reader.fontSize + 1) })}>+</button>
-          </div>
+        <Row label="גודל גופן" desc={`${reader.fontSize} נקודות`}>
+          <Stepper
+            value={reader.fontSize}
+            onDec={() => updateReader({ fontSize: Math.max(12, reader.fontSize - 1) })}
+            onInc={() => updateReader({ fontSize: Math.min(32, reader.fontSize + 1) })}
+          />
         </Row>
-        <Row icon={<IconFormatLineSpacing size={20} />} label="ריווח שורות">
-          <div className="settings-stepper">
-            <button onClick={() => updateReader({ lineHeight: Math.max(1.2, Number((reader.lineHeight - 0.1).toFixed(1))) })}>−</button>
-            <em>{Math.round((reader.lineHeight / 1.7) * 100)}%</em>
-            <button onClick={() => updateReader({ lineHeight: Math.min(2.4, Number((reader.lineHeight + 0.1).toFixed(1))) })}>+</button>
-          </div>
+        <Row label="ריווח שורות" desc={`${Math.round((reader.lineHeight / 1.7) * 100)}%`}>
+          <Stepper
+            value={`${Math.round((reader.lineHeight / 1.7) * 100)}%`}
+            onDec={() => updateReader({ lineHeight: Math.max(1.2, Number((reader.lineHeight - 0.1).toFixed(1))) })}
+            onInc={() => updateReader({ lineHeight: Math.min(2.4, Number((reader.lineHeight + 0.1).toFixed(1))) })}
+          />
         </Row>
-        <Row icon={<IconMargin size={20} />} label="שולי עמוד" value={`${reader.margins}px`} chevron={false} />
-        <Row icon={<IconFormatAlignJustify size={20} />} label="יישור טקסט">
+        <Row label="שולי עמוד" desc={`${reader.margins}px מכל צד`} value={`${reader.margins}px`} />
+        <Row label="יישור טקסט" desc="יישור לשני הצדדים">
           <Switch checked={reader.justify} onChange={(v) => updateReader({ justify: v })} />
         </Row>
-        <Row icon={<IconSwapHoriz size={20} />} label="כיוון דפדוף">
+        <Row label="כיוון דפדוף" desc={reader.mode === 'paginated' ? 'אופקי – כמו ספר' : 'אנכי – גלילה'}>
           <div className="settings-seg">
             <button className={reader.mode === 'paginated' ? 'active' : ''} onClick={() => updateReader({ mode: 'paginated' })}>
-              <IconSwapHoriz size={16} /> אופקי
+              אופקי
             </button>
             <button className={reader.mode === 'scroll' ? 'active' : ''} onClick={() => updateReader({ mode: 'scroll' })}>
-              <IconSwapVert size={16} /> אנכי
+              אנכי
             </button>
           </div>
         </Row>
       </Section>
 
       <Section title="ספרייה">
-        <Row icon={<IconGrid size={20} />} label="תצוגת ספרייה">
-          <div className="settings-seg">
-            <button className={layout === 'list' ? 'active' : ''} onClick={() => setLayout('list')}>
-              <IconList size={16} /> רשימה
-            </button>
-            <button className={layout === 'grid' ? 'active' : ''} onClick={() => setLayout('grid')}>
-              <IconGrid size={16} /> כריכות
-            </button>
-          </div>
-        </Row>
-        <Row icon={<IconSort size={20} />} label="מיון לפי" value={{
-          title: 'שם הספר', author: 'מחבר', added: 'תאריך הוספה', size: 'גודל', progress: 'התקדמות',
-        }[sort.key] || 'שם הספר'} chevron={false} />
-        <Row icon={<IconFolder size={20} />} label="תיקיות לסריקה" value={folderCount} onClick={() => importFolders()} />
-        <Row icon={<IconBooksDocs size={20} />} label="ספרים בספרייה" value={bookCount} chevron={false} />
-        <Row icon={<IconTrash size={20} />} label="אשפה" value={trashCount} onClick={() => setState({ view: 'trash' })} />
+        <Row label="ספרים בספרייה" desc="כל הספרים שנוספו" value={bookCount} />
+        <Row label="אשפה" desc="ספרים שנמחקו – שחזור אפשרי" value={trashCount} onClick={() => setState({ view: 'trash' })} />
       </Section>
 
       <Section title="מראה">
-        <Row icon={<IconPalette size={20} />} label="ערכת נושא של הממשק">
+        <Row label="ערכת נושא של הממשק" desc="צבע החלונות והתפריטים">
           <div className="settings-seg">
             <button className={theme === 'dark' ? 'active' : ''} onClick={() => setTheme('dark')}>כהה</button>
             <button className={theme === 'light' ? 'active' : ''} onClick={() => setTheme('light')}>בהיר</button>
@@ -158,19 +186,17 @@ export default function SettingsView() {
 
       <Section title="ספרי דמו">
         <Row
-          icon={<IconSparkle size={20} />}
           label={loadingDemo ? 'טוען…' : 'טען ספרי דמו'}
-          value="EPUB · FB2 · TXT · MD · HTML"
+          desc="EPUB · FB2 · TXT · MD · HTML"
           onClick={loadingDemo ? undefined : loadDemo}
-          chevron={false}
         />
-        <Row icon={<IconStorage size={20} />} label="מצב הרצה" value={appInfo.desktop ? 'Windows (Electron)' : 'דפדפן (דמו)'} chevron={false} />
       </Section>
 
       <Section title="אודות">
-        <Row icon={<IconInfo size={20} />} label="SHOSO Books" value={`גרסה ${appInfo.version}`} chevron={false} />
-        <Row label="פורמטים נתמכים" value="EPUB · PDF · FB2 · TXT · DOCX · MD" chevron={false} />
-        <Row label="פרטיות" value="הכל נשאר על המחשב" chevron={false} />
+        <Row label="SHOSO Books" desc="קורא ספרים אלקטרוניים למחשב" value={`גרסה ${appInfo.version}`} />
+        <Row label="פורמטים נתמכים" desc="EPUB · PDF · FB2 · TXT · DOCX · MD" />
+        <Row label="מצב הרצה" desc="אפליקציית שולחן עבודה" value={appInfo.desktop ? 'Windows' : 'דפדפן'} />
+        <Row label="פרטיות" desc="הכל נשאר על המחשב שלך" />
       </Section>
     </div>
   );
