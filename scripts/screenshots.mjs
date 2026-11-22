@@ -60,6 +60,12 @@ const clickTitle = async (title) => {
   await el.click();
 };
 
+const clickDrawerItem = async (label) => {
+  const el = page.locator('.drawer .nav-item').filter({ hasText: label }).first();
+  await el.waitFor({ state: 'visible', timeout: 8000 });
+  await el.click();
+};
+
 const clickText = async (text) => {
   const el = page.getByText(text, { exact: true }).first();
   await el.waitFor({ state: 'visible', timeout: 8000 });
@@ -81,7 +87,7 @@ try {
   });
 
   await step('books list', async () => {
-    await clickText('ספרים ומסמכים');
+    await clickDrawerItem('ספרים ומסמכים');
     await page.waitForSelector('.book-list', { timeout: 6000 });
     // use the real row actions so the gold "active" chips are genuine state
     await page.locator('.book-row').nth(1).locator('.row-actions .icon-btn').nth(0).click();
@@ -143,28 +149,28 @@ try {
     await clickTitle('חזרה (Esc)');
     await page.waitForSelector('.book-list', { timeout: 10000 });
     await clickTitle('תפריט');
-    await clickText('מחברים');
+    await clickDrawerItem('מחברים');
     await page.waitForSelector('.author-card', { timeout: 10000 });
     await shot('09-authors');
   });
 
   await step('settings', async () => {
     await clickTitle('תפריט');
-    await clickText('הגדרות');
+    await clickDrawerItem('הגדרות');
     await page.waitForSelector('.settings-view', { timeout: 10000 });
     await shot('10-settings');
   });
 
   await step('trash', async () => {
     await clickTitle('תפריט');
-    await clickText('אשפה');
+    await clickDrawerItem('אשפה');
     await page.waitForTimeout(800);
     await shot('11-trash');
   });
 
   await step('reading now', async () => {
     await clickTitle('תפריט');
-    await clickText('קורא עכשיו');
+    await clickDrawerItem('קורא עכשיו');
     await page.waitForSelector('.book-row', { timeout: 10000 });
     await shot('01-reading-now');
   });
