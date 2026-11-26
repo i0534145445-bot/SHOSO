@@ -3,9 +3,7 @@
   "productName": "SHOSO Music",
   "version": "1.0.0",
   "description": "SHOSO Music - נגן מוזיקה שולחני לווינדוס (Windows only)",
-  "author": {
-    "name": "HEZKI ROTER"
-  },
+  "author": "SHOSO",
   "license": "MIT",
   "private": true,
   "main": "electron/main.cjs",
@@ -39,7 +37,6 @@
   "build": {
     "appId": "com.shoso.music",
     "productName": "SHOSO Music",
-    "copyright": "Copyright © 2026 HEZKI ROTER",
     "directories": {
       "output": "release",
       "buildResources": "build"

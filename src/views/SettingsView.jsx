@@ -165,7 +165,6 @@ export default function SettingsView() {
             נגן מוזיקה שולחני לווינדוס בלבד · בנוי עם Electron + React.
             {isDesktop ? ` · Electron ${appInfo.electron || ''}` : ' · מצב דפדפן (הדגמה)'}
           </p>
-          <p className="hint">פותח על ידי <strong>HEZKI ROTER</strong> · © 2026</p>
           <p className="hint">קיצורי מקלדת: רווח לנגן/השהה, חצים לדילוג, M להשתקה, F1 לרשימה מלאה.</p>
         </div>
       </section>

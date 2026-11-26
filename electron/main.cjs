@@ -2,7 +2,6 @@
 
 /**
  * SHOSO Music – Electron main process (Windows desktop shell).
- * Developer: HEZKI ROTER
  *
  * Responsibilities:
  *  - Create the Windows app window.
