@@ -1,4 +1,4 @@
-library benchmark 2026-11-27T12:26:21.839Z
-   500 books · first paint 31 ms · row nodes 40 · all nodes 1365 · list height 0px · scroll 25 ms · search 0 ms
-  5000 books · first paint 19 ms · row nodes 40 · all nodes 1365 · list height 17758px · scroll 44 ms · search 0 ms
- 10000 books · first paint 22 ms · row nodes 40 · all nodes 1365 · list height 17758px · scroll 19 ms · search 0 ms
+library benchmark 2026-11-27T12:31:30.705Z
+   500 books · first paint 33 ms · rows in DOM 40 (all nodes 1365) · spacers 0 / 16330px · scrollbar 0px · scroll 33 ms · search 34 ms (40 rows drawn)
+  5000 books · first paint 27 ms · rows in DOM 40 (all nodes 1365) · spacers 0 / 176080px · scrollbar 177508px · scroll 61 ms · search 22 ms (0 rows drawn)
+ 10000 books · first paint 43 ms · rows in DOM 40 (all nodes 1365) · spacers 0 / 353580px · scrollbar 355008px · scroll 60 ms · search 27 ms (0 rows drawn)
