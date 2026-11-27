@@ -1,4 +1,4 @@
-start 2026-11-27T00:11:06.022Z
+start 2026-11-27T00:13:11.700Z
 goto
 loaded
 rows ready
@@ -29,6 +29,7 @@ saved 01-reading-now
 ok reading now
 saved 13-selection
 ok selection
+diag {"chapters":3,"ps":23,"anyP":25,"secHtml":"<div><h1 xmlns=\"http://www.w3.org/1999/xhtml\">פרק 1 – ההתחלה</h1>\n<p xmlns=\"http://www.w3.org/1999/xhtml\">הבוקר עלה לאט ","view":"reader"}
 selected 0 chars
 FAIL highlights — page.waitForSelector: Timeout 6000ms exceeded.
 saved 16-auto-reading
