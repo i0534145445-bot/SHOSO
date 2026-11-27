@@ -71,15 +71,22 @@ for (const size of [500, 5000, 10000]) {
     const matches = window.shosoDebug.filteredBooks('בדיקה 00').length;
     const filterCost = Math.round(performance.now() - filterStart);
 
+    // the search box feeds a deferred value, so wait for the list itself to change
+    const firstTitle = () => document.querySelector('.book-row')?.textContent || '';
+    const before = firstTitle();
     const searchStart = performance.now();
     window.shosoDebug.setState({ query: 'בדיקה 00' });
-    await new Promise((resolve) => setTimeout(resolve, 250));
-    await raf();
-    const searchCost = performance.now() - searchStart;
+    let searchCost = -1;
+    for (let tick = 0; tick < 90; tick += 1) {
+      await raf();
+      if (firstTitle() !== before) { searchCost = performance.now() - searchStart; break; }
+    }
     const empty = Boolean(document.querySelector('.empty-state'));
     window.shosoDebug.setState({ query: '' });
-    await new Promise((resolve) => setTimeout(resolve, 250));
-    await raf();
+    for (let tick = 0; tick < 90; tick += 1) {
+      await raf();
+      if (firstTitle() === before) break;
+    }
 
     return {
       painted: Math.round(painted),
