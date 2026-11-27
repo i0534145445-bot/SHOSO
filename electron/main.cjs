@@ -10,7 +10,7 @@
  *  - Persist the library and reading state inside %APPDATA%/SHOSO Books.
  */
 
-const { app, BrowserWindow, ipcMain, protocol, dialog, shell, Menu, nativeTheme, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, protocol, dialog, shell, Menu, nativeTheme, screen, net } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
@@ -57,6 +57,60 @@ const coversDir = () => path.join(userData(), 'covers');
 const stateFile = () => path.join(userData(), 'state.json');
 const libraryFile = () => path.join(userData(), 'library.json');
 const windowStateFile = () => path.join(userData(), 'window.json');
+const updateFile = () => path.join(userData(), 'update.json');
+
+/* ---------------- update checks ---------------- */
+
+/**
+ * The app never needs the network: the library, the books and the settings are
+ * all local. This is the only outbound call – it asks GitHub for the newest
+ * release tag so the app can say "a newer version exists". Offline, it fails
+ * quietly and the app keeps working.
+ */
+const UPDATE_CHECK_INTERVAL = 12 * 60 * 60 * 1000; // twice a day at most
+const RELEASES_API = 'https://api.github.com/repos/i0534145445-bot/SHOSO/releases/latest';
+
+function readUpdateCache() {
+  try {
+    return JSON.parse(fs.readFileSync(updateFile(), 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function writeUpdateCache(data) {
+  try {
+    fs.mkdirSync(userData(), { recursive: true });
+    fs.writeFileSync(updateFile(), JSON.stringify(data), 'utf8');
+  } catch { /* a read-only folder must not break the app */ }
+}
+
+async function fetchLatestRelease() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await net.fetch(RELEASES_API, {
+      signal: controller.signal,
+      headers: { accept: 'application/vnd.github+json' },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const assets = Array.isArray(json.assets)
+      ? json.assets.map((a) => ({ name: String(a.name || ''), url: String(a.browser_download_url || ''), size: a.size || 0 }))
+      : [];
+    return {
+      ok: true,
+      tag: String(json.tag_name || ''),
+      name: String(json.name || ''),
+      notes: String(json.body || '').slice(0, 1500),
+      page: String(json.html_url || ''),
+      publishedAt: String(json.published_at || ''),
+      assets,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 const DEFAULT_WINDOW = { width: 1280, height: 820 };
 
@@ -661,6 +715,36 @@ function registerIpc() {
    * only the user can do that. So the honest button is the page where they do
    * it, with the formats listed for them.
    */
+  ipcMain.handle('update:check', async (_event, options) => {
+    const force = Boolean(options && options.force);
+    const cache = readUpdateCache();
+    const fresh = cache && cache.ok && Date.now() - (cache.checkedAt || 0) < UPDATE_CHECK_INTERVAL;
+    if (!force && fresh) return { ...cache, cached: true };
+    try {
+      const release = await fetchLatestRelease();
+      const result = { ...release, checkedAt: Date.now(), current: app.getVersion(), cached: false };
+      writeUpdateCache(result);
+      return result;
+    } catch (err) {
+      // Offline is a normal state, not an error: nothing is written to the
+      // cache, so the next launch tries again.
+      return {
+        ok: false,
+        offline: true,
+        error: String((err && err.message) || err),
+        checkedAt: 0,
+        current: app.getVersion(),
+      };
+    }
+  });
+
+  ipcMain.handle('shell:openUpdate', async (_event, url) => {
+    const target = typeof url === 'string' ? url : '';
+    if (!/^https:\/\/(github\.com|objects\.githubusercontent\.com)\//.test(target)) return false;
+    await shell.openExternal(target);
+    return true;
+  });
+
   ipcMain.handle('shell:defaultApps', async () => {
     if (process.platform === 'win32') {
       await shell.openExternal('ms-settings:defaultapps');

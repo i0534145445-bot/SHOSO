@@ -11,7 +11,7 @@ export const isWindows = isDesktop && typeof navigator !== 'undefined' && /Win/i
 export const appInfo = {
   desktop: isDesktop,
   platform: isDesktop ? 'win32' : 'browser',
-  version: '1.0.0',
+  version: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '1.0.0',
   userData: '',
 };
 
@@ -158,6 +158,55 @@ export const openDefaultApps = async () => {
   if (!bridge?.openDefaultApps) return false;
   try {
     return await bridge.openDefaultApps();
+  } catch {
+    return false;
+  }
+};
+
+const RELEASES_API = 'https://api.github.com/repos/i0534145445-bot/SHOSO/releases/latest';
+
+/**
+ * Ask GitHub for the latest release. The desktop build asks through the main
+ * process (no CSP, respects the Windows proxy); a browser tab asks directly.
+ * Either way an offline machine just gets `{ ok: false }` – never an error.
+ */
+export const checkUpdate = async (force = false) => {
+  if (bridge?.checkUpdate) {
+    try {
+      return await bridge.checkUpdate(force);
+    } catch {
+      return { ok: false, offline: true, checkedAt: 0 };
+    }
+  }
+  try {
+    const res = await fetch(RELEASES_API, { headers: { accept: 'application/vnd.github+json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    return {
+      ok: true,
+      tag: String(json.tag_name || ''),
+      name: String(json.name || ''),
+      notes: String(json.body || '').slice(0, 1500),
+      page: String(json.html_url || ''),
+      publishedAt: String(json.published_at || ''),
+      assets: (json.assets || []).map((a) => ({ name: String(a.name || ''), url: String(a.browser_download_url || ''), size: a.size || 0 })),
+      checkedAt: Date.now(),
+      cached: false,
+    };
+  } catch {
+    return { ok: false, offline: true, checkedAt: 0 };
+  }
+};
+
+/** Open a release page / installer link in the user's browser. */
+export const openUpdateUrl = async (url) => {
+  if (!url) return false;
+  if (!bridge?.openUpdate) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return true;
+  }
+  try {
+    return await bridge.openUpdate(url);
   } catch {
     return false;
   }

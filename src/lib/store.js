@@ -21,7 +21,10 @@ import {
   pathForFile,
   onLibraryChanged,
   onOpenFiles,
+  checkUpdate,
+  openUpdateUrl,
 } from './platform.js';
+import { isNewer, setupAssetUrl, releasePageUrl } from './updates.js';
 import { bookHaystack, matchesQuery, collate, normalize } from './format.js';
 import { onCoverExtracted } from './covers.js';
 
@@ -82,6 +85,8 @@ const DEFAULT_STATE = {
   selection: [], // library selection mode, like ReadEra
   // How the library keeps itself in step with the disk – all of it controllable.
   scan: { onStart: true, watch: true, pruneMissing: true, folderRemoval: 'trash' },
+  // Only the version numbers are persisted; `status` is derived at run time.
+  updates: { autoCheck: true, status: 'idle', checkedAt: 0, latest: '', page: '', assetUrl: '', notified: '' },
   query: '',
   sort: { key: 'title', dir: 'asc' },
   layout: 'full', // ReadEra views: full | brief | thumbs | grid
@@ -105,7 +110,7 @@ export function subscribe(fn) {
 const PERSISTED = new Set([
   'folders', 'collections', 'favorites', 'toRead', 'trash', 'recent',
   'progress', 'bookmarks', 'highlights', 'readingStats', 'view', 'theme', 'accent',
-  'sidebarCollapsed', 'sort', 'layout', 'reader', 'currentBookId', 'scan',
+  'sidebarCollapsed', 'sort', 'layout', 'reader', 'currentBookId', 'scan', 'updates',
 ]);
 
 function notify() {
@@ -169,7 +174,7 @@ export function useStore(selector = (s) => s) {
 const PERSIST_KEYS = [
   'folders', 'collections', 'favorites', 'toRead', 'trash', 'recent',
   'progress', 'bookmarks', 'highlights', 'readingStats', 'view', 'theme', 'accent',
-  'sidebarCollapsed', 'sort', 'layout', 'reader', 'currentBookId', 'scan',
+  'sidebarCollapsed', 'sort', 'layout', 'reader', 'currentBookId', 'scan', 'updates',
 ];
 
 
@@ -229,6 +234,7 @@ export async function bootstrap() {
     return Math.min(max, Math.max(min, n));
   };
   patch.reader = { ...DEFAULT_READER, ...(patch.reader || {}) };
+  patch.updates = { ...DEFAULT_STATE.updates, ...(patch.updates || {}), status: 'idle' };
   patch.reader.fontSize = num(patch.reader.fontSize, 18, 12, 32);
   patch.reader.lineHeight = num(patch.reader.lineHeight, 1.7, 1.2, 2.4);
   patch.reader.fontWeight = num(patch.reader.fontWeight, 400, 300, 700);
@@ -286,6 +292,10 @@ function followDisk() {
     onLibraryChanged?.((folder) => {
       rescanLibrary({ folders: [folder], silent: true }).catch(() => {});
     });
+  }
+  // Ask GitHub once in a while whether a newer release exists (silently).
+  if (state.updates.autoCheck) {
+    setTimeout(() => { checkForUpdate(false).catch(() => {}); }, 2500);
   }
   // A book double-clicked in Explorer ("Open with SHOSO Books").
   onOpenFiles?.((paths) => { importPaths(paths).catch(() => {}); });
@@ -404,6 +414,69 @@ export function setTheme(theme) {
 }
 
 /** Scan / removal preferences, saved with the rest of the settings. */
+/* ------------------------------------------------------------------ */
+/* Updates – the only thing that ever leaves the machine               */
+/* ------------------------------------------------------------------ */
+
+export function setUpdatesOption(key, value) {
+  setState({ updates: { ...state.updates, [key]: value } });
+}
+
+/**
+ * Ask GitHub for the latest release. Works offline too: a failed check just
+ * sets `status: 'offline'` and the app carries on as if nothing happened.
+ */
+export async function checkForUpdate(force = false) {
+  setState({ updates: { ...state.updates, status: 'checking' } });
+  const info = await checkUpdate(force);
+  const current = appInfo.version;
+
+  if (!info || info.unsupported) {
+    setState({ updates: { ...state.updates, status: 'unsupported' } });
+    return null;
+  }
+  if (!info.ok) {
+    setState({ updates: { ...state.updates, status: 'offline' } });
+    if (force) toast('אין חיבור לאינטרנט – בדיקת העדכונים לא הצליחה', 'info');
+    return null;
+  }
+
+  const latest = String(info.tag || '').replace(/^v/i, '');
+  const newer = isNewer(latest, current);
+  const assetUrl = setupAssetUrl(info.tag, info.assets) || releasePageUrl(info.tag);
+  const page = info.page || releasePageUrl(info.tag);
+  const wasNotified = state.updates.notified === latest;
+
+  setState({
+    updates: {
+      ...state.updates,
+      status: newer ? 'available' : 'current',
+      latest,
+      page,
+      assetUrl,
+      notes: info.notes || '',
+      checkedAt: Date.now(),
+      notified: newer ? latest : state.updates.notified,
+    },
+  });
+
+  if (newer && !wasNotified) {
+    toast(`גרסה ${latest} זמינה – הורדה בהגדרות ← עדכונים`, 'info');
+  } else if (!newer && force) {
+    toast(`אתה בגרסה האחרונה (${current})`, 'success');
+  }
+  return state.updates;
+}
+
+/** Open the release page (or the installer) in the browser. */
+export async function downloadUpdate() {
+  const url = state.updates.assetUrl || state.updates.page;
+  if (!url) return false;
+  const ok = await openUpdateUrl(url);
+  if (!ok) toast('לא ניתן לפתוח את קישור ההורדה', 'error');
+  return ok;
+}
+
 export function setScanOption(key, value) {
   setState({ scan: { ...state.scan, [key]: value } });
 }

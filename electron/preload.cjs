@@ -31,6 +31,9 @@ contextBridge.exposeInMainWorld('shoso', {
   onOpenFiles: (cb) => on('open-files', cb),
   // Windows only lets the user choose a default app – this opens that page.
   openDefaultApps: () => ipcRenderer.invoke('shell:defaultApps'),
+  // The one network call the app ever makes: what is the newest release?
+  checkUpdate: (force) => ipcRenderer.invoke('update:check', { force: Boolean(force) }),
+  openUpdate: (url) => ipcRenderer.invoke('shell:openUpdate', url),
   loadState: () => ipcRenderer.invoke('state:load'),
   saveState: (state) => ipcRenderer.invoke('state:save', state),
   loadLibrary: () => ipcRenderer.invoke('library:load'),

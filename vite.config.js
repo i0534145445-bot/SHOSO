@@ -1,5 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { readFileSync } from 'node:fs';
+
+/** The real version, so even the browser build reports it honestly. */
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
 const CSP = [
   "default-src 'self'",
@@ -8,7 +12,8 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self'",
   "font-src 'self' data:",
-  "connect-src 'self' data: blob: shoso-media:",
+  // Only the update check talks to the network, and only to the GitHub API.
+  "connect-src 'self' data: blob: shoso-media: https://api.github.com",
   "worker-src 'self' blob:",
   "child-src 'self' blob: shoso-media:",
 ].join('; ');
@@ -43,6 +48,9 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 4173,
     allowedHosts: true,
+  },
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
   },
   build: {
     outDir: 'dist',

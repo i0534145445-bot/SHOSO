@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import {
   useStore, setTheme, updateReader, setState, getState, setSort,
   setLayout, importFolders, toast, COLOR_MODES, FONT_FAMILIES, rescanLibrary,
-  setScanOption,
+  setScanOption, checkForUpdate, downloadUpdate, setUpdatesOption,
 } from '../lib/store.js';
 import { createDemoBooks } from '../lib/demo.js';
 import { IconChevron } from '../lib/icons.jsx';
 import { appInfo, openDefaultApps } from '../lib/platform.js';
+import { updateStatusLine } from '../lib/updates.js';
 import { VIEW_MODES } from '../components/BookList.jsx';
 
 /**
@@ -64,6 +65,18 @@ function Stepper({ value, onDec, onInc }) {
 
 const modeLabel = (id) => (COLOR_MODES.find((m) => m.id === id) || COLOR_MODES[2]).label;
 
+/** "לפני 3 דקות" for the update check line. */
+const sinceLabel = (ts) => {
+  if (!ts) return 'עוד לא נבדק';
+  const minutes = Math.round((Date.now() - ts) / 60000);
+  if (minutes < 1) return 'נבדק עכשיו';
+  if (minutes < 60) return `נבדק לפני ${minutes} דק׳`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return hours === 1 ? 'נבדק לפני שעה' : `נבדק לפני ${hours} שעות`;
+  const days = Math.round(hours / 24);
+  return days === 1 ? 'נבדק אתמול' : `נבדק לפני ${days} ימים`;
+};
+
 const SORT_LABEL = {
   title: 'שם הספר', author: 'מחבר', added: 'תאריך הוספה', size: 'גודל', progress: 'התקדמות',
 };
@@ -79,6 +92,7 @@ export default function SettingsView() {
   const folderCount = useStore((s) => s.folders.length);
   const scanStatus = useStore((s) => s.scanStatus);
   const scan = useStore((s) => s.scan);
+  const updates = useStore((s) => s.updates);
   const [loadingDemo, setLoadingDemo] = useState(false);
 
   const loadDemo = async () => {
@@ -264,8 +278,27 @@ export default function SettingsView() {
         )}
       </Section>
 
-      <Section title="אודות">
+      <Section title="אודות ועדכונים">
         <Row label="SHOSO Books" desc="קורא ספרים אלקטרוניים למחשב" value={`גרסה ${appInfo.version}`} />
+        <Row
+          label="עדכונים"
+          desc={updates.status === 'checking'
+            ? 'פונה ל-GitHub…'
+            : `${sinceLabel(updates.checkedAt)} · בדיקה מול GitHub`}
+          value={updateStatusLine(updates, appInfo.version)}
+          onClick={updates.status === 'checking' ? undefined : () => checkForUpdate(true)}
+        />
+        {updates.status === 'available' && (
+          <Row
+            label={`הורד את גרסה ${updates.latest}`}
+            desc="נפתח בדפדפן – מתקינים מעל הגרסה הקיימת והספרייה נשמרת"
+            onClick={() => downloadUpdate()}
+          />
+        )}
+        <Row label="בדיקת עדכונים אוטומטית" desc="פעם ביומיים, ברקע, בלי להפריע">
+          <Switch checked={updates.autoCheck !== false} onChange={(v) => setUpdatesOption('autoCheck', v)} />
+        </Row>
+        <Row label="עובד לגמרי אופליין" desc="הספרים, הספרייה וההגדרות נשארים במחשב – רק בדיקת העדכונים יוצאת לרשת" />
         <Row label="פורמטים נתמכים" desc="EPUB · PDF · FB2 · TXT · DOCX · MD" />
         <Row label="מצב הרצה" desc="אפליקציית שולחן עבודה" value={appInfo.desktop ? 'Windows' : 'דפדפן'} />
         <Row label="פרטיות" desc="הכל נשאר על המחשב שלך" />
