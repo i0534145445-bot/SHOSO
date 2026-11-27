@@ -1,4 +1,4 @@
-start 2026-11-22T18:12:27.192Z
+start 2026-11-27T00:09:08.952Z
 goto
 loaded
 rows ready
@@ -13,6 +13,7 @@ ok books tiles
 saved 05-reader-night
 ok reader
 saved 06-reader-settings
+saved 06b-reader-settings-bottom
 ok reader settings
 saved 07-reader-sepia
 ok sepia mode
@@ -28,6 +29,10 @@ saved 01-reading-now
 ok reading now
 saved 13-selection
 ok selection
+selected 0 chars
+FAIL highlights — page.waitForSelector: Timeout 6000ms exceeded.
+saved 16-auto-reading
+ok automatic reading
 saved 12-book-detail
 ok book detail
 done
