@@ -1,10 +1,11 @@
-step: highlights
-page.waitForSelector: Timeout 6000ms exceeded.
+step: book detail
+page.waitForSelector: Timeout 10000ms exceeded.
 Call log:
-  - waiting for locator('.sel-bar') to be visible
+  - waiting for locator('.book-row') to be visible
 
 {
+  "view": "ספרים ומסמכים",
   "rows": 0,
   "drawer": false,
-  "text": "הספר הישן פרק 1 – ההתחלה הבוקר עלה לאט על פני העיר. אור זהוב שטף את הרחובות הצרים, והצללים התארכו על המדרכות האפורות. מרים עמדה ליד החלון, כוס תה חמה בידה, והביטה אל הנוף המוכר כל כך – ועדיין, משהו היה שונה היום. היא הייתה בטוחה ששמעה קול"
+  "text": "ספרים ומסמכים FB2 הבית על הגבעה דוד כהן הבית על הגבעה דוד כהן EPUB הספר הישן מרים לוי הספר הישן מרים לוי HTML זיכרונות של ספרייה רחל בן-עמי זיכרונות של ספרייה רחל בן-עמי MD מדריך הגן הקטן עמוס גבע מדריך הגן הקטן עמוס גבע TXT מכתבים מן העמק "
 }

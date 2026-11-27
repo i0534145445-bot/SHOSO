@@ -1,26 +1,16 @@
-start 2026-11-27T11:44:47.185Z
+start 2026-11-27T12:24:11.791Z
 goto
 loaded
 rows ready
 saved 02-drawer
 ok drawer
-saved 03-books-list
-ok books list
-saved 04-books-thumbs
-saved 04b-books-brief
-saved 04c-books-grid
-ok books tiles
-saved 05-reader-night
-ok reader
-saved 06-reader-settings
-saved 06b-reader-settings-bottom
-ok reader settings
-saved 07-reader-sepia
-ok sepia mode
-saved 08-reader-toc
-ok toc
-saved 09-authors
-ok authors
+FAIL books list — page.waitForSelector: Timeout 6000ms exceeded.
+FAIL books tiles — page.waitForSelector: Timeout 6000ms exceeded.
+FAIL reader — locator.click: Timeout 30000ms exceeded.
+FAIL reader settings — locator.waitFor: Timeout 8000ms exceeded.
+FAIL sepia mode — locator.selectOption: Timeout 6000ms exceeded.
+FAIL toc — locator.waitFor: Timeout 8000ms exceeded.
+FAIL authors — locator.waitFor: Timeout 8000ms exceeded.
 saved 17-genres
 saved 18-genre-books
 ok genres
@@ -28,17 +18,9 @@ saved 10-settings
 ok settings
 saved 11-trash
 ok trash
-saved 01-reading-now
-ok reading now
-saved 13-selection
-ok selection
-selected 73 chars
-saved 14-selection-bar
-selected 70 chars
-saved 15-highlights
-ok highlights
-saved 16-auto-reading
-ok automatic reading
-saved 12-book-detail
-ok book detail
+FAIL reading now — page.waitForSelector: Timeout 10000ms exceeded.
+FAIL selection — page.waitForSelector: Timeout 10000ms exceeded.
+FAIL highlights — page.waitForSelector: Timeout 10000ms exceeded.
+FAIL automatic reading — locator.waitFor: Timeout 8000ms exceeded.
+FAIL book detail — page.waitForSelector: Timeout 10000ms exceeded.
 done
