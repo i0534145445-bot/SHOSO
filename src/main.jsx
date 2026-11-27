@@ -17,7 +17,12 @@ createRoot(document.getElementById('root')).render(
 // only exists when the page is opened with ?bench=1.
 if (new URLSearchParams(window.location.search).has('bench')) {
   import('./lib/store.js').then((store) => {
-    window.shosoDebug = { setState: store.setState, getState: store.getState, setView: store.setView };
+    window.shosoDebug = {
+      setState: store.setState,
+      getState: store.getState,
+      setView: store.setView,
+      filteredBooks: store.filteredBooks,
+    };
   });
 }
 

@@ -47,14 +47,14 @@ for (const size of [500, 5000, 10000]) {
     }));
 
     const raf = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    const scroller = document.querySelector('.view-scroll');
-    if (scroller) scroller.scrollTop = 0;
-
     const started = performance.now();
     window.shosoDebug.setState({ books, view: 'books', query: '' });
     await raf();
     const painted = performance.now() - started;
 
+    // the view is keyed by its name, so switching to it replaces the scroller
+    const scroller = document.querySelector('.view-scroll');
+    if (scroller) scroller.scrollTop = 0;
     const rows = document.querySelectorAll('.book-row').length;
     const nodes = document.querySelectorAll('.view-scroll *').length;
     const spacers = [...document.querySelectorAll('.vgrid > div[aria-hidden="true"]')]
@@ -66,13 +66,19 @@ for (const size of [500, 5000, 10000]) {
     await raf();
     const scrollCost = performance.now() - scrollStart;
 
-    // typing in the search box: filtering + sorting the whole library
+    // typing in the search box: filter + sort the whole library, then the list
+    const filterStart = performance.now();
+    const matches = window.shosoDebug.filteredBooks('בדיקה 00').length;
+    const filterCost = Math.round(performance.now() - filterStart);
+
     const searchStart = performance.now();
     window.shosoDebug.setState({ query: 'בדיקה 00' });
+    await new Promise((resolve) => setTimeout(resolve, 250));
     await raf();
     const searchCost = performance.now() - searchStart;
-    const hits = document.querySelectorAll('.book-row').length;
+    const empty = Boolean(document.querySelector('.empty-state'));
     window.shosoDebug.setState({ query: '' });
+    await new Promise((resolve) => setTimeout(resolve, 250));
     await raf();
 
     return {
@@ -80,7 +86,9 @@ for (const size of [500, 5000, 10000]) {
       rows,
       nodes,
       spacers,
-      hits,
+      matches,
+      filterCost,
+      empty,
       totalHeight,
       scrollCost: Math.round(scrollCost),
       searchCost: Math.round(searchCost),
@@ -90,7 +98,8 @@ for (const size of [500, 5000, 10000]) {
   line(`${String(size).padStart(6)} books · first paint ${result.painted} ms · `
     + `rows in DOM ${result.rows} (all nodes ${result.nodes}) · `
     + `spacers ${result.spacers.join(' / ')}px · scrollbar ${result.totalHeight}px · `
-    + `scroll ${result.scrollCost} ms · search ${result.searchCost} ms (${result.hits} rows drawn)`);
+    + `scroll ${result.scrollCost} ms · filter+sort ${result.filterCost} ms ` +
+    `(${result.matches} matches) · list update ${result.searchCost} ms${result.empty ? ' (EMPTY!)' : ''}`);
 
   if (size === 10000) {
     await page.evaluate(() => {
