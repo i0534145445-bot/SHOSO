@@ -1,4 +1,4 @@
-start 2026-11-27T11:00:44.311Z
+start 2026-11-27T11:27:28.757Z
 goto
 loaded
 rows ready
@@ -23,8 +23,6 @@ saved 09-authors
 ok authors
 saved 10-settings
 ok settings
-saved 10b-settings-updates
-ok settings – about and updates
 saved 11-trash
 ok trash
 saved 01-reading-now
