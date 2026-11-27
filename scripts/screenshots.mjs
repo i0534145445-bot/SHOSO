@@ -234,6 +234,14 @@ try {
     await page.locator('.bd-read').click();
     await page.waitForSelector('.book-scroll', { timeout: 45000 });
     await page.waitForTimeout(600);
+    const diag = await page.evaluate(() => ({
+      chapters: document.querySelectorAll('.book-chapter').length,
+      ps: document.querySelectorAll('.book-chapter p').length,
+      anyP: document.querySelectorAll('p').length,
+      secHtml: (document.querySelector('.book-chapter')?.innerHTML || '').slice(0, 120),
+      view: document.querySelector('.reader') ? 'reader' : 'other',
+    }));
+    trace(`diag ${JSON.stringify(diag)}`);
     const picked = await page.evaluate(() => {
       // the first child of a paragraph is often a whitespace text node
       const good = (node) => node && node.nodeType === 3 && node.textContent.trim().length >= 30;
