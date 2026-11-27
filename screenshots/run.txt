@@ -1,4 +1,4 @@
-start 2026-11-27T00:15:22.415Z
+start 2026-11-27T00:17:42.768Z
 goto
 loaded
 rows ready
@@ -29,7 +29,7 @@ saved 01-reading-now
 ok reading now
 saved 13-selection
 ok selection
-selected 0 chars
+selected 73 chars
 FAIL highlights — page.waitForSelector: Timeout 6000ms exceeded.
 saved 16-auto-reading
 ok automatic reading
