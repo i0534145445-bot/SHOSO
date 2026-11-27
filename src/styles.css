@@ -1712,6 +1712,14 @@ kbd {
    Highlights & notes — selected text, colour dots, the list of saved marks
    ========================================================================== */
 
+/* The app chrome is not selectable, but the book itself must be: highlighting
+   starts with a plain drag over the text. */
+.book-scroll, .book-chapter, .book-chapter * {
+  -webkit-user-select: text;
+  user-select: text;
+}
+.book-chapter img { -webkit-user-drag: none; user-drag: none; }
+
 .book-chapter mark.shoso-hl {
   background: rgba(224, 166, 60, 0.34);
   color: inherit;
