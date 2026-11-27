@@ -235,12 +235,20 @@ try {
     await page.waitForSelector('.book-scroll', { timeout: 45000 });
     await page.waitForTimeout(600);
     const picked = await page.evaluate(() => {
-      const p = document.querySelector('.book-chapter p');
-      const node = p && p.firstChild;
-      if (!node || !node.textContent || node.textContent.trim().length < 8) return '';
+      // the first child of a paragraph is often a whitespace text node
+      const good = (node) => node && node.nodeType === 3 && node.textContent.trim().length >= 30;
+      let node = null;
+      for (const p of document.querySelectorAll('.book-chapter p')) {
+        const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
+        let n = walker.nextNode();
+        while (n && !good(n)) n = walker.nextNode();
+        if (good(n)) { node = n; break; }
+      }
+      if (!node) return '';
+      const start = node.textContent.search(/\S/);
       const range = document.createRange();
-      range.setStart(node, 0);
-      range.setEnd(node, Math.min(48, node.textContent.length));
+      range.setStart(node, Math.max(0, start));
+      range.setEnd(node, Math.min(node.textContent.length, Math.max(0, start) + 42));
       const sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(range);
@@ -254,15 +262,22 @@ try {
     await page.waitForSelector('mark.shoso-hl', { timeout: 6000 });
     // second highlight in another colour
     await page.evaluate(() => {
-      const p = document.querySelectorAll('.book-chapter p')[1];
-      const node = p && p.firstChild;
-      if (!node) return;
-      const range = document.createRange();
-      range.setStart(node, 0);
-      range.setEnd(node, Math.min(30, node.textContent.length));
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
+      // pick a paragraph a little further down so the two marks are distinct
+      const paragraphs = [...document.querySelectorAll('.book-chapter p')].slice(6);
+      for (const p of paragraphs) {
+        const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
+        let n = walker.nextNode();
+        while (n && n.textContent.trim().length < 30) n = walker.nextNode();
+        if (!n) continue;
+        const start = n.textContent.search(/\S/);
+        const range = document.createRange();
+        range.setStart(n, Math.max(0, start));
+        range.setEnd(n, Math.min(n.textContent.length, Math.max(0, start) + 34));
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return;
+      }
     });
     await page.locator('.book-scroll').dispatchEvent('mouseup');
     await page.waitForSelector('.sel-bar', { timeout: 6000 });
