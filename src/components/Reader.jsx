@@ -300,17 +300,17 @@ export default function Reader() {
   }, [selection]);
 
   const onContentClick = useCallback((e) => {
-    if (selection) {
-      setSelection(null);
-      return;
-    }
+    // A click also ends a text drag; a live selection means the bar should stay.
+    const live = window.getSelection ? window.getSelection() : null;
+    if (live && !live.isCollapsed) return;
+    setSelection(null);
     const mark = e.target.closest ? e.target.closest('mark.shoso-hl') : null;
     if (!mark || !book?.id) return;
     const hit = highlights.find((h) => stripNiqqud(normalizeSpace(h.quote)) === stripNiqqud(normalizeSpace(mark.textContent)));
     if (!hit) return;
     removeHighlight(book.id, hit.id);
     toast('ההדגשה הוסרה', 'info');
-  }, [selection, highlights, book?.id]);
+  }, [highlights, book?.id]);
 
   // Repaint after every render of the text: React rewrites the chapters on a
   // font or niqqud change, which throws the old <mark>s away.
