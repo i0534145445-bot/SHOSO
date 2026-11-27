@@ -12,8 +12,7 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self'",
   "font-src 'self' data:",
-  // Only the update check talks to the network, and only to the GitHub API.
-  "connect-src 'self' data: blob: shoso-media: https://api.github.com",
+  "connect-src 'self' data: blob: shoso-media:",
   "worker-src 'self' blob:",
   "child-src 'self' blob: shoso-media:",
 ].join('; ');

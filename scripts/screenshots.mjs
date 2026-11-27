@@ -194,16 +194,6 @@ try {
     await shot('10-settings');
   });
 
-  await step('settings – about and updates', async () => {
-    await page.getByText('אודות ועדכונים').scrollIntoViewIfNeeded();
-    await page.waitForTimeout(400);
-    // a real GitHub round-trip: the row reports what the API says
-    await page.locator('.settings-row').filter({ hasText: 'עדכונים' }).first().click();
-    await page.waitForTimeout(3000);
-    await page.getByText('אודות ועדכונים').scrollIntoViewIfNeeded();
-    await shot('10b-settings-updates');
-  });
-
   await step('trash', async () => {
     await clickTitle('תפריט');
     await clickDrawerItem('אשפה');
