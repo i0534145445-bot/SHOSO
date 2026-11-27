@@ -68,14 +68,14 @@ for (const size of [500, 5000, 10000]) {
 
     // typing in the search box: filter + sort the whole library, then the list
     const filterStart = performance.now();
-    const matches = window.shosoDebug.filteredBooks('בדיקה 00').length;
+    const matches = window.shosoDebug.filteredBooks('בדיקה 0000').length;
     const filterCost = Math.round(performance.now() - filterStart);
 
     // the search box feeds a deferred value, so wait for the list itself to change
     const firstTitle = () => document.querySelector('.book-row')?.textContent || '';
     const before = firstTitle();
     const searchStart = performance.now();
-    window.shosoDebug.setState({ query: 'בדיקה 00' });
+    window.shosoDebug.setState({ query: 'בדיקה 0000' });
     let searchCost = -1;
     for (let tick = 0; tick < 90; tick += 1) {
       await raf();
@@ -106,7 +106,7 @@ for (const size of [500, 5000, 10000]) {
     + `rows in DOM ${result.rows} (all nodes ${result.nodes}) · `
     + `spacers ${result.spacers.join(' / ')}px · scrollbar ${result.totalHeight}px · `
     + `scroll ${result.scrollCost} ms · filter+sort ${result.filterCost} ms ` +
-    `(${result.matches} matches) · list update ${result.searchCost} ms${result.empty ? ' (EMPTY!)' : ''}`);
+    `(${result.matches} matches) · list update ${result.searchCost < 0 ? '—' : result.searchCost} ms${result.empty ? ' (EMPTY!)' : ''}`);
 
   if (size === 10000) {
     await page.evaluate(() => {
