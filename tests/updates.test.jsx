@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { isNewer, parseVersion, setupAssetUrl, releasePageUrl, updateStatusLine } from '../src/lib/updates.js';
 import { bootstrap, getState, setState, checkForUpdate, setUpdatesOption } from '../src/lib/store.js';
 
@@ -56,15 +56,54 @@ describe('update status line', () => {
 });
 
 describe('update state in the store', () => {
-  it('defaults to automatic checks and stays quiet when there is no network', async () => {
+  const realFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = realFetch;
     setState({ updates: { autoCheck: true, status: 'idle', checkedAt: 0, latest: '', page: '', assetUrl: '', notified: '' } });
+  });
+
+  it('stays quiet when the machine is offline', async () => {
+    globalThis.fetch = () => Promise.reject(new Error('offline'));
     expect(getState().updates.autoCheck).toBe(true);
-    // jsdom has no route to GitHub: the check must not throw, and the app
-    // must simply stay on the version it has.
     const result = await checkForUpdate(false);
     expect(result).toBeNull();
-    expect(['offline', 'unsupported']).toContain(getState().updates.status);
+    expect(getState().updates.status).toBe('offline');
     expect(getState().updates.latest).toBe('');
+    // nothing cached: the next launch tries again
+    expect(getState().updates.checkedAt).toBe(0);
+  });
+
+  it('answers HTTP errors the same quiet way', async () => {
+    globalThis.fetch = async () => ({ ok: false, status: 403, json: async () => ({}) });
+    await checkForUpdate(true);
+    expect(getState().updates.status).toBe('offline');
+  });
+
+  it('offers the newer release with its installer link', async () => {
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        tag_name: 'v9.9.9',
+        html_url: 'https://github.com/i0534145445-bot/SHOSO/releases/tag/v9.9.9',
+        assets: [{ name: 'SHOSO-Books-Setup-9.9.9.exe', browser_download_url: 'https://github.com/x/setup.exe', size: 1 }],
+      }),
+    });
+    await checkForUpdate(true);
+    const updates = getState().updates;
+    expect(updates.status).toBe('available');
+    expect(updates.latest).toBe('9.9.9');
+    expect(updates.assetUrl).toBe('https://github.com/x/setup.exe');
+    expect(updates.checkedAt).toBeGreaterThan(0);
+  });
+
+  it('reports that the app is current when GitHub has nothing newer', async () => {
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({ tag_name: 'v0.0.1', html_url: 'https://github.com/i0534145445-bot/SHOSO/releases/tag/v0.0.1', assets: [] }),
+    });
+    await checkForUpdate(true);
+    expect(getState().updates.status).toBe('current');
   });
 
   it('remembers that automatic checks were switched off', () => {
