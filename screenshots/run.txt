@@ -1,4 +1,4 @@
-start 2026-11-27T11:27:28.757Z
+start 2026-11-27T11:35:48.648Z
 goto
 loaded
 rows ready
@@ -21,6 +21,9 @@ saved 08-reader-toc
 ok toc
 saved 09-authors
 ok authors
+saved 17-genres
+saved 18-genre-books
+ok genres
 saved 10-settings
 ok settings
 saved 11-trash
