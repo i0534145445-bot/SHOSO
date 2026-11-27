@@ -1,6 +1,6 @@
 import React from 'react';
-import { describe, it, expect, beforeAll } from 'vitest';
-import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
+import { describe, it, expect, beforeAll, afterEach } from 'vitest';
+import { render, screen, act, cleanup } from '@testing-library/react';
 import { normalizeGenre, bookGenres, genresList, booksOfGenre, parseGenreInput } from '../src/lib/genres.js';
 import {
   bootstrap, setState, getState, genresOfLibrary, booksInGenre, addBookGenres,
@@ -121,17 +121,37 @@ describe('genres in the library', () => {
 });
 
 describe('a very large library', () => {
-  it('renders one page of rows and offers the rest', () => {
+  const realIO = globalThis.IntersectionObserver;
+
+  afterEach(() => {
+    globalThis.IntersectionObserver = realIO;
+    cleanup();
+  });
+
+  it('loads the next page silently when the marker is reached', () => {
+    // a minimal observer we can fire by hand – jsdom has none
+    const observers = [];
+    globalThis.IntersectionObserver = class {
+      constructor(cb) { this.cb = cb; observers.push(this); }
+      observe() { /* the test decides when it scrolls into view */ }
+      disconnect() {}
+    };
+    const fire = () => act(() => observers.forEach((o) => o.cb([{ isIntersecting: true }])));
+
     const many = Array.from({ length: 500 }, (_, i) => book(`b${i}`, ['פנטזיה']));
     reset(many);
     render(<BookList books={many} from="books" />);
     expect(document.querySelectorAll('.book-row').length).toBe(120);
-    expect(screen.getByText(/מציגים 120 מתוך 500/)).toBeTruthy();
-    act(() => { fireEvent.click(screen.getByText('טען עוד')); });
-    expect(document.querySelectorAll('.book-row').length).toBe(360);
-    act(() => { fireEvent.click(screen.getByText('טען עוד')); });
-    expect(document.querySelectorAll('.book-row').length).toBe(500);
+    // nothing to click – the page grows on its own
     expect(screen.queryByText('טען עוד')).toBeNull();
-    cleanup();
+
+    fire();
+    expect(document.querySelectorAll('.book-row').length).toBe(360);
+    expect(screen.queryByText('טען עוד')).toBeNull();
+
+    fire();
+    expect(document.querySelectorAll('.book-row').length).toBe(500);
+    // nothing left to load, so the marker is gone
+    expect(document.querySelector('.list-sentinel')).toBeNull();
   });
 });

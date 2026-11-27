@@ -119,24 +119,21 @@ function usePagedBooks(books, layout, from) {
     return () => io.disconnect();
   }, [shown.length, books.length]);
 
-  const grow = () => setCount((prev) => Math.min(books.length, prev + PAGE_STEP));
-  return { shown, sentinel, grow, more: books.length - shown.length };
+  return { shown, sentinel, more: books.length - shown.length };
 }
 
-/** "מציג 120 מתוך 10,000" plus a real button for the rest. */
-function MoreRow({ shown, total, onMore, innerRef }) {
-  if (shown >= total) return null;
-  return (
-    <div className="list-more" ref={innerRef}>
-      <span className="list-more-count">מציגים {shown.toLocaleString('he-IL')} מתוך {total.toLocaleString('he-IL')} ספרים</span>
-      <button className="btn ghost small" onClick={onMore}>טען עוד</button>
-    </div>
-  );
+/**
+ * The next page loads by itself when this marker scrolls into view – no button,
+ * no counter, nothing to click. It keeps a hairline of height so the observer
+ * has something to watch.
+ */
+function Sentinel({ innerRef }) {
+  return <div className="list-sentinel" ref={innerRef} aria-hidden="true" />;
 }
 
 export default function BookList({ books, from = 'books' }) {
   const layout = useStore((s) => s.layout);
-  const { shown, sentinel, grow, more } = usePagedBooks(books, layout, from);
+  const { shown, sentinel, more } = usePagedBooks(books, layout, from);
 
   if (!books.length) return null;
 
@@ -146,7 +143,7 @@ export default function BookList({ books, from = 'books' }) {
         <div className="book-grid thumbs">
           {shown.map((b) => <BookTile key={b.id} book={b} from={from} size="xs" />)}
         </div>
-        <MoreRow shown={shown.length} total={books.length} onMore={grow} innerRef={sentinel} />
+        {more ? <Sentinel innerRef={sentinel} /> : null}
       </>
     );
   }
@@ -157,7 +154,7 @@ export default function BookList({ books, from = 'books' }) {
         <div className="book-grid tiles">
           {shown.map((b) => <BookTile key={b.id} book={b} from={from} size="md" />)}
         </div>
-        <MoreRow shown={shown.length} total={books.length} onMore={grow} innerRef={sentinel} />
+        {more ? <Sentinel innerRef={sentinel} /> : null}
       </>
     );
   }
@@ -168,7 +165,7 @@ export default function BookList({ books, from = 'books' }) {
         <div className="book-list brief">
           {shown.map((b) => <BookBrief key={b.id} book={b} from={from} />)}
         </div>
-        <MoreRow shown={shown.length} total={books.length} onMore={grow} innerRef={sentinel} />
+        {more ? <Sentinel innerRef={sentinel} /> : null}
       </>
     );
   }
@@ -178,7 +175,7 @@ export default function BookList({ books, from = 'books' }) {
       <div className="book-list">
         {shown.map((b) => <BookCard key={b.id} book={b} from={from} />)}
       </div>
-      <MoreRow shown={shown.length} total={books.length} onMore={grow} innerRef={sentinel} />
+      {more ? <Sentinel innerRef={sentinel} /> : null}
     </>
   );
 }
