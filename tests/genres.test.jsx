@@ -121,37 +121,34 @@ describe('genres in the library', () => {
 });
 
 describe('a very large library', () => {
-  const realIO = globalThis.IntersectionObserver;
-
   afterEach(() => {
-    globalThis.IntersectionObserver = realIO;
     cleanup();
   });
 
-  it('loads the next page silently when the marker is reached', () => {
-    // a minimal observer we can fire by hand – jsdom has none
-    const observers = [];
-    globalThis.IntersectionObserver = class {
-      constructor(cb) { this.cb = cb; observers.push(this); }
-      observe() { /* the test decides when it scrolls into view */ }
-      disconnect() {}
-    };
-    const fire = () => act(() => observers.forEach((o) => o.cb([{ isIntersecting: true }])));
-
-    const many = Array.from({ length: 500 }, (_, i) => book(`b${i}`, ['פנטזיה']));
+  it('keeps one screenful in the DOM and the full height in the spacers', () => {
+    const many = Array.from({ length: 10000 }, (_, i) => book(`b${i}`, ['פנטזיה']));
     reset(many);
     render(<BookList books={many} from="books" />);
-    expect(document.querySelectorAll('.book-row').length).toBe(120);
-    // nothing to click – the page grows on its own
+
+    const rows = document.querySelectorAll('.book-row');
+    // a window, not ten thousand cards
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.length).toBeLessThan(60);
     expect(screen.queryByText('טען עוד')).toBeNull();
 
-    fire();
-    expect(document.querySelectorAll('.book-row').length).toBe(360);
-    expect(screen.queryByText('טען עוד')).toBeNull();
+    // the space below the window stands for everything that is not drawn yet
+    const spacers = [...document.querySelectorAll('.vgrid > div[aria-hidden="true"]')];
+    expect(spacers.length).toBe(2);
+    const below = parseInt(spacers[1].style.height, 10);
+    expect(below).toBeGreaterThan(10000 * 100);
+  });
 
-    fire();
-    expect(document.querySelectorAll('.book-row').length).toBe(500);
-    // nothing left to load, so the marker is gone
-    expect(document.querySelector('.list-sentinel')).toBeNull();
+  it('draws the first books first', () => {
+    const many = Array.from({ length: 400 }, (_, i) => book(`b${i}`, []));
+    reset(many);
+    render(<BookList books={many} from="books" />);
+    // sorted by title, so ספר b0 is first and it is on screen
+    expect(document.querySelectorAll('.book-row').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/ספר b0/).length).toBeGreaterThan(0);
   });
 });

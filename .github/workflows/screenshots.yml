@@ -40,6 +40,8 @@ jobs:
           mkdir -p screenshots
           node scripts/screenshots.mjs 2>&1 || true
           cat screenshots/run.txt || true
+          node scripts/bench-library.mjs 2>&1 || true
+          cat screenshots/bench.txt || true
 
       - name: Commit screenshots back to branch
         run: |

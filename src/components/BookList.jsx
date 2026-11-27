@@ -1,6 +1,7 @@
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useRef } from 'react';
 import { useStore } from '../lib/store.js';
 import BookCard, { BookTile } from './BookCard.jsx';
+import VirtualGrid from './VirtualGrid.jsx';
 import Cover from './Cover.jsx';
 import { toggleSelect, openBookDetails } from '../lib/store.js';
 import { IconCheck } from '../lib/icons.jsx';
@@ -78,107 +79,73 @@ function BookBriefBase({ book, from }) {
  * Renders a set of books using whichever library view is selected – shared by
  * Books & documents, Favorites, To read, Have read, Authors, Formats, Shelves…
  */
-/**
- * A library can hold ten thousand books. Rendering them all at once froze the
- * window for seconds and melted memory, so the list paints a first page and
- * keeps loading more as the reader scrolls – the rest is still there, one
- * scroll away, and the counter says exactly what is shown.
- */
-const PAGE_SIZE = 120;
-const PAGE_STEP = 240;
-
-function usePagedBooks(books, layout, from) {
-  const [count, setCount] = useState(PAGE_SIZE);
-  const sentinel = useRef(null);
-  // Views hand us a fresh array on every render; only a different list (filter,
-  // section, view mode, size) may reset the page, or the effect would loop.
-  const signature = `${from}|${layout}|${books.length}`;
-  const lastSignature = useRef(signature);
-
-  useEffect(() => {
-    if (lastSignature.current === signature) return;
-    lastSignature.current = signature;
-    setCount(PAGE_SIZE);
-  }, [signature]);
-
-  const shown = useMemo(
-    () => (books.length > count ? books.slice(0, count) : books),
-    [books, count],
-  );
-
-  useEffect(() => {
-    const node = sentinel.current;
-    if (!node || shown.length >= books.length) return undefined;
-    if (typeof IntersectionObserver === 'undefined') return undefined;
-    const io = new IntersectionObserver((entries) => {
-      if (entries.some((e) => e.isIntersecting)) {
-        setCount((prev) => Math.min(books.length, prev + PAGE_STEP));
-      }
-    }, { rootMargin: '600px' });
-    io.observe(node);
-    return () => io.disconnect();
-  }, [shown.length, books.length]);
-
-  return { shown, sentinel, more: books.length - shown.length };
-}
-
-/**
- * The next page loads by itself when this marker scrolls into view – no button,
- * no counter, nothing to click. It keeps a hairline of height so the observer
- * has something to watch.
- */
-function Sentinel({ innerRef }) {
-  return <div className="list-sentinel" ref={innerRef} aria-hidden="true" />;
-}
-
 export default function BookList({ books, from = 'books' }) {
   const layout = useStore((s) => s.layout);
-  const { shown, sentinel, more } = usePagedBooks(books, layout, from);
 
   if (!books.length) return null;
 
+  const keyOf = (b) => b.id;
+
   if (layout === 'thumbs') {
     return (
-      <>
-        <div className="book-grid thumbs">
-          {shown.map((b) => <BookTile key={b.id} book={b} from={from} size="xs" />)}
-        </div>
-        {more ? <Sentinel innerRef={sentinel} /> : null}
-      </>
+      <VirtualGrid
+        items={books}
+        keyOf={keyOf}
+        className="thumbs"
+        minColumnWidth={112}
+        gapX={14}
+        gapY={18}
+        paddingX={16}
+        estimateRowHeight={220}
+        itemSelector=".book-tile"
+        renderItem={(b) => <BookTile key={b.id} book={b} from={from} size="xs" />}
+      />
     );
   }
 
   if (layout === 'grid') {
     return (
-      <>
-        <div className="book-grid tiles">
-          {shown.map((b) => <BookTile key={b.id} book={b} from={from} size="md" />)}
-        </div>
-        {more ? <Sentinel innerRef={sentinel} /> : null}
-      </>
+      <VirtualGrid
+        items={books}
+        keyOf={keyOf}
+        className="tiles"
+        minColumnWidth={232}
+        gapX={22}
+        gapY={24}
+        paddingX={18}
+        estimateRowHeight={380}
+        itemSelector=".book-tile"
+        renderItem={(b) => <BookTile key={b.id} book={b} from={from} size="md" />}
+      />
     );
   }
 
   if (layout === 'brief') {
     return (
-      <>
-        <div className="book-list brief">
-          {shown.map((b) => <BookBrief key={b.id} book={b} from={from} />)}
-        </div>
-        {more ? <Sentinel innerRef={sentinel} /> : null}
-      </>
+      <VirtualGrid
+        items={books}
+        keyOf={keyOf}
+        className="brief"
+        singleColumn
+        estimateRowHeight={56}
+        itemSelector=".brief-row"
+        renderItem={(b) => <BookBrief key={b.id} book={b} from={from} />}
+      />
     );
   }
 
   return (
-    <>
-      <div className="book-list">
-        {shown.map((b) => <BookCard key={b.id} book={b} from={from} />)}
-      </div>
-      {more ? <Sentinel innerRef={sentinel} /> : null}
-    </>
+    <VirtualGrid
+      items={books}
+      keyOf={keyOf}
+      className="rows"
+      minColumnWidth={300}
+      gapX={8}
+      gapY={8}
+      paddingX={8}
+      estimateRowHeight={142}
+      itemSelector=".book-row"
+      renderItem={(b) => <BookCard key={b.id} book={b} from={from} />}
+    />
   );
 }
-
-/* Same rule as the rows: a brief line only changes with its book. */
-const BookBrief = memo(BookBriefBase, (a, b) => a.book === b.book && a.from === b.from);

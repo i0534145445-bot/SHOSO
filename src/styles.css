@@ -1856,8 +1856,25 @@ kbd {
 .brief-row { contain-intrinsic-size: auto 56px; }
 .book-tile { contain-intrinsic-size: auto 240px; }
 
-/* The next page of the library loads silently when this marker is reached. */
-.list-sentinel { height: 1px; }
+/* ==========================================================================
+   Windowed library (VirtualGrid)
+   The scrollbar keeps the full height; only the tiles on screen exist.
+   ========================================================================== */
+
+.vgrid { padding: 8px; }
+.vgrid.tiles { padding: 20px 18px; }
+.vgrid.thumbs { padding: 18px 16px; }
+.vgrid.brief { padding: 0; }
+
+.vgrid-window {
+  display: grid;
+  gap: 8px;
+  align-items: start;
+}
+.vgrid.rows > .vgrid-window { gap: 8px; }
+.vgrid.tiles > .vgrid-window { gap: 24px 22px; }
+.vgrid.thumbs > .vgrid-window { gap: 18px 14px; }
+.vgrid-window.single { display: flex; flex-direction: column; gap: 0; }
 
 /* ==========================================================================
    Responsive

@@ -13,6 +13,14 @@ createRoot(document.getElementById('root')).render(
   </React.StrictMode>,
 );
 
+// A real, measurable benchmark needs to hand the app a big library. The hook
+// only exists when the page is opened with ?bench=1.
+if (new URLSearchParams(window.location.search).has('bench')) {
+  import('./lib/store.js').then((store) => {
+    window.shosoDebug = { setState: store.setState, getState: store.getState, setView: store.setView };
+  });
+}
+
 bootstrap().catch((err) => {
   // eslint-disable-next-line no-console
   console.error('SHOSO Books bootstrap failed', err);
