@@ -223,6 +223,23 @@ try {
     await page.waitForTimeout(300);
   });
 
+  /** A real mouse drag over a paragraph – exactly how a reader selects text. */
+  const dragSelect = async (index = 0) => {
+    const p = page.locator('.book-chapter p').nth(index);
+    await p.scrollIntoViewIfNeeded();
+    const box = await p.boundingBox();
+    if (!box) throw new Error('paragraph has no box');
+    const y = box.y + Math.min(18, box.height / 2);
+    // Hebrew runs right-to-left: start on the right edge and pull left
+    await page.mouse.move(box.x + box.width - 6, y);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.32, y, { steps: 14 });
+    await page.mouse.up();
+    const text = await page.evaluate(() => window.getSelection().toString().trim());
+    trace(`selected ${text.length} chars`);
+    return text;
+  };
+
   await step('highlights', async () => {
     await ensureNoSelection();
     await clickTitle('תפריט');
@@ -230,67 +247,23 @@ try {
     await page.waitForSelector('.book-row', { timeout: 10000 });
     await page.locator('.book-row h3').filter({ hasText: 'הספר הישן' }).first().click();
     await page.waitForSelector('.book-detail', { timeout: 10000 });
-    // real mouse selection inside the book, then a real colour tap
     await page.locator('.bd-read').click();
     await page.waitForSelector('.book-scroll', { timeout: 45000 });
-    await page.waitForTimeout(600);
-    const diag = await page.evaluate(() => ({
-      chapters: document.querySelectorAll('.book-chapter').length,
-      ps: document.querySelectorAll('.book-chapter p').length,
-      anyP: document.querySelectorAll('p').length,
-      secHtml: (document.querySelector('.book-chapter')?.innerHTML || '').slice(0, 120),
-      view: document.querySelector('.reader') ? 'reader' : 'other',
-    }));
-    trace(`diag ${JSON.stringify(diag)}`);
-    const picked = await page.evaluate(() => {
-      // the first child of a paragraph is often a whitespace text node
-      const good = (node) => node && node.nodeType === 3 && node.textContent.trim().length >= 30;
-      let node = null;
-      for (const p of document.querySelectorAll('.book-chapter p')) {
-        const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
-        let n = walker.nextNode();
-        while (n && !good(n)) n = walker.nextNode();
-        if (good(n)) { node = n; break; }
-      }
-      if (!node) return '';
-      const start = node.textContent.search(/\S/);
-      const range = document.createRange();
-      range.setStart(node, Math.max(0, start));
-      range.setEnd(node, Math.min(node.textContent.length, Math.max(0, start) + 42));
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      return sel.toString();
-    });
-    trace(`selected ${picked.length} chars`);
-    await page.locator('.book-scroll').dispatchEvent('mouseup');
+    await page.waitForTimeout(800);
+
+    await dragSelect(0);
     await page.waitForSelector('.sel-bar', { timeout: 6000 });
     await shot('14-selection-bar');
+
     await page.locator('.sel-dot.dot-yellow').click();
     await page.waitForSelector('mark.shoso-hl', { timeout: 6000 });
-    // second highlight in another colour
-    await page.evaluate(() => {
-      // pick a paragraph a little further down so the two marks are distinct
-      const paragraphs = [...document.querySelectorAll('.book-chapter p')].slice(6);
-      for (const p of paragraphs) {
-        const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
-        let n = walker.nextNode();
-        while (n && n.textContent.trim().length < 30) n = walker.nextNode();
-        if (!n) continue;
-        const start = n.textContent.search(/\S/);
-        const range = document.createRange();
-        range.setStart(n, Math.max(0, start));
-        range.setEnd(n, Math.min(n.textContent.length, Math.max(0, start) + 34));
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-        return;
-      }
-    });
-    await page.locator('.book-scroll').dispatchEvent('mouseup');
+    await page.waitForTimeout(300);
+
+    await dragSelect(5);
     await page.waitForSelector('.sel-bar', { timeout: 6000 });
     await page.locator('.sel-dot.dot-blue').click();
     await page.waitForTimeout(400);
+
     await showUi();
     await clickTitle('הדגשות');
     await page.waitForSelector('.highlights-list', { timeout: 6000 });
