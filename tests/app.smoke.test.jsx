@@ -92,6 +92,14 @@ describe('SHOSO Books app', () => {
     act(() => setState({ selection: [] }));
   });
 
+  it('repaints the list when a rescan only replaces the books', () => {
+    setState({ books: [makeBook(6)], view: 'books', query: '', progress: {} });
+    const { container } = render(<App />);
+    expect(container.textContent).toContain('ספר 6');
+    act(() => setState({ books: [makeBook(6), makeBook(7)] }));
+    expect(container.textContent).toContain('ספר 7');
+  });
+
   it('shows settings with demo loader', () => {
     setState({ books: [], view: 'settings' });
     render(<App />);

@@ -57,52 +57,55 @@ for (const size of [500, 5000, 10000]) {
 
     const rows = document.querySelectorAll('.book-row').length;
     const nodes = document.querySelectorAll('.view-scroll *').length;
-    const totalHeight = scroller ? scroller.scrollHeight : 0;
+    const spacers = [...document.querySelectorAll('.vgrid > div[aria-hidden="true"]')]
+      .map((el) => Math.round(el.getBoundingClientRect().height));
+    const totalHeight = scroller ? Math.round(scroller.scrollHeight) : 0;
 
-    // a scroll to the middle: does the window follow without a long frame?
     scroller.scrollTop = scroller.scrollHeight / 2;
     const scrollStart = performance.now();
     await raf();
     const scrollCost = performance.now() - scrollStart;
 
-    // and a keystroke in the search box (filtering + sorting everything)
-    const input = document.querySelector('#global-search') || document.querySelector('.topbar-search input');
-    let searchCost = 0;
-    if (input) {
-      input.focus();
-      const t = performance.now();
-      window.shosoDebug.setState({ query: 'בדיקה 001' });
-      await raf();
-      searchCost = performance.now() - t;
-      window.shosoDebug.setState({ query: '' });
-      await raf();
-    }
+    // typing in the search box: filtering + sorting the whole library
+    const searchStart = performance.now();
+    window.shosoDebug.setState({ query: 'בדיקה 00' });
+    await raf();
+    const searchCost = performance.now() - searchStart;
+    const hits = document.querySelectorAll('.book-row').length;
+    window.shosoDebug.setState({ query: '' });
+    await raf();
 
     return {
       painted: Math.round(painted),
       rows,
       nodes,
-      totalHeight: Math.round(totalHeight),
+      spacers,
+      hits,
+      totalHeight,
       scrollCost: Math.round(scrollCost),
       searchCost: Math.round(searchCost),
     };
   }, size);
 
+  line(`${String(size).padStart(6)} books · first paint ${result.painted} ms · `
+    + `rows in DOM ${result.rows} (all nodes ${result.nodes}) · `
+    + `spacers ${result.spacers.join(' / ')}px · scrollbar ${result.totalHeight}px · `
+    + `scroll ${result.scrollCost} ms · search ${result.searchCost} ms (${result.hits} rows drawn)`);
+
   if (size === 10000) {
-    await page.waitForTimeout(400);
+    await page.evaluate(() => {
+      const scroller = document.querySelector('.view-scroll');
+      if (scroller) scroller.scrollTop = 0;
+    });
+    await page.waitForTimeout(500);
     await page.screenshot({ path: 'screenshots/19-library-10k-top.png' });
     await page.evaluate(() => {
       const scroller = document.querySelector('.view-scroll');
       if (scroller) scroller.scrollTop = scroller.scrollHeight * 0.62;
     });
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(500);
     await page.screenshot({ path: 'screenshots/20-library-10k-mid.png' });
   }
-
-  line(`${String(size).padStart(6)} books · first paint ${result.painted} ms · `
-    + `row nodes ${result.rows} · all nodes ${result.nodes} · `
-    + `list height ${result.totalHeight}px · scroll ${result.scrollCost} ms · `
-    + `search ${result.searchCost} ms`);
 }
 
 await browser.close();

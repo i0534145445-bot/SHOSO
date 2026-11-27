@@ -9,6 +9,12 @@ export default function LibraryView() {
   // Filtering a 2 000-book library on every keystroke must never lag the input,
   // so the list follows a deferred copy of the query.
   const deferredQuery = useDeferredValue(query);
+  // `useStore` only re-renders when the slice it selects changes, so the list
+  // must subscribe to the library itself: a rescan (or an add/remove) that only
+  // replaces `books` used to leave the previous list on screen.
+  useStore((s) => s.books);
+  useStore((s) => s.favorites);
+  useStore((s) => s.progress);
   const books = filteredBooks(deferredQuery);
 
   if (!books.length) {
