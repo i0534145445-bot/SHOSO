@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   useStore, bookById, openBook, toggleFavorite, toggleToRead, toggleHaveRead,
-  removeBook, setView, goBack, setState,
+  removeBook, setView, goBack, setState, withGenres, addBookGenres, removeBookGenre,
 } from '../lib/store.js';
 import { formatSize, formatDate, formatRelative } from '../lib/format.js';
 import {
@@ -40,6 +40,8 @@ export default function BookDetail() {
   const stats = useStore((s) => s.readingStats[bookId] || 0);
   const [info, setInfo] = useState(() => cachedDescription(bookId) || null);
   const [shelfOpen, setShelfOpen] = useState(false);
+  const customGenres = useStore((s) => s.customGenres);
+  const [genreDraft, setGenreDraft] = useState('');
 
   useEffect(() => {
     let alive = true;
@@ -65,6 +67,8 @@ export default function BookDetail() {
   const started = percent > 0 && !isRead;
   const minutes = readingMinutes(book.wordCount);
   const open = () => openBook(book.id);
+  const genres = withGenres(book, customGenres)?.genres || [];
+  const genresFromFile = Array.isArray(book.genres) ? book.genres.length : 0;
 
   const addToShelf = (collectionId) => {
     setState({
@@ -155,6 +159,44 @@ export default function BookDetail() {
               העבר לאשפה
             </button>
           </div>
+
+          <section className="bd-section bd-genres">
+            <h2 className="bd-section-title">ז׳אנר וסגנון</h2>
+            {genres.length ? (
+              <div className="genre-chips">
+                {genres.map((g) => (
+                  <span key={g} className="genre-chip">
+                    <button className="genre-chip-name" onClick={() => setView('genre', g)} title={`כל הספרים בז׳אנר ${g}`}>
+                      {g}
+                    </button>
+                    {genresFromFile && book.genres.includes(g) ? null : (
+                      <button className="genre-chip-x" onClick={() => removeBookGenre(book.id, g)} title="הסר את הז׳אנר">×</button>
+                    )}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="bd-desc empty">לקובץ הזה אין ז׳אנר במטא-דאטה. אפשר להוסיף אחד כאן – הוא נשמר בספרייה.</p>
+            )}
+            <div className="create-row bd-genre-add">
+              <input
+                placeholder="הוסף ז׳אנר, למשל: מתח בלשים…"
+                value={genreDraft}
+                onChange={(e) => setGenreDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter') return;
+                  if (addBookGenres(book.id, genreDraft).length) setGenreDraft('');
+                }}
+              />
+              <button
+                className="btn primary"
+                disabled={!genreDraft.trim()}
+                onClick={() => { if (addBookGenres(book.id, genreDraft).length) setGenreDraft(''); }}
+              >
+                <IconPlus size={16} /> הוסף
+              </button>
+            </div>
+          </section>
 
           <section className="bd-section">
             <h2 className="bd-section-title">תיאור</h2>

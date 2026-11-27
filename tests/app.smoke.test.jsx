@@ -72,7 +72,8 @@ describe('SHOSO Books app', () => {
     expect(container.querySelector('.book-detail')).toBeTruthy();
     const read = container.querySelector('.bd-read');
     expect(read.textContent).toContain('קרא את הספר');
-    expect(container.querySelector('.bd-section-title').textContent).toBe('תיאור');
+    expect([...container.querySelectorAll('.bd-section-title')].map((el) => el.textContent))
+      .toContain('תיאור');
     // and only the explicit action opens the book
     fireEvent.click(read);
     expect(getState().view).toBe('reader');

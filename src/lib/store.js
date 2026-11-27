@@ -23,6 +23,7 @@ import {
   onOpenFiles,
 } from './platform.js';
 import { bookHaystack, matchesQuery, collate, normalize } from './format.js';
+import { bookGenres, genresList, booksOfGenre, parseGenreInput } from './genres.js';
 import { onCoverExtracted } from './covers.js';
 
 export const READER_THEMES = ['light', 'sepia', 'dark', 'night', 'console'];
@@ -82,6 +83,8 @@ const DEFAULT_STATE = {
   selection: [], // library selection mode, like ReadEra
   // How the library keeps itself in step with the disk – all of it controllable.
   scan: { onStart: true, watch: true, pruneMissing: true, folderRemoval: 'trash' },
+  // Genres the reader added by hand – they survive rescans, which rewrite books.
+  customGenres: {},
   query: '',
   sort: { key: 'title', dir: 'asc' },
   layout: 'full', // ReadEra views: full | brief | thumbs | grid
@@ -105,7 +108,7 @@ export function subscribe(fn) {
 const PERSISTED = new Set([
   'folders', 'collections', 'favorites', 'toRead', 'trash', 'recent',
   'progress', 'bookmarks', 'highlights', 'readingStats', 'view', 'theme', 'accent',
-  'sidebarCollapsed', 'sort', 'layout', 'reader', 'currentBookId', 'scan',
+  'sidebarCollapsed', 'sort', 'layout', 'reader', 'currentBookId', 'scan', 'customGenres',
 ]);
 
 function notify() {
@@ -169,7 +172,7 @@ export function useStore(selector = (s) => s) {
 const PERSIST_KEYS = [
   'folders', 'collections', 'favorites', 'toRead', 'trash', 'recent',
   'progress', 'bookmarks', 'highlights', 'readingStats', 'view', 'theme', 'accent',
-  'sidebarCollapsed', 'sort', 'layout', 'reader', 'currentBookId', 'scan',
+  'sidebarCollapsed', 'sort', 'layout', 'reader', 'currentBookId', 'scan', 'customGenres',
 ];
 
 
@@ -229,6 +232,7 @@ export async function bootstrap() {
     return Math.min(max, Math.max(min, n));
   };
   patch.reader = { ...DEFAULT_READER, ...(patch.reader || {}) };
+  if (typeof patch.customGenres !== 'object' || patch.customGenres === null) patch.customGenres = {};
   patch.reader.fontSize = num(patch.reader.fontSize, 18, 12, 32);
   patch.reader.lineHeight = num(patch.reader.lineHeight, 1.7, 1.2, 2.4);
   patch.reader.fontWeight = num(patch.reader.fontWeight, 400, 300, 700);
@@ -364,7 +368,7 @@ export const bookById = (id) => (id ? indexOf().get(id) || null : null);
  * remember where they were opened from so the back arrow – and closing the
  * reader – land where the reader expects.
  */
-const DETAIL_VIEWS = new Set(['book', 'author', 'format', 'collection']);
+const DETAIL_VIEWS = new Set(['book', 'author', 'format', 'collection', 'genre']);
 
 export function setView(view, detailBookId = null) {
   const patch = { view, detailBookId, selection: [] };
@@ -1000,6 +1004,73 @@ export function authorsList() {
   return [...map.entries()]
     .map(([author, books]) => ({ author, books, count: books.length }))
     .sort((a, b) => collate(a.author, b.author));
+}
+
+/* ------------------------------------------------------------------ */
+/* Genres / styles                                                     */
+/* ------------------------------------------------------------------ */
+
+/** A book with its metadata genres plus the ones added by hand. */
+export function withGenres(book, custom = state.customGenres) {
+  if (!book) return null;
+  const manual = custom[book.id] || [];
+  if (!manual.length) return book;
+  return { ...book, genres: bookGenres({ genres: [...(book.genres || []), ...manual] }) };
+}
+
+/** Genre shelves of the whole library. */
+export function genresOfLibrary(books = state.books) {
+  return genresList(books.map((b) => withGenres(b)));
+}
+
+/** Books of one genre, with the manual genres taken into account. */
+export function booksInGenre(genre, books = state.books) {
+  return booksOfGenre(books.map((b) => withGenres(b)), genre);
+}
+
+/** Add genres to a book by hand (they are kept separately from the file). */
+export function addBookGenres(bookId, input) {
+  const book = state.books.find((b) => b.id === bookId);
+  if (!book) return [];
+  const added = parseGenreInput(input);
+  if (!added.length) return [];
+  const fromFile = bookGenres(book);
+  const manual = bookGenres({ genres: [...(state.customGenres[bookId] || []), ...added] })
+    .filter((g) => !fromFile.includes(g));
+  setState({ customGenres: { ...state.customGenres, [bookId]: manual } });
+  toast(`הז'אנר נוסף: ${added.join(', ')}`, 'success');
+  return added;
+}
+
+export function removeBookGenre(bookId, genre) {
+  const manual = (state.customGenres[bookId] || []).filter((g) => g !== genre);
+  setState({ customGenres: { ...state.customGenres, [bookId]: manual } });
+}
+
+/** One shelf per genre, idempotent: existing shelves are only topped up. */
+export function collectionsFromGenres() {
+  const shelves = genresOfLibrary();
+  if (!shelves.length) return 0;
+  const next = [...state.collections];
+  let created = 0;
+  for (const { genre, books } of shelves) {
+    const ids = books.map((b) => b.id);
+    const existing = next.find((c) => c.name.trim() === genre);
+    if (existing) {
+      existing.bookIds = [...new Set([...existing.bookIds, ...ids])];
+      continue;
+    }
+    next.push({
+      id: `col-${genre.length}-${Math.random().toString(36).slice(2, 8)}`,
+      name: genre,
+      bookIds: ids,
+      createdAt: Date.now(),
+    });
+    created += 1;
+  }
+  setState({ collections: next });
+  toast(created ? `נוצרו ${created} מדפים לפי ז'אנר` : 'המדפים כבר מעודכנים לפי הז\'אנרים', created ? 'success' : 'info');
+  return created;
 }
 
 export function formatsList() {

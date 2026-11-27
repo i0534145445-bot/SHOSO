@@ -187,6 +187,18 @@ try {
     await shot('09-authors');
   });
 
+  await step('genres', async () => {
+    await clickTitle('תפריט');
+    await clickDrawerItem('ז׳אנרים וסגנונות');
+    await page.waitForSelector('.authors-grid .author-card', { timeout: 10000 });
+    await shot('17-genres');
+    await page.locator('.authors-grid .author-card').first().click();
+    await page.waitForSelector('.detail-head', { timeout: 8000 });
+    await shot('18-genre-books');
+    await clickTitle('חזרה');
+    await page.waitForSelector('.authors-grid', { timeout: 8000 });
+  });
+
   await step('settings', async () => {
     await clickTitle('תפריט');
     await clickDrawerItem('הגדרות');

@@ -1,4 +1,4 @@
-import React, { memo, useRef } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../lib/store.js';
 import BookCard, { BookTile } from './BookCard.jsx';
 import Cover from './Cover.jsx';
@@ -78,39 +78,108 @@ function BookBriefBase({ book, from }) {
  * Renders a set of books using whichever library view is selected – shared by
  * Books & documents, Favorites, To read, Have read, Authors, Formats, Shelves…
  */
+/**
+ * A library can hold ten thousand books. Rendering them all at once froze the
+ * window for seconds and melted memory, so the list paints a first page and
+ * keeps loading more as the reader scrolls – the rest is still there, one
+ * scroll away, and the counter says exactly what is shown.
+ */
+const PAGE_SIZE = 120;
+const PAGE_STEP = 240;
+
+function usePagedBooks(books, layout, from) {
+  const [count, setCount] = useState(PAGE_SIZE);
+  const sentinel = useRef(null);
+  // Views hand us a fresh array on every render; only a different list (filter,
+  // section, view mode, size) may reset the page, or the effect would loop.
+  const signature = `${from}|${layout}|${books.length}`;
+  const lastSignature = useRef(signature);
+
+  useEffect(() => {
+    if (lastSignature.current === signature) return;
+    lastSignature.current = signature;
+    setCount(PAGE_SIZE);
+  }, [signature]);
+
+  const shown = useMemo(
+    () => (books.length > count ? books.slice(0, count) : books),
+    [books, count],
+  );
+
+  useEffect(() => {
+    const node = sentinel.current;
+    if (!node || shown.length >= books.length) return undefined;
+    if (typeof IntersectionObserver === 'undefined') return undefined;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        setCount((prev) => Math.min(books.length, prev + PAGE_STEP));
+      }
+    }, { rootMargin: '600px' });
+    io.observe(node);
+    return () => io.disconnect();
+  }, [shown.length, books.length]);
+
+  const grow = () => setCount((prev) => Math.min(books.length, prev + PAGE_STEP));
+  return { shown, sentinel, grow, more: books.length - shown.length };
+}
+
+/** "מציג 120 מתוך 10,000" plus a real button for the rest. */
+function MoreRow({ shown, total, onMore, innerRef }) {
+  if (shown >= total) return null;
+  return (
+    <div className="list-more" ref={innerRef}>
+      <span className="list-more-count">מציגים {shown.toLocaleString('he-IL')} מתוך {total.toLocaleString('he-IL')} ספרים</span>
+      <button className="btn ghost small" onClick={onMore}>טען עוד</button>
+    </div>
+  );
+}
+
 export default function BookList({ books, from = 'books' }) {
   const layout = useStore((s) => s.layout);
+  const { shown, sentinel, grow, more } = usePagedBooks(books, layout, from);
 
   if (!books.length) return null;
 
   if (layout === 'thumbs') {
     return (
-      <div className="book-grid thumbs">
-        {books.map((b) => <BookTile key={b.id} book={b} from={from} size="xs" />)}
-      </div>
+      <>
+        <div className="book-grid thumbs">
+          {shown.map((b) => <BookTile key={b.id} book={b} from={from} size="xs" />)}
+        </div>
+        <MoreRow shown={shown.length} total={books.length} onMore={grow} innerRef={sentinel} />
+      </>
     );
   }
 
   if (layout === 'grid') {
     return (
-      <div className="book-grid tiles">
-        {books.map((b) => <BookTile key={b.id} book={b} from={from} size="md" />)}
-      </div>
+      <>
+        <div className="book-grid tiles">
+          {shown.map((b) => <BookTile key={b.id} book={b} from={from} size="md" />)}
+        </div>
+        <MoreRow shown={shown.length} total={books.length} onMore={grow} innerRef={sentinel} />
+      </>
     );
   }
 
   if (layout === 'brief') {
     return (
-      <div className="book-list brief">
-        {books.map((b) => <BookBrief key={b.id} book={b} from={from} />)}
-      </div>
+      <>
+        <div className="book-list brief">
+          {shown.map((b) => <BookBrief key={b.id} book={b} from={from} />)}
+        </div>
+        <MoreRow shown={shown.length} total={books.length} onMore={grow} innerRef={sentinel} />
+      </>
     );
   }
 
   return (
-    <div className="book-list">
-      {books.map((b) => <BookCard key={b.id} book={b} from={from} />)}
-    </div>
+    <>
+      <div className="book-list">
+        {shown.map((b) => <BookCard key={b.id} book={b} from={from} />)}
+      </div>
+      <MoreRow shown={shown.length} total={books.length} onMore={grow} innerRef={sentinel} />
+    </>
   );
 }
 

@@ -149,6 +149,7 @@ const EXTRA_TEXTS = [
     title: 'מכתבים מן העמק',
     author: 'לאה שדה',
     format: 'TXT',
+    genres: ['מכתבים', 'פרוזה'],
     body: `מכתבים מן העמק
 
 אגרת ראשונה
@@ -165,6 +166,7 @@ const EXTRA_TEXTS = [
     title: 'The Quiet Hours',
     author: 'Margaret Ellery',
     format: 'TXT',
+    genres: ['Literary Fiction', 'Mystery'],
     body: `The Quiet Hours
 
 Chapter One
@@ -181,6 +183,7 @@ By evening the boards were down. By Friday there were curtains. By the end of th
     title: 'מדריך הגן הקטן',
     author: 'עמוס גבע',
     format: 'MD',
+    genres: ['עיון', 'טבע וגינון'],
     body: `# מדריך הגן הקטן
 
 ## אדמה
@@ -200,6 +203,7 @@ By evening the boards were down. By Friday there were curtains. By the end of th
     title: 'זיכרונות של ספרייה',
     author: 'רחל בן-עמי',
     format: 'HTML',
+    genres: ['ביוגרפיה', 'עיון'],
     body: `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>זיכרונות של ספרייה</title></head><body>
 <h1>זיכרונות של ספרייה</h1>
 <p>שלושים שנה עמדתי בין המדפים. ראיתי ילדים מגיעים בגיל שש ויוצאים בגיל שמונה-עשרה, וכמה מהם חזרו עם ילדים משלהם.</p>
@@ -212,6 +216,7 @@ By evening the boards were down. By Friday there were curtains. By the end of th
     title: 'על הכתיבה',
     author: 'יוסף אריאל',
     format: 'TXT',
+    genres: ['עיון', 'פרוזה'],
     body: `על הכתיבה
 
 פרק ראשון – הפסקה הראשונה
@@ -243,7 +248,7 @@ export async function createDemoBooks() {
   const txtBuffer = enc(TXT_CONTENT);
   const fb2Buffer = enc(FB2_CONTENT);
 
-  const mk = (name, title, author, ext, buffer, format) => {
+  const mk = (name, title, author, ext, buffer, format, genres = []) => {
     const id = hashString(`demo:${name}`);
     const file = new File([buffer], name, { type: 'application/octet-stream' });
     registerFileHandle(id, file);
@@ -254,6 +259,7 @@ export async function createDemoBooks() {
       fileName: name,
       title,
       author,
+      genres,
       language: format === 'EPUB' || format === 'FB2' ? 'he' : 'en',
       format,
       ext,
@@ -269,12 +275,12 @@ export async function createDemoBooks() {
   };
 
   const extras = EXTRA_TEXTS.map((b) =>
-    mk(b.name, b.title, b.author, `.${b.format.toLowerCase()}`, enc(b.body), b.format));
+    mk(b.name, b.title, b.author, `.${b.format.toLowerCase()}`, enc(b.body), b.format, b.genres || []));
 
   return [
-    mk('הספר הישן.epub', 'הספר הישן', 'מרים לוי', '.epub', epubBuffer, 'EPUB'),
-    mk('The Library at the End of the World.txt', 'The Library at the End of the World', 'Elias Hart', '.txt', txtBuffer, 'TXT'),
-    mk('הבית על הגבעה.fb2', 'הבית על הגבעה', 'דוד כהן', '.fb2', fb2Buffer, 'FB2'),
+    mk('הספר הישן.epub', 'הספר הישן', 'מרים לוי', '.epub', epubBuffer, 'EPUB', ['פרוזה', 'מסתורין']),
+    mk('The Library at the End of the World.txt', 'The Library at the End of the World', 'Elias Hart', '.txt', txtBuffer, 'TXT', ['Science Fiction']),
+    mk('הבית על הגבעה.fb2', 'הבית על הגבעה', 'דוד כהן', '.fb2', fb2Buffer, 'FB2', ['prose_classic']),
     ...extras,
   ];
 }

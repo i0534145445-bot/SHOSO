@@ -25,6 +25,7 @@ const SECTIONS = [
   { id: 'trash', label: 'אשפה', icon: IconTrash },
   { sep: true },
   { id: 'authors', label: 'מחברים', icon: IconAuthor },
+  { id: 'genres', label: 'ז׳אנרים וסגנונות', icon: IconFormat },
   { id: 'collections', label: 'מדפים', icon: IconCollection },
   { id: 'formats', label: 'פורמטים', icon: IconFormat },
   { id: 'folders', label: 'הוספת תיקייה', icon: IconFolder },

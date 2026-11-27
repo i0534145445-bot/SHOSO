@@ -272,6 +272,13 @@ async function readEpubMeta(filePath) {
     meta.title = xmlText(opfXml, 'dc:title') || xmlText(opfXml, 'title');
     meta.author = xmlText(opfXml, 'dc:creator') || xmlText(opfXml, 'creator');
     meta.language = xmlText(opfXml, 'dc:language') || xmlText(opfXml, 'language');
+    // Genre / style comes from the book's own subjects (EPUB3 "dc:subject").
+    const subjects = [];
+    for (const m of opfXml.matchAll(/<dc:subject\b[^>]*>([\s\S]*?)<\/dc:subject>/gi)) {
+      const value = m[1].replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+      if (value && !subjects.includes(value)) subjects.push(value);
+    }
+    meta.genres = subjects.slice(0, 8);
     // Cover, in the order EPUB itself defines it:
     //   1. EPUB3 – manifest item with properties="cover-image"
     //   2. EPUB2 – <meta name="cover" content="ITEM-ID"/> (very common, and the
@@ -333,6 +340,12 @@ async function readFb2Meta(filePath) {
     meta.author = [first, last].filter(Boolean).join(' ').trim();
     meta.language = xmlText(head, 'lang');
     meta.chapters = (text.match(/<section[\s>]/gi) || []).length;
+    const genres = [];
+    for (const m of head.matchAll(/<genre\b[^>]*>([^<]+)<\/genre>/gi)) {
+      const value = m[1].trim();
+      if (value && !genres.includes(value)) genres.push(value);
+    }
+    meta.genres = genres.slice(0, 8);
     // cover: <coverpage><image xlink:href="#id"/></coverpage> + <binary id=".." content-type="..">base64</binary>
     const coverMatch = /<coverpage[\s\S]*?<image[^>]*xlink:href="#([^"]+)"/i.exec(head) || /<coverpage[\s\S]*?<image[^>]*href="#([^"]+)"/i.exec(head);
     if (coverMatch) {
@@ -363,6 +376,8 @@ async function readPdfMeta(filePath) {
     };
     meta.title = get('Title');
     meta.author = get('Author');
+    const keywords = get('Keywords');
+    if (keywords) meta.genres = keywords.split(/[,;]/).map((k) => k.trim()).filter(Boolean).slice(0, 8);
     const count = /\/Count\s+(\d+)/.exec(head);
     if (count) meta.pageCount = parseInt(count[1], 10) || 0;
   } catch {
@@ -425,6 +440,7 @@ async function readBook(filePath, statGiven) {
     fileName: path.basename(filePath),
     title: fallbackTitle,
     author: 'מחבר לא ידוע',
+    genres: [],
     language: '',
     format,
     ext,
@@ -444,6 +460,7 @@ async function readBook(filePath, statGiven) {
     else if (ext === '.pdf') meta = await readPdfMeta(filePath);
     else if (ext === '.txt' || ext === '.md') meta = await readTxtMeta(filePath);
     if (meta) {
+      if (Array.isArray(meta.genres) && meta.genres.length) book.genres = meta.genres.slice(0, 8);
       if (meta.title) book.title = meta.title;
       if (meta.author) book.author = meta.author;
       if (meta.language) book.language = meta.language;

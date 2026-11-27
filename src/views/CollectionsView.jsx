@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { useStore, createCollection, setView } from '../lib/store.js';
+import { useStore, createCollection, setView, collectionsFromGenres, genresOfLibrary } from '../lib/store.js';
 import { IconCollection, IconPlus } from '../lib/icons.jsx';
 
 export default function CollectionsView() {
   const collections = useStore((s) => s.collections);
   const books = useStore((s) => s.books);
   const [name, setName] = useState('');
+  const genreCount = genresOfLibrary(books).length;
 
   const create = () => {
     if (!name.trim()) return;
@@ -24,6 +25,14 @@ export default function CollectionsView() {
         />
         <button className="btn primary" onClick={create} disabled={!name.trim()}>
           <IconPlus size={16} /> צור מדף
+        </button>
+        <button
+          className="btn ghost"
+          onClick={() => collectionsFromGenres()}
+          disabled={!genreCount}
+          title={genreCount ? `מדף לכל ז׳אנר (${genreCount})` : 'אין ז׳אנרים בספרייה עדיין'}
+        >
+          <IconCollection size={16} /> מדפים לפי ז׳אנר ({genreCount})
         </button>
       </div>
 

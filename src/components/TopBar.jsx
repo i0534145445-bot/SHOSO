@@ -26,6 +26,8 @@ const TITLES = {
   author: 'מחבר',
   formats: 'פורמטים',
   format: 'פורמט',
+  genres: 'ז׳אנרים וסגנונות',
+  genre: 'ז׳אנר',
   collections: 'מדפים',
   collection: 'מדף',
   folders: 'תיקיות',
@@ -68,7 +70,7 @@ export default function TopBar() {
   const title = TITLES[view] || 'SHOSO Books';
   // Detail screens (a book, an author, a format, a shelf) open with a back
   // arrow where the drawer button normally sits – the way ReadEra does it.
-  const isDetail = ['book', 'author', 'format', 'collection'].includes(view);
+  const isDetail = ['book', 'author', 'format', 'collection', 'genre'].includes(view);
   const canSearch = ['home', 'books', 'library', 'favorites', 'toread', 'haveread', 'authors', 'formats', 'collections', 'trash'].includes(view);
   const selecting = selection.length > 0;
   const selectedTitles = selection.map((id) => bookById(id)?.title).filter(Boolean);

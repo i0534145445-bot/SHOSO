@@ -12,6 +12,8 @@ import AuthorsView from '../views/AuthorsView.jsx';
 import AuthorDetail from '../views/AuthorDetail.jsx';
 import FormatsView from '../views/FormatsView.jsx';
 import FormatDetail from '../views/FormatDetail.jsx';
+import GenresView from '../views/GenresView.jsx';
+import GenreDetail from '../views/GenreDetail.jsx';
 import FavoritesView from '../views/FavoritesView.jsx';
 import HistoryView from '../views/HistoryView.jsx';
 import CollectionsView from '../views/CollectionsView.jsx';
@@ -37,6 +39,8 @@ const VIEWS = {
   author: AuthorDetail,
   formats: FormatsView,
   format: FormatDetail,
+  genres: GenresView,
+  genre: GenreDetail,
   favorites: FavoritesView,
   history: HistoryView,
   collections: CollectionsView,
