@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import {
   useStore, setTheme, updateReader, setState, getState, setSort,
   setLayout, importFolders, toast, COLOR_MODES, FONT_FAMILIES, rescanLibrary,
+  setScanOption,
 } from '../lib/store.js';
 import { createDemoBooks } from '../lib/demo.js';
 import { IconChevron } from '../lib/icons.jsx';
-import { appInfo } from '../lib/platform.js';
+import { appInfo, openDefaultApps } from '../lib/platform.js';
 import { VIEW_MODES } from '../components/BookList.jsx';
 
 /**
@@ -77,6 +78,7 @@ export default function SettingsView() {
   const recentCount = useStore((s) => s.recent.length);
   const folderCount = useStore((s) => s.folders.length);
   const scanStatus = useStore((s) => s.scanStatus);
+  const scan = useStore((s) => s.scan);
   const [loadingDemo, setLoadingDemo] = useState(false);
 
   const loadDemo = async () => {
@@ -178,11 +180,54 @@ export default function SettingsView() {
         <Row label="ספרים בספרייה" desc="כל הספרים שנוספו" value={bookCount} />
         <Row label="אשפה" desc="ספרים שנמחקו – שחזור אפשרי" value={trashCount} onClick={() => setState({ view: 'trash' })} />
         <Row label="היסטוריית קריאה" desc="הספרים שנפתחו לאחרונה" value={`${recentCount} ספרים`} onClick={() => setState({ view: 'history' })} />
+        <Row label="סריקה אוטומטית בהפעלה" desc="הספרייה מתיישרת עם הדיסק בכל פתיחה של האפליקציה">
+          <Switch checked={scan.onStart} onChange={(v) => setScanOption('onStart', v)} />
+        </Row>
+        <Row label="מעקב אחרי התיקיות" desc="קובץ שנוסף או נמחק בתיקייה נסרקת מתעדכן מיד">
+          <Switch checked={scan.watch} onChange={(v) => setScanOption('watch', v)} />
+        </Row>
+        <Row label="הסרת ספרים שנעלמו" desc="ספר שהקובץ שלו נמחק או הועבר יורד מהספרייה">
+          <Switch checked={scan.pruneMissing} onChange={(v) => setScanOption('pruneMissing', v)} />
+        </Row>
+        <Row label="הסרת תיקייה" desc={scan.folderRemoval === 'trash' ? 'הספרים שלה עוברים לאשפה (ברירת מחדל)' : 'הספרים נשארים בספרייה'}>
+          <div className="settings-seg">
+            <button className={scan.folderRemoval === 'trash' ? 'active' : ''} onClick={() => setScanOption('folderRemoval', 'trash')}>
+              לאשפה
+            </button>
+            <button className={scan.folderRemoval === 'keep' ? 'active' : ''} onClick={() => setScanOption('folderRemoval', 'keep')}>
+              להשאיר
+            </button>
+          </div>
+        </Row>
         <Row
           label={scanStatus ? 'סורק את הספרייה…' : 'סרוק את הספרייה עכשיו'}
           desc="קבצים חדשים בתיקיות נכנסים, קבצים שנמחקו יורדים מהרשימה"
           value={`${folderCount} תיקיות`}
           onClick={scanStatus ? undefined : () => rescanLibrary()}
+        />
+      </Section>
+
+      <Section title="פתיחת ספרים מ-Windows">
+        <Row
+          label={appInfo.desktop ? 'פתח את הגדרות ברירת המחדל של Windows' : 'זמין רק באפליקציה המותקנת'}
+          desc={appInfo.desktop
+            ? 'Windows מחייב לבחור את האפליקציה ידנית: Win+I ← אפליקציות ← אפליקציות ברירת מחדל ← בחר לפי סוג קובץ ← epub'
+            : 'בגרסת הדפדפן אין שיוך קבצים'}
+          onClick={appInfo.desktop ? async () => {
+            const ok = await openDefaultApps();
+            if (!ok) toast('לא ניתן לפתוח את הגדרות Windows', 'error');
+          } : undefined}
+        />
+        <Row
+          label="סוגי קבצים שהאפליקציה נרשמת אליהם"
+          desc={appInfo.desktop
+            ? 'בהתקנה נרשמים epub · fb2 · mobi · azw3 · pdf, כדי שיופיעו ברשימת „פתח עם“'
+            : 'בהתקנה נרשמים epub · fb2 · mobi · azw3 · pdf'}
+        />
+        <Row
+          label="פתיחת קובץ בלחיצה כפולה"
+          desc="קובץ שנפתח דרך האפליקציה נכנס לספרייה ונפתח לקריאה"
+          value={appInfo.desktop ? 'פעיל' : '—'}
         />
       </Section>
 

@@ -151,6 +151,10 @@ try {
     await clickTitle('הגדרות קריאה (A)');
     await page.waitForSelector('.reader-settings', { timeout: 6000 });
     await shot('06-reader-settings');
+    // the sheet scrolls – the niqqud / automatic-reading rows are below
+    await page.locator('.reader-settings').evaluate((el) => { el.scrollTop = el.scrollHeight; });
+    await shot('06b-reader-settings-bottom');
+    await page.locator('.reader-settings').evaluate((el) => { el.scrollTop = 0; });
   });
 
   await step('sepia mode', async () => {
@@ -217,6 +221,72 @@ try {
     await shot('13-selection');
     await clickTitle('בטל בחירה (Esc)');
     await page.waitForTimeout(300);
+  });
+
+  await step('highlights', async () => {
+    await ensureNoSelection();
+    await clickTitle('תפריט');
+    await clickDrawerItem('ספרים ומסמכים');
+    await page.waitForSelector('.book-row', { timeout: 10000 });
+    await page.locator('.book-row h3').filter({ hasText: 'הספר הישן' }).first().click();
+    await page.waitForSelector('.book-detail', { timeout: 10000 });
+    // real mouse selection inside the book, then a real colour tap
+    await page.locator('.bd-read').click();
+    await page.waitForSelector('.book-scroll', { timeout: 45000 });
+    await page.waitForTimeout(600);
+    const picked = await page.evaluate(() => {
+      const p = document.querySelector('.book-chapter p');
+      const node = p && p.firstChild;
+      if (!node || !node.textContent || node.textContent.trim().length < 8) return '';
+      const range = document.createRange();
+      range.setStart(node, 0);
+      range.setEnd(node, Math.min(48, node.textContent.length));
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      return sel.toString();
+    });
+    trace(`selected ${picked.length} chars`);
+    await page.locator('.book-scroll').dispatchEvent('mouseup');
+    await page.waitForSelector('.sel-bar', { timeout: 6000 });
+    await shot('14-selection-bar');
+    await page.locator('.sel-dot.dot-yellow').click();
+    await page.waitForSelector('mark.shoso-hl', { timeout: 6000 });
+    // second highlight in another colour
+    await page.evaluate(() => {
+      const p = document.querySelectorAll('.book-chapter p')[1];
+      const node = p && p.firstChild;
+      if (!node) return;
+      const range = document.createRange();
+      range.setStart(node, 0);
+      range.setEnd(node, Math.min(30, node.textContent.length));
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    });
+    await page.locator('.book-scroll').dispatchEvent('mouseup');
+    await page.waitForSelector('.sel-bar', { timeout: 6000 });
+    await page.locator('.sel-dot.dot-blue').click();
+    await page.waitForTimeout(400);
+    await showUi();
+    await clickTitle('הדגשות');
+    await page.waitForSelector('.highlights-list', { timeout: 6000 });
+    await shot('15-highlights');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+  });
+
+  await step('automatic reading', async () => {
+    await showUi();
+    await clickTitle('קריאה אוטומטית (P)');
+    await page.waitForTimeout(1600);
+    await showUi();
+    await shot('16-auto-reading');
+    await clickTitle('קריאה אוטומטית (P)');
+    await page.waitForTimeout(300);
+    await showUi();
+    await clickTitle('חזרה (Esc)');
+    await page.waitForSelector('.book-list', { timeout: 10000 });
   });
 
   await step('book detail', async () => {

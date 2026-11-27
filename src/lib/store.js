@@ -6,7 +6,7 @@
  * %APPDATA%/SHOSO Books, browser: localStorage).
  */
 
-import { useRef, useSyncExternalStore } from 'react';
+import { startTransition, useRef, useSyncExternalStore } from 'react';
 import {
   initPlatform,
   appInfo,
@@ -20,6 +20,7 @@ import {
   pickFiles,
   pathForFile,
   onLibraryChanged,
+  onOpenFiles,
 } from './platform.js';
 import { bookHaystack, matchesQuery, collate, normalize } from './format.js';
 import { onCoverExtracted } from './covers.js';
@@ -53,6 +54,9 @@ export const DEFAULT_READER = {
   hyphenation: true,
   mode: 'scroll', // 'scroll' (אנכי) | 'paginated' (אופקי)
   maxWidth: 900,
+  niqqud: true, // show Hebrew vocalisation
+  autoScroll: false, // automatic reading
+  autoScrollSpeed: 20, // 5 (slow) – 60 (fast)
 };
 
 const DEFAULT_STATE = {
@@ -65,6 +69,7 @@ const DEFAULT_STATE = {
   trash: [],
   progress: {}, // bookId -> { chapter, scroll, page, percent, updatedAt, finished, totalChapters, totalPages }
   bookmarks: {}, // bookId -> [{ id, chapter, scroll, page, label, createdAt }]
+  highlights: {}, // bookId -> [{ id, chapter, quote, color, createdAt }]
   readingStats: {}, // bookId -> seconds
   currentBookId: null,
   view: 'home',
@@ -75,6 +80,8 @@ const DEFAULT_STATE = {
   sidebarCollapsed: false,
   drawerOpen: false,
   selection: [], // library selection mode, like ReadEra
+  // How the library keeps itself in step with the disk – all of it controllable.
+  scan: { onStart: true, watch: true, pruneMissing: true, folderRemoval: 'trash' },
   query: '',
   sort: { key: 'title', dir: 'asc' },
   layout: 'full', // ReadEra views: full | brief | thumbs | grid
@@ -97,8 +104,8 @@ export function subscribe(fn) {
 
 const PERSISTED = new Set([
   'folders', 'collections', 'favorites', 'toRead', 'trash', 'recent',
-  'progress', 'bookmarks', 'readingStats', 'view', 'theme', 'accent',
-  'sidebarCollapsed', 'sort', 'layout', 'reader', 'currentBookId',
+  'progress', 'bookmarks', 'highlights', 'readingStats', 'view', 'theme', 'accent',
+  'sidebarCollapsed', 'sort', 'layout', 'reader', 'currentBookId', 'scan',
 ]);
 
 function notify() {
@@ -161,8 +168,8 @@ export function useStore(selector = (s) => s) {
 
 const PERSIST_KEYS = [
   'folders', 'collections', 'favorites', 'toRead', 'trash', 'recent',
-  'progress', 'bookmarks', 'readingStats', 'view', 'theme', 'accent',
-  'sidebarCollapsed', 'sort', 'layout', 'reader', 'currentBookId',
+  'progress', 'bookmarks', 'highlights', 'readingStats', 'view', 'theme', 'accent',
+  'sidebarCollapsed', 'sort', 'layout', 'reader', 'currentBookId', 'scan',
 ];
 
 
@@ -237,6 +244,7 @@ export async function bootstrap() {
   }
   if (typeof patch.progress !== 'object' || patch.progress === null) patch.progress = {};
   if (typeof patch.bookmarks !== 'object' || patch.bookmarks === null) patch.bookmarks = {};
+  if (typeof patch.highlights !== 'object' || patch.highlights === null) patch.highlights = {};
   if (typeof patch.readingStats !== 'object' || patch.readingStats === null) patch.readingStats = {};
   patch.collections = patch.collections
     .filter((c) => c && typeof c === 'object')
@@ -246,6 +254,11 @@ export async function bootstrap() {
       bookIds: Array.isArray(c.bookIds) ? c.bookIds : [],
       createdAt: c.createdAt || Date.now(),
     }));
+  patch.scan = {
+    onStart: true, watch: true, pruneMissing: true, folderRemoval: 'trash',
+    ...(patch.scan && typeof patch.scan === 'object' ? patch.scan : {}),
+  };
+  if (!['trash', 'keep'].includes(patch.scan.folderRemoval)) patch.scan.folderRemoval = 'trash';
   if (!['dark', 'light'].includes(patch.theme)) patch.theme = 'dark';
   if (patch.layout === 'list') patch.layout = 'full';
   if (patch.layout === 'thumbnails') patch.layout = 'thumbs';
@@ -269,12 +282,16 @@ let following = false;
 function followDisk() {
   if (!isDesktop || following) return;
   following = true;
-  onLibraryChanged?.((folder) => {
-    rescanLibrary({ folders: [folder], silent: true }).catch(() => {});
-  });
+  if (state.scan.watch) {
+    onLibraryChanged?.((folder) => {
+      rescanLibrary({ folders: [folder], silent: true }).catch(() => {});
+    });
+  }
+  // A book double-clicked in Explorer ("Open with SHOSO Books").
+  onOpenFiles?.((paths) => { importPaths(paths).catch(() => {}); });
   // A cover drawn at display time (a PDF's first page) is kept with the book.
   onCoverExtracted((bookId, url) => setBookCover(bookId, url));
-  if (state.folders.length) {
+  if (state.scan.onStart && state.folders.length) {
     // after the first paint, so the window is usable immediately
     setTimeout(() => { rescanLibrary({ silent: true }).catch(() => {}); }, 400);
   }
@@ -354,7 +371,9 @@ export function setView(view, detailBookId = null) {
   if (DETAIL_VIEWS.has(view)) {
     patch.detailReturn = DETAIL_VIEWS.has(state.view) ? state.detailReturn || 'books' : state.view;
   }
-  setState(patch);
+  // Switching screens is a transition: the current screen stays responsive
+  // while the next one renders, so a big library never freezes the click.
+  startTransition(() => setState(patch));
 }
 
 /** Step back out of a detail screen, to wherever it was opened from. */
@@ -382,6 +401,11 @@ export function setLayout(layout) {
 export function setTheme(theme) {
   setState({ theme });
   applyTheme();
+}
+
+/** Scan / removal preferences, saved with the rest of the settings. */
+export function setScanOption(key, value) {
+  setState({ scan: { ...state.scan, [key]: value } });
 }
 
 export function setAccent(accent) {
@@ -545,7 +569,7 @@ const underFolder = (bookPath, folder) => {
  * by one (not from a scanned folder) are never touched, and a folder that did
  * not answer keeps its books.
  */
-export function reconcileBooks({ books, scanned, folders }) {
+export function reconcileBooks({ books, scanned, folders, pruneMissing = true }) {
   const seen = new Set(scanned.map((b) => b.id));
   const existing = new Map(books.map((b) => [b.id, b]));
   const reachable = folders && folders.length ? folders : [];
@@ -562,12 +586,12 @@ export function reconcileBooks({ books, scanned, folders }) {
     }
   }
 
-  const gone = books.filter((b) => (
+  const gone = pruneMissing ? books.filter((b) => (
     b.path
     && !String(b.path).startsWith('blob:')
     && !seen.has(b.id)
     && fromScanned(b)
-  ));
+  )) : [];
   const goneIds = new Set(gone.map((b) => b.id));
   const kept = books.filter((b) => !goneIds.has(b.id) && !fromScanned(b));
 
@@ -591,7 +615,12 @@ export async function rescanLibrary({ folders = null, silent = false } = {}) {
     const { books: scanned, folders: reachable } = await runScan(targets);
     if (!reachable.length) return { added: 0, removed: 0 };
 
-    const result = reconcileBooks({ books: state.books, scanned, folders: reachable });
+    const result = reconcileBooks({
+      books: state.books,
+      scanned,
+      folders: reachable,
+      pruneMissing: state.scan.pruneMissing,
+    });
     const books = result.books;
     added = result.added;
     removed = result.removed;
@@ -634,14 +663,22 @@ export function setBookCover(bookId, coverUrl) {
   scheduleLibrarySave();
 }
 
+/** Add books that arrived as absolute paths (drag & drop, Explorer, argv). */
+export async function importPaths(paths) {
+  const list = (paths || []).filter(Boolean);
+  if (!list.length) return 0;
+  const scanned = (await runScan(list)).books;
+  const added = mergeBooks(scanned);
+  toast(added.length ? `נוספו ${added.length} ספרים לספרייה` : 'לא נמצאו ספרים חדשים', added.length ? 'success' : 'info');
+  return added.length;
+}
+
 export async function importFiles() {
   try {
     const { paths, files } = await pickFiles();
     if (!paths.length && !files.length) return;
     if (paths.length) {
-      const scanned = (await runScan(paths)).books;
-      const added = mergeBooks(scanned);
-      toast(added.length ? `נוספו ${added.length} ספרים לספרייה` : 'לא נמצאו ספרים חדשים', added.length ? 'success' : 'info');
+      await importPaths(paths);
     } else if (files.length) {
       const scanned = await booksFromFiles(files);
       const added = mergeBooks(scanned);
@@ -660,9 +697,7 @@ export async function handleDrop(event) {
   // Desktop: use real paths when available
   const paths = files.map((f) => pathForFile(f)).filter(Boolean);
   if (paths.length) {
-    const scanned = (await runScan(paths)).books;
-    const added = mergeBooks(scanned);
-    toast(added.length ? `נוספו ${added.length} ספרים לספרייה` : 'לא נמצאו ספרים חדשים', added.length ? 'success' : 'info');
+    await importPaths(paths);
     return;
   }
   const scanned = await booksFromFiles(files);
@@ -677,6 +712,8 @@ export function removeBook(bookId) {
   delete progress[bookId];
   const bookmarks = { ...state.bookmarks };
   delete bookmarks[bookId];
+  const highlights = { ...state.highlights };
+  delete highlights[bookId];
   const trash = book
     ? [{ ...book, removedAt: Date.now() }, ...state.trash.filter((b) => b.id !== bookId)].slice(0, 200)
     : state.trash;
@@ -689,6 +726,7 @@ export function removeBook(bookId) {
     collections: state.collections.map((c) => ({ ...c, bookIds: c.bookIds.filter((id) => id !== bookId) })),
     progress,
     bookmarks,
+    highlights,
     currentBookId: state.currentBookId === bookId ? null : state.currentBookId,
   });
   scheduleLibrarySave();
@@ -743,6 +781,11 @@ export function toggleHaveRead(bookId) {
  * files themselves are never touched, and the books land in the trash.
  */
 export function removeFolder(folder) {
+  if (state.scan.folderRemoval === 'keep') {
+    setState({ folders: state.folders.filter((f) => f !== folder) });
+    toast('התיקייה הוסרה מהרשימה · הספרים נשארו בספרייה (הקבצים לא נגעו)', 'info');
+    return;
+  }
   const flat = (p) => String(p || '').replace(/\\/g, '/').replace(/\/+$/, '');
   const foldered = flat(folder);
   const inside = (b) => {
@@ -815,6 +858,38 @@ export function toggleInCollection(collectionId, bookId) {
 /* Reading progress & bookmarks                                        */
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ */
+/* Highlights – a selected sentence the reader wants to keep           */
+/* ------------------------------------------------------------------ */
+
+export function addHighlight(bookId, { chapter = 0, quote = '', color = 'yellow' } = {}) {
+  const text = String(quote || '').replace(/\s+/g, ' ').trim();
+  if (!bookId || text.length < 2) return null;
+  const list = state.highlights[bookId] || [];
+  if (list.some((h) => h.quote === text)) return null;
+  const item = {
+    id: `hl-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    chapter,
+    quote: text,
+    color,
+    createdAt: Date.now(),
+  };
+  setState({ highlights: { ...state.highlights, [bookId]: [...list, item] } });
+  toast('הקטע הודגש', 'success');
+  return item;
+}
+
+export function removeHighlight(bookId, highlightId) {
+  const list = state.highlights[bookId] || [];
+  const next = list.filter((h) => h.id !== highlightId);
+  if (next.length === list.length) return;
+  setState({ highlights: { ...state.highlights, [bookId]: next } });
+}
+
+export function clearHighlights(bookId) {
+  setState({ highlights: { ...state.highlights, [bookId]: [] } });
+}
+
 export function openBook(bookId) {
   const recent = [bookId, ...state.recent.filter((id) => id !== bookId)].slice(0, 50);
   setState({ currentBookId: bookId, recent, view: 'reader' });
@@ -873,8 +948,9 @@ export function removeBookmark(bookId, bookmarkId) {
  */
 let filterCache = null;
 
-export function filteredBooks() {
-  const { books, query, sort, favorites, view } = state;
+export function filteredBooks(queryOverride) {
+  const { books, sort, favorites, view } = state;
+  const query = queryOverride === undefined ? state.query : queryOverride;
   const key = `${query}\u0000${view}\u0000${sort.key}\u0000${sort.dir}`;
   if (
     filterCache

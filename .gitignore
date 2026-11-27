@@ -5,3 +5,7 @@ release/
 .DS_Store
 .vite/
 coverage/
+
+# Reference material kept outside the build
+grid/
+image-search/

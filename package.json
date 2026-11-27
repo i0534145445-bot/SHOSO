@@ -1,7 +1,7 @@
 {
   "name": "shoso-books",
   "productName": "SHOSO Books",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "SHOSO Books - קורא ספרים שולחני לווינדוס (Windows only) - חלופה ל-Readera",
   "author": "SHOSO",
   "license": "MIT",
@@ -94,6 +94,43 @@
       "en-US"
     ],
     "compression": "maximum",
-    "asar": true
+    "asar": true,
+    "fileAssociations": [
+      {
+        "ext": "epub",
+        "name": "EPUB Book",
+        "description": "ספר אלקטרוני (EPUB)",
+        "role": "Viewer",
+        "icon": "icon.ico"
+      },
+      {
+        "ext": "fb2",
+        "name": "FictionBook",
+        "description": "ספר אלקטרוני (FB2)",
+        "role": "Viewer",
+        "icon": "icon.ico"
+      },
+      {
+        "ext": "mobi",
+        "name": "Mobipocket Book",
+        "description": "ספר אלקטרוני (MOBI)",
+        "role": "Viewer",
+        "icon": "icon.ico"
+      },
+      {
+        "ext": "azw3",
+        "name": "Kindle Book",
+        "description": "ספר אלקטרוני (AZW3)",
+        "role": "Viewer",
+        "icon": "icon.ico"
+      },
+      {
+        "ext": "pdf",
+        "name": "PDF Document",
+        "description": "מסמך PDF",
+        "role": "Viewer",
+        "icon": "icon.ico"
+      }
+    ]
   }
 }

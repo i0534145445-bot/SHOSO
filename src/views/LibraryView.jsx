@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useDeferredValue } from 'react';
 import { useStore, filteredBooks, importFolders } from '../lib/store.js';
 import { IconBooksDocs, IconPlus } from '../lib/icons.jsx';
 import BookList from '../components/BookList.jsx';
@@ -6,7 +6,10 @@ import BookList from '../components/BookList.jsx';
 /** Readera's "Books & documents" — a list of rows, or a cover thumbnail grid. */
 export default function LibraryView() {
   const query = useStore((s) => s.query);
-  const books = filteredBooks();
+  // Filtering a 2 000-book library on every keystroke must never lag the input,
+  // so the list follows a deferred copy of the query.
+  const deferredQuery = useDeferredValue(query);
+  const books = filteredBooks(deferredQuery);
 
   if (!books.length) {
     return (

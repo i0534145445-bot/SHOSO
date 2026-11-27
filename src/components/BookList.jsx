@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { memo, useRef } from 'react';
 import { useStore } from '../lib/store.js';
 import BookCard, { BookTile } from './BookCard.jsx';
 import Cover from './Cover.jsx';
@@ -15,7 +15,7 @@ export const VIEW_MODES = [
 ];
 
 /** Compact row used by the "brief" view – cover, title and author on one line. */
-function BookBrief({ book, from }) {
+function BookBriefBase({ book, from }) {
   const progress = useStore((s) => s.progress[book.id]);
   const selected = useStore((s) => s.selection.includes(book.id));
   const selecting = useStore((s) => s.selection.length > 0);
@@ -113,3 +113,6 @@ export default function BookList({ books, from = 'books' }) {
     </div>
   );
 }
+
+/* Same rule as the rows: a brief line only changes with its book. */
+const BookBrief = memo(BookBriefBase, (a, b) => a.book === b.book && a.from === b.from);

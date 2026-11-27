@@ -21,6 +21,25 @@ const BOOK_EXT = new Set(['.epub', '.pdf', '.txt', '.fb2', '.html', '.htm', '.md
 const COVER_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 
 /**
+ * Windows hands a double-clicked ("Open with") document to the app as a plain
+ * command-line argument. Everything here exists so the book the user picked
+ * lands in the library instead of being ignored.
+ */
+const OPENABLE_EXT = new Set(['.epub', '.pdf', '.fb2', '.mobi', '.azw3', '.txt', '.html', '.htm', '.md']);
+
+function filesFromArgv(argv) {
+  const out = [];
+  for (const arg of (argv || []).slice(1)) {
+    if (typeof arg !== 'string' || arg.startsWith('-')) continue;
+    if (!OPENABLE_EXT.has(path.extname(arg).toLowerCase())) continue;
+    try {
+      if (fs.statSync(arg).isFile()) out.push(arg);
+    } catch { /* a stale shortcut target */ }
+  }
+  return out;
+}
+
+/**
  * A portable copy keeps its library beside the .exe instead of writing into
  * %APPDATA%, so it can sit on a USB stick without sharing (or overwriting) the
  * library of an installed copy. Must run before anything reads userData.
@@ -637,6 +656,20 @@ function registerIpc() {
 
   ipcMain.handle('book:refresh', async (_event, filePath) => readBook(filePath));
 
+  /**
+   * Windows 10/11 never lets an app silently become the default for a format –
+   * only the user can do that. So the honest button is the page where they do
+   * it, with the formats listed for them.
+   */
+  ipcMain.handle('shell:defaultApps', async () => {
+    if (process.platform === 'win32') {
+      await shell.openExternal('ms-settings:defaultapps');
+      return true;
+    }
+    return false;
+  });
+
+
   ipcMain.handle('state:load', async () => {
     try {
       return JSON.parse(await fsp.readFile(stateFile(), 'utf8'));
@@ -722,6 +755,18 @@ const resolveIcon = () => {
   });
 };
 
+let pendingOpenFiles = [];
+
+/** Send document paths to the renderer once it can receive them. */
+function deliverOpenFiles(paths) {
+  if (!paths || !paths.length) return;
+  pendingOpenFiles.push(...paths);
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.webContents.isLoading()) return;
+  const batch = pendingOpenFiles.splice(0, pendingOpenFiles.length);
+  mainWindow.webContents.send('open-files', batch);
+}
+
 function createWindow() {
   const saved = onScreen(readWindowState());
   mainWindow = new BrowserWindow({
@@ -772,6 +817,11 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
   }
 
+  // A queued "open with" document waits for the page to be ready.
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (pendingOpenFiles.length) deliverOpenFiles([]);
+  });
+
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('http')) shell.openExternal(url);
     return { action: 'deny' };
@@ -788,11 +838,12 @@ const singleInstance = app.requestSingleInstanceLock();
 if (!singleInstance) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, argv) => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
+    deliverOpenFiles(filesFromArgv(argv));
   });
 
   app.whenReady().then(() => {
@@ -819,6 +870,8 @@ if (!singleInstance) {
       ]),
     );
     createWindow();
+    // Books opened from Explorer before the window finished loading are queued.
+    deliverOpenFiles(filesFromArgv(process.argv));
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });

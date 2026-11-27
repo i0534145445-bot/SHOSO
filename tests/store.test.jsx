@@ -5,6 +5,7 @@ import {
   openBook, closeBook, saveProgress, addBookmark, removeBookmark,
   filteredBooks, authorsList, formatsList, continueReading,
   removeBook, updateReader, bookById, removeFolder, restoreBook, reconcileBooks,
+  addHighlight, removeHighlight, clearHighlights,
 } from '../src/lib/store.js';
 
 const makeBook = (i, overrides = {}) => ({
@@ -38,6 +39,7 @@ const reset = (books) => {
     recent: [],
     progress: {},
     bookmarks: {},
+    highlights: {},
     collections: [],
     query: '',
     sort: { key: 'title', dir: 'asc' },
@@ -232,5 +234,42 @@ describe('reader settings', () => {
     updateReader({ fontSize: 24, theme: 'sepia' });
     expect(getState().reader.fontSize).toBe(24);
     expect(getState().reader.theme).toBe('sepia');
+  });
+});
+
+describe('highlights', () => {
+  it('stores a quote per book and ignores the same quote twice', () => {
+    reset([makeBook(1)]);
+    const first = addHighlight('b1', { chapter: 0, quote: '  משפט   ארוך כאן  ', color: 'green' });
+    expect(first.color).toBe('green');
+    // whitespace is normalised before it is stored
+    expect(getState().highlights.b1[0].quote).toBe('משפט ארוך כאן');
+    expect(addHighlight('b1', { chapter: 0, quote: 'משפט ארוך כאן' })).toBeNull();
+    expect(getState().highlights.b1).toHaveLength(1);
+  });
+
+  it('removes a single highlight and clears the rest', () => {
+    reset([makeBook(1)]);
+    const a = addHighlight('b1', { quote: 'קטע ראשון' });
+    addHighlight('b1', { quote: 'קטע שני' });
+    removeHighlight('b1', a.id);
+    expect(getState().highlights.b1).toHaveLength(1);
+    clearHighlights('b1');
+    expect(getState().highlights.b1).toHaveLength(0);
+  });
+
+  it('drops the highlights of a book that leaves the library', () => {
+    reset([makeBook(1)]);
+    addHighlight('b1', { quote: 'קטע' });
+    removeBook('b1');
+    expect(getState().highlights.b1).toBeUndefined();
+  });
+
+  it('keeps the reader defaults for niqqud and automatic reading', () => {
+    updateReader({ niqqud: false, autoScroll: true, autoScrollSpeed: 35 });
+    expect(getState().reader.niqqud).toBe(false);
+    expect(getState().reader.autoScroll).toBe(true);
+    expect(getState().reader.autoScrollSpeed).toBe(35);
+    updateReader({ niqqud: true, autoScroll: false, autoScrollSpeed: 20 });
   });
 });

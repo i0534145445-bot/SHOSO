@@ -2,14 +2,18 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   useStore, getState, bookById, closeBook, saveProgress, markFinished,
   addBookmark, removeBookmark, updateReader, addReadingTime, toast, setState,
+  addHighlight, removeHighlight,
 } from '../lib/store.js';
 import { readBookBuffer } from '../lib/platform.js';
 import { parseBookBuffer, searchChapters, renderPdfPage, loadPdf, DETECTED_ONLY_EXT, extOf } from '../lib/parsers.js';
 import { FONT_FAMILIES, COLOR_MODES } from '../lib/store.js';
 import {
+  paintHighlights, stripNiqqudHtml, normalizeSpace, stripNiqqud, shortQuote, HIGHLIGHT_COLORS,
+} from '../lib/annotate.js';
+import {
   IconBack, IconToc, IconSearch, IconBookmark, IconTts, IconFullscreen,
   IconClose, IconZoomIn, IconZoomOut, IconStop,
-  IconMore, IconSettings, IconBookmarkSolid,
+  IconMore, IconSettings, IconBookmarkSolid, IconPause, IconPlay, IconColorLens,
   IconArrowDropDown, IconAddCircleOutline, IconRemoveCircleOutline,
 } from '../lib/icons.jsx';
 
@@ -28,6 +32,7 @@ export default function Reader() {
   const currentBookId = useStore((s) => s.currentBookId);
   const readerSettings = useStore((s) => s.reader);
   const bookmarks = useStore((s) => s.bookmarks[currentBookId] || []);
+  const highlights = useStore((s) => (currentBookId ? s.highlights[currentBookId] : null) || []);
   const book = bookById(currentBookId);
 
   const [parsed, setParsed] = useState(null);
@@ -45,6 +50,7 @@ export default function Reader() {
   const [tts, setTts] = useState({ playing: false, rate: 1 });
   const [moreOpen, setMoreOpen] = useState(false);
   const [ttsText, setTtsText] = useState('');
+  const [selection, setSelection] = useState(null); // { quote, chapter, top, left }
 
   const scrollRef = useRef(null);
   const chapterRefs = useRef([]);
@@ -249,6 +255,110 @@ export default function Reader() {
     el.scrollBy({ top: dir * el.clientHeight * 0.9, behavior: 'smooth' });
   }, []);
 
+  /* ---------- highlights ---------- */
+  const chapterOf = useCallback((node) => {
+    const el = node && (node.nodeType === 1 ? node : node.parentElement);
+    const section = el && el.closest ? el.closest('.book-chapter') : null;
+    return section ? Number(section.dataset.chapter) || 0 : 0;
+  }, []);
+
+  const captureSelection = useCallback(() => {
+    const sel = window.getSelection ? window.getSelection() : null;
+    const root = scrollRef.current;
+    if (!sel || sel.isCollapsed || !sel.rangeCount || !root || !root.contains(sel.anchorNode)) {
+      setSelection(null);
+      return;
+    }
+    const quote = normalizeSpace(sel.toString());
+    if (quote.length < 2) {
+      setSelection(null);
+      return;
+    }
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    setSelection({
+      quote,
+      chapter: chapterOf(sel.anchorNode),
+      top: Math.max(60, rect.top - 6),
+      left: Math.min(window.innerWidth - 90, Math.max(90, rect.left + rect.width / 2)),
+    });
+  }, [chapterOf]);
+
+  const highlightSelection = useCallback((color) => {
+    if (!selection || !book?.id) return;
+    addHighlight(book.id, { chapter: selection.chapter, quote: selection.quote, color });
+    window.getSelection?.().removeAllRanges();
+    setSelection(null);
+  }, [selection, book?.id]);
+
+  const copySelection = useCallback(() => {
+    if (!selection) return;
+    navigator.clipboard?.writeText(selection.quote).then(
+      () => toast('הקטע הועתק', 'success'),
+      () => toast('לא ניתן להעתיק', 'error'),
+    );
+    setSelection(null);
+  }, [selection]);
+
+  const onContentClick = useCallback((e) => {
+    if (selection) {
+      setSelection(null);
+      return;
+    }
+    const mark = e.target.closest ? e.target.closest('mark.shoso-hl') : null;
+    if (!mark || !book?.id) return;
+    const hit = highlights.find((h) => stripNiqqud(normalizeSpace(h.quote)) === stripNiqqud(normalizeSpace(mark.textContent)));
+    if (!hit) return;
+    removeHighlight(book.id, hit.id);
+    toast('ההדגשה הוסרה', 'info');
+  }, [selection, highlights, book?.id]);
+
+  // Repaint after every render of the text: React rewrites the chapters on a
+  // font or niqqud change, which throws the old <mark>s away.
+  useEffect(() => {
+    if (!parsed || parsed.format === 'PDF') return;
+    chapterRefs.current.forEach((section, i) => {
+      if (!section) return;
+      paintHighlights(section, highlights.filter((h) => Number(h.chapter || 0) === i));
+    });
+  }, [highlights, parsed, readerSettings.niqqud, readerSettings.fontSize, readerSettings.fontFamily]);
+
+  /* ---------- automatic reading ---------- */
+  const toggleAutoScroll = useCallback(() => {
+    if (readerSettings.autoScroll) {
+      updateReader({ autoScroll: false });
+      return;
+    }
+    if (readerSettings.mode !== 'scroll') updateReader({ mode: 'scroll' });
+    updateReader({ autoScroll: true });
+    toast('קריאה אוטומטית פועלת — גלגלת העכבר עוצרת אותה', 'info');
+  }, [readerSettings.autoScroll, readerSettings.mode]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !readerSettings.autoScroll) return undefined;
+    let raf = 0;
+    const speed = Math.max(0.4, Number(readerSettings.autoScrollSpeed || 20) / 10);
+    const step = () => {
+      const max = el.scrollHeight - el.clientHeight;
+      if (el.scrollTop >= max - 1) {
+        updateReader({ autoScroll: false });
+        toast('הגעת לסוף הספר', 'success');
+        return;
+      }
+      el.scrollTop += speed;
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    const stop = () => updateReader({ autoScroll: false });
+    el.addEventListener('wheel', stop, { passive: true });
+    el.addEventListener('touchstart', stop, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener('wheel', stop);
+      el.removeEventListener('touchstart', stop);
+    };
+  }, [readerSettings.autoScroll, readerSettings.autoScrollSpeed, parsed]);
+
   /* ---------- search ---------- */
   const runSearch = useCallback(() => {
     if (!parsed?.chapters) return;
@@ -277,6 +387,8 @@ export default function Reader() {
         setPanel((p) => (p === 'toc' ? null : 'toc'));
       } else if (e.key === 's' || e.key === 'S') {
         setPanel((p) => (p === 'search' ? null : 'search'));
+      } else if (e.key === 'p' || e.key === 'P') {
+        toggleAutoScroll();
       } else if (e.key === 'a' || e.key === 'A') {
         setPanel((p) => (p === 'settings' ? null : 'settings'));
       } else if (e.key === 'f' || e.key === 'F') {
@@ -285,7 +397,15 @@ export default function Reader() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [panel, parsed, pageScroll, book?.id, currentChapter, pdfPage]);
+  }, [panel, parsed, pageScroll, book?.id, currentChapter, pdfPage, toggleAutoScroll]);
+
+  // Memoised: the niqqud pass rewrites every chapter's HTML, so it must not run
+  // on each scroll tick.
+  const renderedChapters = useMemo(() => {
+    const list = parsed?.chapters || [];
+    if (readerSettings.niqqud !== false) return list;
+    return list.map((ch) => ({ ...ch, html: stripNiqqudHtml(ch.html) }));
+  }, [parsed, readerSettings.niqqud]);
 
   if (!book) return null;
 
@@ -305,7 +425,24 @@ export default function Reader() {
     : (parsed?.toc || []);
 
   return (
-    <div className={`reader reader-theme-${readerSettings.theme}`} style={readerStyle} onMouseMove={pokeUi}>
+    <div className={`reader reader-theme-${readerSettings.theme}${readerSettings.autoScroll ? ' auto-reading' : ''}`} style={readerStyle} onMouseMove={pokeUi}>
+      {selection && (
+        <div className="sel-bar" style={{ top: selection.top, left: selection.left }} onMouseDown={(e) => e.preventDefault()}>
+          {HIGHLIGHT_COLORS.map((c) => (
+            <button
+              key={c.id}
+              className={`sel-dot dot-${c.id}`}
+              title={`הדגש ${c.label}`}
+              onClick={() => highlightSelection(c.id)}
+            />
+          ))}
+          <span className="sel-sep" />
+          <button className="sel-act" onClick={copySelection} title="העתק את הקטע">העתק</button>
+          <button className="sel-act" onClick={() => { window.getSelection?.().removeAllRanges(); setSelection(null); }} title="סגור">
+            <IconClose size={15} />
+          </button>
+        </div>
+      )}
       {/* Top bar — ReadEra's two-row header: actions above, book title below */}
       <div className={`reader-top ${uiVisible ? '' : 'hidden'}`}>
         <div className="reader-bar-row">
@@ -328,6 +465,13 @@ export default function Reader() {
             <IconToc size={21} />
           </button>
           <button
+            className={`icon-btn ${panel === 'highlights' ? 'active' : ''}`}
+            onClick={() => setPanel(panel === 'highlights' ? null : 'highlights')}
+            title="הדגשות"
+          >
+            <IconColorLens size={21} />
+          </button>
+          <button
             className={`icon-btn ${panel === 'settings' ? 'active' : ''}`}
             onClick={() => setPanel(panel === 'settings' ? null : 'settings')}
             title="הגדרות קריאה (A)"
@@ -344,6 +488,9 @@ export default function Reader() {
                 <div className="row-menu" style={{ top: 'calc(100% + 2px)' }}>
                   <button onClick={() => { setMoreOpen(false); setPanel('bookmarks'); }}>
                     <IconBookmark size={18} /> סימניות ({bookmarks.length})
+                  </button>
+                  <button onClick={() => { setMoreOpen(false); setPanel('highlights'); }}>
+                    <IconColorLens size={18} /> הדגשות ({highlights.length})
                   </button>
                   <button
                     onClick={() => {
@@ -393,6 +540,7 @@ export default function Reader() {
                 {panel === 'toc' && 'תוכן עניינים'}
                 {panel === 'search' && 'חיפוש בספר'}
                 {panel === 'bookmarks' && 'סימניות'}
+                {panel === 'highlights' && 'הדגשות'}
                 {panel === 'settings' && 'הגדרות קריאה'}
               </h3>
               <button className="icon-btn" onClick={() => setPanel(null)}><IconClose size={16} /></button>
@@ -447,6 +595,29 @@ export default function Reader() {
                   ))}
                   {searchQuery && searchResults.length === 0 && <p className="dim">לא נמצאו תוצאות</p>}
                 </div>
+              </div>
+            )}
+
+            {panel === 'highlights' && (
+              <div className="highlights-list">
+                {highlights.length === 0 && (
+                  <p className="dim">אין הדגשות עדיין. סמן קטע בטקסט ולחץ על צבע.</p>
+                )}
+                {highlights.map((h) => (
+                  <div key={h.id} className="highlight-item">
+                    <button
+                      className="highlight-main"
+                      onClick={() => { goChapter(h.chapter || 0); setPanel(null); }}
+                    >
+                      <i className={`hl-dot dot-${h.color || 'yellow'}`} />
+                      <span>{shortQuote(h.quote)}</span>
+                      <em>פרק {(h.chapter || 0) + 1}</em>
+                    </button>
+                    <button className="icon-btn" onClick={() => removeHighlight(book.id, h.id)} title="מחק הדגשה">
+                      <IconClose size={14} />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -601,6 +772,45 @@ export default function Reader() {
                 </div>
 
                 <div className="rs-block switch">
+                  <span>ניקוד</span>
+                  <label className="rs-switch">
+                    <input
+                      type="checkbox"
+                      checked={readerSettings.niqqud}
+                      onChange={(e) => updateReader({ niqqud: e.target.checked })}
+                    />
+                    <i />
+                  </label>
+                </div>
+
+                <div className="rs-block switch">
+                  <span>קריאה אוטומטית</span>
+                  <label className="rs-switch">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(readerSettings.autoScroll)}
+                      onChange={toggleAutoScroll}
+                    />
+                    <i />
+                  </label>
+                </div>
+
+                {readerSettings.autoScroll && (
+                  <div className="rs-block">
+                    <div className="rs-cap">מהירות גלילה</div>
+                    <input
+                      type="range"
+                      min="5"
+                      max="60"
+                      step="5"
+                      value={readerSettings.autoScrollSpeed ?? 20}
+                      style={{ '--pct': `${(((readerSettings.autoScrollSpeed ?? 20) - 5) / 55) * 100}%` }}
+                      onChange={(e) => updateReader({ autoScrollSpeed: Number(e.target.value) })}
+                    />
+                  </div>
+                )}
+
+                <div className="rs-block switch">
                   <span>הקראה בקול</span>
                   <label className="rs-switch">
                     <input
@@ -665,10 +875,12 @@ export default function Reader() {
               className={`book-scroll ${readerSettings.justify ? 'justify' : ''} ${readerSettings.hyphenation ? 'hyphen' : ''} ${readerSettings.mode === 'paginated' ? 'paginated' : ''}`}
               dir={parsed.direction || 'rtl'}
               onScroll={onScroll}
-              onClick={pokeUi}
+              onMouseUp={captureSelection}
+              onTouchEnd={captureSelection}
+              onClick={(e) => { pokeUi(e); onContentClick(e); }}
             >
               <div className="book-page">
-                {parsed.chapters.map((ch, i) => (
+                {renderedChapters.map((ch, i) => (
                   <section
                     key={ch.id || i}
                     ref={(el) => { chapterRefs.current[i] = el; }}
@@ -701,6 +913,13 @@ export default function Reader() {
           </div>
           <span className="page-label dim" style={{ color: 'rgba(255,255,255,.8)' }}>{percent}%</span>
         </div>
+        <button
+          className={`icon-btn ${readerSettings.autoScroll ? 'active' : ''}`}
+          onClick={toggleAutoScroll}
+          title="קריאה אוטומטית (P)"
+        >
+          {readerSettings.autoScroll ? <IconPause size={20} /> : <IconPlay size={20} />}
+        </button>
         <button
           className="icon-btn"
           onClick={() => addBookmark(book.id, { chapter: currentChapter, scroll: scrollRef.current?.scrollTop || 0, page: pdfPage })}

@@ -5,6 +5,7 @@ import {
   extOf, isSupported,
 } from '../src/lib/parsers.js';
 import { createDemoBooks } from '../src/lib/demo.js';
+import JSZip from 'jszip';
 import { detectDirection, bookHaystack, matchesQuery, stripNiqqud } from '../src/lib/format.js';
 
 const enc = (s) => new TextEncoder().encode(s).buffer;
@@ -79,6 +80,13 @@ describe('FB2 parsing', () => {
     expect(result.chapters.length).toBe(2);
     expect(result.direction).toBe('rtl');
   });
+
+  it('keeps FB2 pictures: the cover <binary> becomes a data URL', () => {
+    const jpeg = 'data:image/jpeg;base64,' + Buffer.from('cover-bytes').toString('base64');
+    const fb2 = `<?xml version="1.0"?><FictionBook><description><title-info><book-title>עם תמונה</book-title></title-info></description><body><section><title><p>פרק 1</p></title><image l:href="#cover.jpg"/><p>טקסט</p></section></body><binary id="cover.jpg" content-type="image/jpeg">${jpeg.slice(23)}</binary></FictionBook>`;
+    const result = parseFb2(enc(fb2));
+    expect(result.chapters[0].html).toContain('data:image/jpeg;base64,');
+  });
 });
 
 describe('EPUB parsing (demo book)', () => {
@@ -104,6 +112,20 @@ describe('EPUB parsing (demo book)', () => {
     expect(formats.has('TXT')).toBe(true);
     // every demo book carries a readable buffer
     books.forEach((b) => expect(b.size).toBeGreaterThan(0));
+  });
+
+  it('rewrites the SVG cover page so the image at the top of the book loads', async () => {
+    const zip = new JSZip();
+    zip.file('mimetype', 'application/epub+zip');
+    zip.file('META-INF/container.xml', `<?xml version="1.0"?><container><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`);
+    zip.file('OEBPS/content.opf', `<?xml version="1.0"?><package><metadata><dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">ספר עם תמונה</dc:title></metadata><manifest><item id="cover" href="cover.xhtml" media-type="application/xhtml+xml"/><item id="art" href="Images/cover.jpg" media-type="image/jpeg"/><item id="ch1" href="ch1.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="cover"/><itemref idref="ch1"/></spine></package>`);
+    zip.file('OEBPS/cover.xhtml', `<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><body><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image xlink:href="../Images/cover.jpg"/></svg></body></html>`);
+    zip.file('OEBPS/ch1.xhtml', `<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><body><h1>פרק</h1><p>טקסט</p></body></html>`);
+    zip.file('OEBPS/Images/cover.jpg', 'fake-jpeg-bytes');
+    const buffer = await zip.generateAsync({ type: 'arraybuffer' });
+    const result = await parseEpub(buffer);
+    expect(result.chapters[0].html).toContain('<image');
+    expect(result.chapters[0].html).not.toContain('../Images/cover.jpg');
   });
 });
 

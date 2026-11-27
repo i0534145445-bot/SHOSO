@@ -150,6 +150,19 @@ export async function openExternal(url) {
 
 export const onScanProgress = (cb) => (bridge ? bridge.onScanProgress(cb) : () => {});
 
+/** Books handed to the app by Explorer ("Open with" / double-click). */
+export const onOpenFiles = (cb) => (bridge?.onOpenFiles ? bridge.onOpenFiles(cb) : () => {});
+
+/** The Windows page where the user picks the default app for book files. */
+export const openDefaultApps = async () => {
+  if (!bridge?.openDefaultApps) return false;
+  try {
+    return await bridge.openDefaultApps();
+  } catch {
+    return false;
+  }
+};
+
 /** A folder changed on disk – only the desktop build has watchers. */
 export const onLibraryChanged = (cb) => (bridge?.onLibraryChanged ? bridge.onLibraryChanged(cb) : () => {});
 

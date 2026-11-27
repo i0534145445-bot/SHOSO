@@ -26,6 +26,11 @@ contextBridge.exposeInMainWorld('shoso', {
   saveCover: (dataUrl) => ipcRenderer.invoke('cover:save', { dataUrl }),
   onScanProgress: (cb) => on('library:progress', cb),
   refreshBook: (filePath) => ipcRenderer.invoke('book:refresh', filePath),
+  // A book the user double-clicked (Windows "Open with").
+
+  onOpenFiles: (cb) => on('open-files', cb),
+  // Windows only lets the user choose a default app – this opens that page.
+  openDefaultApps: () => ipcRenderer.invoke('shell:defaultApps'),
   loadState: () => ipcRenderer.invoke('state:load'),
   saveState: (state) => ipcRenderer.invoke('state:save', state),
   loadLibrary: () => ipcRenderer.invoke('library:load'),

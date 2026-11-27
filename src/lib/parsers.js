@@ -268,8 +268,26 @@ export function parseFb2(buffer) {
   while ((m = sectionRx.exec(body)) !== null) {
     sections.push(m[1]);
   }
+  // FB2 keeps every picture in a base64 <binary> block; without this the cover
+  // (an <image> on the first page) simply vanished.
+  const binaries = new Map();
+  const binRx = /<binary\b[^>]*\bid=["']([^"']+)["'][^>]*>([\s\S]*?)<\/binary>/gi;
+  let bin;
+  while ((bin = binRx.exec(text)) !== null) {
+    const meta = bin[0].slice(0, bin[0].indexOf('>'));
+    const type = (/content-type=["']([^"']+)["']/i.exec(meta) || [])[1] || 'image/jpeg';
+    const data = bin[2].replace(/\s+/g, '');
+    if (data) binaries.set(bin[1], `data:${type};base64,${data}`);
+  }
   const fb2ToHtml = (xml) => {
     let out = xml;
+    // Pictures travel through the tag stripper below as placeholders.
+    const pictures = [];
+    out = out.replace(/<image\b[^>]*?\b(?:l:href|href)=["']#([^"']+)["'][^>]*\/?>/gi, (_m, id) => {
+      if (!binaries.has(id)) return '';
+      pictures.push(binaries.get(id));
+      return `\u0000pic${pictures.length - 1}\u0000`;
+    });
     out = out.replace(/<title>([\s\S]*?)<\/title>/gi, (_m, inner) => {
       const t = inner.replace(/<[^>]+>/g, '').trim();
       return t ? `<h2>${escapeHtml(t)}</h2>` : '';
@@ -283,6 +301,7 @@ export function parseFb2(buffer) {
     out = out.replace(/<strikethrough>([\s\S]*?)<\/strikethrough>/gi, '<s>$1</s>');
     out = out.replace(/<image[^>]*\/>/gi, '');
     out = out.replace(/<[^>]+>/g, '');
+    out = out.replace(/\u0000pic(\d+)\u0000/g, (_m, i) => `<img src="${pictures[Number(i)]}" alt="" />`);
     // Re-wrap: split on newlines into paragraphs where needed
     return out;
   };
@@ -315,6 +334,21 @@ export function parseFb2(buffer) {
 /* ------------------------------------------------------------------ */
 
 const xmlToDoc = (xml) => new DOMParser().parseFromString(xml, 'application/xml');
+
+/**
+ * Resolve `..` and `.` inside a zip path. Inside an EPUB every chapter sits in
+ * its own folder and refers to artwork as "../Images/cover.jpg"; without this
+ * those references never matched a file and the picture stayed blank.
+ */
+export function normalizeZipPath(path) {
+  const parts = [];
+  String(path || '').split('/').forEach((seg) => {
+    if (!seg || seg === '.') return;
+    if (seg === '..') parts.pop();
+    else parts.push(seg);
+  });
+  return parts.join('/');
+}
 
 function opfText(doc, tag) {
   // tag may be 'dc:title' (namespaced) or plain 'title'
@@ -424,6 +458,18 @@ export async function parseEpub(buffer) {
     }
   }
 
+  const imageCandidates = (href, opfDir, chapterPath) => {
+    const chapterDir = chapterPath.slice(0, chapterPath.lastIndexOf('/') + 1);
+    return [
+      href,
+      normalizeZipPath(href),
+      normalizeZipPath(opfDir + href),
+      normalizeZipPath(chapterDir + href),
+      opfDir + href,
+      chapterDir + href,
+    ];
+  };
+
   // Chapters from spine. The zip deflate step is I/O- and CPU-bound per file,
   // so all spine documents are decompressed concurrently and then assembled in
   // reading order – a 300-chapter book opens several times faster.
@@ -457,11 +503,22 @@ export async function parseEpub(buffer) {
       const src = img.getAttribute('src') || img.getAttribute('xlink:href') || '';
       if (!src || /^data:/.test(src) || /^https?:/.test(src)) return;
       const decoded = (() => { try { return decodeURIComponent(src); } catch { return src; } })();
-      const candidates = [decoded, opfDir + decoded, full.slice(0, full.lastIndexOf('/') + 1) + decoded];
-      for (const c of candidates) {
-        if (imageUrls.has(c)) { img.setAttribute('src', imageUrls.get(c)); break; }
-      }
+      const candidates = imageCandidates(decoded, opfDir, full);
+      const hit = candidates.find((c) => imageUrls.has(c));
+      if (hit) img.setAttribute('src', imageUrls.get(hit));
       img.removeAttribute('xlink:href');
+    });
+    // Cover pages are often an <svg><image xlink:href="…"/></svg> wrapper.
+    doc.querySelectorAll('image').forEach((node) => {
+      const src = node.getAttribute('xlink:href') || node.getAttribute('href') || '';
+      if (!src || /^data:/.test(src) || /^https?:/.test(src)) return;
+      const decoded = (() => { try { return decodeURIComponent(src); } catch { return src; } })();
+      const hit = imageCandidates(decoded, opfDir, full).find((c) => imageUrls.has(c));
+      if (hit) {
+        const url = imageUrls.get(hit);
+        node.setAttribute('href', url);
+        node.setAttribute('xlink:href', url);
+      }
     });
     const body = doc.querySelector('body');
     const html = body ? body.innerHTML : doc.documentElement.innerHTML;

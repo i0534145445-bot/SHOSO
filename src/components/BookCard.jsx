@@ -17,7 +17,7 @@ import Cover from './Cover.jsx';
  *   star (favourite) · clock (to read) · double-check (have read) ·
  *   reading position · overflow.
  */
-export default function BookCard({ book, from = 'books' }) {
+function BookCard({ book, from = 'books' }) {
   const favorites = useStore((s) => s.favorites);
   const toRead = useStore((s) => s.toRead);
   const progress = useStore((s) => s.progress[book.id]);
@@ -154,7 +154,7 @@ export default function BookCard({ book, from = 'books' }) {
 }
 
 /** Cover-first tile used by the "thumbnails" library layout. */
-export function BookTile({ book, from = 'books', size = 'md' }) {
+function BookTile({ book, from = 'books', size = 'md' }) {
   const progress = useStore((s) => s.progress[book.id]);
   const selected = useStore((s) => s.selection.includes(book.id));
   const selecting = useStore((s) => s.selection.length > 0);
@@ -205,3 +205,11 @@ export function BookTile({ book, from = 'books', size = 'md' }) {
     </button>
   );
 }
+
+/* A row only changes when its book changes, so a library of hundreds of books
+   does not re-render wholesale when something unrelated moves. */
+const Same = (a, b) => a.book === b.book && a.from === b.from && a.size === b.size;
+const MemoCard = React.memo(BookCard, Same);
+const MemoTile = React.memo(BookTile, Same);
+export default MemoCard;
+export { MemoTile as BookTile };
