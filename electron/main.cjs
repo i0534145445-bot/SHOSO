@@ -819,7 +819,9 @@ function createWindow() {
 
   // A queued "open with" document waits for the page to be ready.
   mainWindow.webContents.on('did-finish-load', () => {
-    if (pendingOpenFiles.length) deliverOpenFiles([]);
+    if (!pendingOpenFiles.length) return;
+    const batch = pendingOpenFiles.splice(0, pendingOpenFiles.length);
+    mainWindow.webContents.send('open-files', batch);
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
