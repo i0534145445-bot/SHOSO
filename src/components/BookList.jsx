@@ -75,6 +75,8 @@ function BookBriefBase({ book, from }) {
   );
 }
 
+const BookBrief = memo(BookBriefBase);
+
 /**
  * Renders a set of books using whichever library view is selected – shared by
  * Books & documents, Favorites, To read, Have read, Authors, Formats, Shelves…

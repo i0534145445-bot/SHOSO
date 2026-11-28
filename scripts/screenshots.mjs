@@ -24,6 +24,12 @@ const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 const page = await context.newPage();
 
+// A blank window is the worst failure: log what the page itself said.
+page.on('pageerror', (err) => trace(`pageerror: ${err.message}`));
+page.on('console', (msg) => {
+  if (msg.type() === 'error') trace(`console: ${msg.text().split('\n')[0]}`);
+});
+
 const shot = async (name) => {
   await page.waitForTimeout(600);
   await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: false });
