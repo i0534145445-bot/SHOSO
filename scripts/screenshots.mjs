@@ -31,12 +31,22 @@ const shot = async (name) => {
 };
 
 /** Run one capture step; a failure is logged and never aborts the whole run. */
+const failures = [];
 const step = async (label, fn) => {
   try {
     await fn();
     trace(`ok ${label}`);
   } catch (err) {
+    failures.push(label);
     trace(`FAIL ${label} — ${err.message.split('\n')[0]}`);
+    // Close any open menu: its invisible backdrop swallows every later click.
+    await page.evaluate(() => {
+      document.querySelectorAll('div[style*="position: fixed"]').forEach((el) => {
+        if (el.getAttribute('style').includes('inset')) {
+          el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        }
+      });
+    }).catch(() => {});
     const state = await page.evaluate(() => ({
       view: document.querySelector('.topbar-title')?.textContent,
       rows: document.querySelectorAll('.book-row').length,
@@ -97,7 +107,7 @@ try {
 
   await step('books list', async () => {
     await clickDrawerItem('ספרים ומסמכים');
-    await page.waitForSelector('.book-list', { timeout: 6000 });
+    await page.waitForSelector('.vgrid', { timeout: 6000 });
     // use the real row actions so the gold "active" chips are genuine state
     await page.locator('.book-row').nth(1).locator('.row-actions .icon-btn').nth(0).click();
     await page.locator('.book-row').nth(2).locator('.row-actions .icon-btn').nth(1).click();
@@ -203,7 +213,7 @@ try {
   await step('authors', async () => {
     await showUi();
     await clickTitle('חזרה (Esc)');
-    await page.waitForSelector('.book-list', { timeout: 10000 });
+    await page.waitForSelector('.vgrid', { timeout: 10000 });
     await clickTitle('תפריט');
     await clickDrawerItem('מחברים');
     await page.waitForSelector('.author-card', { timeout: 10000 });
@@ -317,7 +327,7 @@ try {
     await page.waitForTimeout(300);
     await showUi();
     await clickTitle('חזרה (Esc)');
-    await page.waitForSelector('.book-list', { timeout: 10000 });
+    await page.waitForSelector('.vgrid', { timeout: 10000 });
   });
 
   await step('book detail', async () => {
@@ -340,3 +350,7 @@ try {
 }
 
 trace('done');
+if (failures.length) {
+  trace(`FAILED steps (${failures.length}): ${failures.join(', ')}`);
+  process.exitCode = 1;
+}

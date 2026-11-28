@@ -38,12 +38,18 @@ jobs:
           npx vite preview --host 0.0.0.0 --port 4173 &
           sleep 4
           mkdir -p screenshots
-          node scripts/screenshots.mjs 2>&1 || true
+          # A failed capture step must turn the run red: the screenshots are the
+          # evidence, so a silently missing one is worse than a red build.
+          set -o pipefail
+          status=0
+          node scripts/screenshots.mjs 2>&1 | tee /tmp/shots.log || status=$?
           cat screenshots/run.txt || true
-          node scripts/bench-library.mjs 2>&1 || true
+          node scripts/bench-library.mjs 2>&1 | tee /tmp/bench.log || true
           cat screenshots/bench.txt || true
+          exit $status
 
       - name: Commit screenshots back to branch
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
