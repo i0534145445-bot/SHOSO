@@ -1,4 +1,4 @@
-start 2026-11-27T12:41:47.979Z
+start 2026-11-28T17:25:54.056Z
 goto
 loaded
 rows ready
@@ -10,17 +10,14 @@ FAIL reader — locator.click: Timeout 30000ms exceeded.
 FAIL reader settings — locator.waitFor: Timeout 8000ms exceeded.
 FAIL sepia mode — locator.selectOption: Timeout 6000ms exceeded.
 FAIL toc — locator.waitFor: Timeout 8000ms exceeded.
+FAIL fullscreen — page.waitForSelector: Timeout 6000ms exceeded.
 FAIL authors — locator.waitFor: Timeout 8000ms exceeded.
-saved 17-genres
-saved 18-genre-books
-ok genres
-saved 10-settings
-ok settings
-saved 11-trash
-ok trash
-FAIL reading now — page.waitForSelector: Timeout 10000ms exceeded.
-FAIL selection — page.waitForSelector: Timeout 10000ms exceeded.
-FAIL highlights — page.waitForSelector: Timeout 10000ms exceeded.
+FAIL genres — locator.click: Timeout 30000ms exceeded.
+FAIL settings — locator.click: Timeout 30000ms exceeded.
+FAIL trash — locator.click: Timeout 30000ms exceeded.
+FAIL reading now — locator.click: Timeout 30000ms exceeded.
+FAIL selection — locator.click: Timeout 30000ms exceeded.
+FAIL highlights — locator.click: Timeout 30000ms exceeded.
 FAIL automatic reading — locator.waitFor: Timeout 8000ms exceeded.
-FAIL book detail — page.waitForSelector: Timeout 10000ms exceeded.
+FAIL book detail — locator.click: Timeout 30000ms exceeded.
 done
