@@ -1,4 +1,4 @@
-start 2026-11-28T17:32:38.721Z
+start 2026-11-28T17:36:52.867Z
 goto
 loaded
 rows ready
@@ -6,24 +6,21 @@ saved 02-drawer
 ok drawer
 saved 03-books-list
 ok books list
+saved 04-books-thumbs
 FAIL books tiles — page.waitForSelector: Timeout 6000ms exceeded.
 FAIL reader — locator.click: Timeout 30000ms exceeded.
 FAIL reader settings — locator.waitFor: Timeout 8000ms exceeded.
 FAIL sepia mode — locator.selectOption: Timeout 6000ms exceeded.
 FAIL toc — locator.waitFor: Timeout 8000ms exceeded.
-FAIL fullscreen — page.waitForSelector: Timeout 6000ms exceeded.
+FAIL fullscreen — locator.waitFor: Timeout 8000ms exceeded.
 FAIL authors — locator.waitFor: Timeout 8000ms exceeded.
-saved 17-genres
-saved 18-genre-books
-ok genres
-saved 10-settings
-ok settings
-saved 11-trash
-ok trash
-FAIL reading now — page.waitForSelector: Timeout 10000ms exceeded.
-FAIL selection — page.waitForSelector: Timeout 10000ms exceeded.
-FAIL highlights — page.waitForSelector: Timeout 10000ms exceeded.
+FAIL genres — locator.waitFor: Timeout 8000ms exceeded.
+FAIL settings — locator.waitFor: Timeout 8000ms exceeded.
+FAIL trash — locator.waitFor: Timeout 8000ms exceeded.
+FAIL reading now — locator.waitFor: Timeout 8000ms exceeded.
+FAIL selection — locator.waitFor: Timeout 8000ms exceeded.
+FAIL highlights — locator.waitFor: Timeout 8000ms exceeded.
 FAIL automatic reading — locator.waitFor: Timeout 8000ms exceeded.
-FAIL book detail — page.waitForSelector: Timeout 10000ms exceeded.
+FAIL book detail — locator.waitFor: Timeout 8000ms exceeded.
 done
-FAILED steps (12): books tiles, reader, reader settings, sepia mode, toc, fullscreen, authors, reading now, selection, highlights, automatic reading, book detail
+FAILED steps (15): books tiles, reader, reader settings, sepia mode, toc, fullscreen, authors, genres, settings, trash, reading now, selection, highlights, automatic reading, book detail
