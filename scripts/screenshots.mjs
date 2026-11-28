@@ -177,6 +177,29 @@ try {
     await page.waitForTimeout(400);
   });
 
+  await step('fullscreen', async () => {
+    // Fullscreen removes the window chrome, so the capture has to prove the app
+    // itself offers a way out – and that Escape is honoured.
+    await showUi();
+    await clickTitle('עוד');
+    await page.waitForSelector('.row-menu', { timeout: 6000 });
+    await shot('21-reader-menu');
+    await page.locator('.row-menu button').filter({ hasText: 'מסך מלא' }).first().click();
+    await page.waitForFunction(() => Boolean(document.fullscreenElement), null, { timeout: 6000 })
+      .catch(() => {});
+    const active = await page.evaluate(() => Boolean(document.fullscreenElement));
+    trace(`fullscreen active: ${active}`);
+    if (!active) return;
+    await showUi();
+    await page.waitForSelector('.fullscreen-exit', { timeout: 6000 });
+    await shot('22-fullscreen-exit');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.fullscreenElement, null, { timeout: 6000 });
+    const stillReading = await page.evaluate(() => Boolean(document.querySelector('.book-scroll')));
+    trace(`escape left fullscreen, book still open: ${stillReading}`);
+    await shot('23-after-fullscreen');
+  });
+
   await step('authors', async () => {
     await showUi();
     await clickTitle('חזרה (Esc)');

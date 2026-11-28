@@ -6,8 +6,9 @@ import {
 } from '../lib/store.js';
 import {
   IconMenu, IconSearch, IconMore, IconBack, IconCheck, IconRead, IconCollection,
-  IconTrash, IconClose, IconPlus,
+  IconTrash, IconClose, IconPlus, IconFullscreenExit,
 } from '../lib/icons.jsx';
+import { useFullscreen, exitFullscreen } from '../lib/fullscreen.js';
 import { VIEW_MODES } from './BookList.jsx';
 
 /**
@@ -54,6 +55,7 @@ export default function TopBar() {
   const selection = useStore((s) => s.selection);
   const books = useStore((s) => s.books);
   const collections = useStore((s) => s.collections);
+  const fullscreen = useFullscreen();
   const [searching, setSearching] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [shelfOpen, setShelfOpen] = useState(false);
@@ -179,6 +181,18 @@ export default function TopBar() {
           </div>
           <h1 className="topbar-title">{title}</h1>
           <div className="topbar-actions">
+            {/* Fullscreen removes the window chrome, so the app itself has to
+                keep a visible way back – on every screen, not just the reader. */}
+            {fullscreen && (
+              <button
+                className="icon-btn fullscreen-exit"
+                title="צא ממסך מלא (Esc)"
+                aria-label="צא ממסך מלא"
+                onClick={exitFullscreen}
+              >
+                <IconFullscreenExit size={21} />
+              </button>
+            )}
             {canSearch && (
               <button className="icon-btn" title="חיפוש" onClick={() => setSearching(true)}>
                 <IconSearch size={21} />

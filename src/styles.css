@@ -364,6 +364,11 @@ svg { shape-rendering: geometricPrecision; }
 .icon-btn.active { color: var(--gold); }
 .icon-btn.danger:hover { color: #ef5350; background: rgba(239, 83, 80, 0.12); }
 
+/* The way out of fullscreen has to be findable at a glance – it is the only
+   control on screen once the window chrome is gone. */
+.icon-btn.fullscreen-exit { color: var(--gold); }
+.icon-btn.fullscreen-exit:hover { color: var(--gold); background: rgba(224, 166, 60, 0.16); }
+
 .seg {
   display: inline-flex;
   background: var(--surface-hi);

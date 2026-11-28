@@ -39,6 +39,10 @@ contextBridge.exposeInMainWorld('shoso', {
   openDataFolder: () => ipcRenderer.invoke('shell:openDataFolder'),
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
   toggleFullscreen: () => ipcRenderer.invoke('window:toggleFullscreen'),
+  setFullscreen: (value) => ipcRenderer.invoke('window:setFullscreen', Boolean(value)),
+  isFullscreen: () => ipcRenderer.invoke('window:isFullscreen'),
+  // F11 from the menu, the window menu or our own button – one source of truth.
+  onFullscreenChange: (cb) => on('window:fullscreen', cb),
   minimize: () => ipcRenderer.invoke('window:minimize'),
   maximize: () => ipcRenderer.invoke('window:maximize'),
   close: () => ipcRenderer.invoke('window:close'),

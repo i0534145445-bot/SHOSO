@@ -7,11 +7,12 @@ import {
 import { readBookBuffer } from '../lib/platform.js';
 import { parseBookBuffer, searchChapters, renderPdfPage, loadPdf, DETECTED_ONLY_EXT, extOf } from '../lib/parsers.js';
 import { FONT_FAMILIES, COLOR_MODES } from '../lib/store.js';
+import { useFullscreen, toggleFullscreen, exitFullscreen, isFullscreen } from '../lib/fullscreen.js';
 import {
   paintHighlights, stripNiqqudHtml, normalizeSpace, stripNiqqud, shortQuote, HIGHLIGHT_COLORS,
 } from '../lib/annotate.js';
 import {
-  IconBack, IconToc, IconSearch, IconBookmark, IconTts, IconFullscreen,
+  IconBack, IconToc, IconSearch, IconBookmark, IconTts, IconFullscreen, IconFullscreenExit,
   IconClose, IconZoomIn, IconZoomOut, IconStop,
   IconMore, IconSettings, IconBookmarkSolid, IconPause, IconPlay, IconColorLens,
   IconArrowDropDown, IconAddCircleOutline, IconRemoveCircleOutline,
@@ -49,6 +50,7 @@ export default function Reader() {
   const [pdfZoom, setPdfZoom] = useState(1.5);
   const [tts, setTts] = useState({ playing: false, rate: 1 });
   const [moreOpen, setMoreOpen] = useState(false);
+  const fullscreen = useFullscreen();
   const [ttsText, setTtsText] = useState('');
   const [selection, setSelection] = useState(null); // { quote, chapter, top, left }
 
@@ -371,7 +373,10 @@ export default function Reader() {
       const typing = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
       if (typing) return;
       if (e.key === 'Escape') {
-        if (panel) setPanel(null);
+        // Fullscreen hides every way out of the window, so Escape must mean
+        // "leave fullscreen" before it means anything else.
+        if (isFullscreen()) exitFullscreen();
+        else if (panel) setPanel(null);
         else closeBook();
       } else if (e.key === 'ArrowLeft' || e.key === 'PageDown') {
         e.preventDefault();
@@ -392,7 +397,7 @@ export default function Reader() {
       } else if (e.key === 'a' || e.key === 'A') {
         setPanel((p) => (p === 'settings' ? null : 'settings'));
       } else if (e.key === 'f' || e.key === 'F') {
-        window.shoso?.toggleFullscreen?.();
+        toggleFullscreen();
       }
     };
     window.addEventListener('keydown', onKey);
@@ -478,6 +483,16 @@ export default function Reader() {
           >
             <IconSettings size={21} />
           </button>
+          {fullscreen && (
+            <button
+              className="icon-btn fullscreen-exit"
+              onClick={exitFullscreen}
+              title="צא ממסך מלא (Esc)"
+              aria-label="צא ממסך מלא"
+            >
+              <IconFullscreenExit size={21} />
+            </button>
+          )}
           <div style={{ position: 'relative' }}>
             <button className="icon-btn" onClick={() => setMoreOpen((v) => !v)} title="עוד">
               <IconMore size={21} />
@@ -511,15 +526,13 @@ export default function Reader() {
                       // Desktop window chrome when the Electron bridge is there,
                       // the browser's own fullscreen when it isn't – never a
                       // button that does nothing.
-                      if (window.shoso?.toggleFullscreen) {
-                        window.shoso.toggleFullscreen();
-                        return;
-                      }
-                      if (document.fullscreenElement) document.exitFullscreen?.();
-                      else document.documentElement.requestFullscreen?.();
+                      if (fullscreen) exitFullscreen();
+                      else toggleFullscreen();
                     }}
                   >
-                    <IconFullscreen size={18} /> מסך מלא
+                    {fullscreen
+                      ? <><IconFullscreenExit size={18} /> צא ממסך מלא (Esc)</>
+                      : <><IconFullscreen size={18} /> מסך מלא</>}
                   </button>
                 </div>
               </>

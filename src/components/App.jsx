@@ -27,6 +27,7 @@ import TrashView from '../views/TrashView.jsx';
 import DropOverlay from './DropOverlay.jsx';
 import ShortcutsDialog from './ShortcutsDialog.jsx';
 import { handleDrop } from '../lib/store.js';
+import { isFullscreen, exitFullscreen } from '../lib/fullscreen.js';
 
 const VIEWS = {
   home: HomeView,
@@ -89,7 +90,10 @@ export default function App() {
           }
           break;
         case 'Escape':
-          if (getState().query) setQuery('');
+          // Out of fullscreen first: with no window chrome it is the only way
+          // back, and Escape closing search instead would leave the user stuck.
+          if (isFullscreen()) exitFullscreen();
+          else if (getState().query) setQuery('');
           break;
         case 'F1':
           event.preventDefault();

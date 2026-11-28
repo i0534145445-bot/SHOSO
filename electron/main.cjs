@@ -738,6 +738,14 @@ function registerIpc() {
     return next;
   });
 
+  ipcMain.handle('window:setFullscreen', (_event, value) => {
+    if (!mainWindow) return false;
+    mainWindow.setFullScreen(Boolean(value));
+    return Boolean(value);
+  });
+
+  ipcMain.handle('window:isFullscreen', () => Boolean(mainWindow && mainWindow.isFullScreen()));
+
   ipcMain.handle('window:minimize', () => mainWindow && mainWindow.minimize());
   ipcMain.handle('window:maximize', () => {
     if (!mainWindow) return false;
@@ -817,6 +825,15 @@ function createWindow() {
     clearTimeout(windowTimer);
     windowTimer = setTimeout(saveWindowState, 400);
   };
+  // The renderer has to know when the window is fullscreen, otherwise the way
+  // out of it depends on remembering which key did it.
+  const tellFullscreen = (value) => () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.webContents.send('window:fullscreen', value);
+  };
+  mainWindow.on('enter-full-screen', tellFullscreen(true));
+  mainWindow.on('leave-full-screen', tellFullscreen(false));
+
   mainWindow.on('resize', remember);
   mainWindow.on('move', remember);
   mainWindow.on('maximize', remember);
