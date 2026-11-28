@@ -1,34 +1,11 @@
 step: book detail
-locator.click: Timeout 30000ms exceeded.
+page.waitForSelector: Timeout 10000ms exceeded.
 Call log:
-  - waiting for locator('[title="תפריט"]').first()
-    - locator resolved to <button title="תפריט" class="icon-btn">…</button>
-  - attempting click action
-    2 × waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <div></div> from <div class="topbar-actions">…</div> subtree intercepts pointer events
-    - retrying click action
-    - waiting 20ms
-    2 × waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <div></div> from <div class="topbar-actions">…</div> subtree intercepts pointer events
-    - retrying click action
-      - waiting 100ms
-    58 × waiting for element to be visible, enabled and stable
-       - element is visible, enabled and stable
-       - scrolling into view if needed
-       - done scrolling
-       - <div></div> from <div class="topbar-actions">…</div> subtree intercepts pointer events
-     - retrying click action
-       - waiting 500ms
+  - waiting for locator('.book-row') to be visible
 
 {
   "view": "ספרים ומסמכים",
   "rows": 0,
   "drawer": false,
-  "text": "ספרים ומסמכים מיון לפי שם הספר ✓ מחבר תאריך הוספה גודל קובץ התקדמות קריאה סדר יורד תצוגת ספרייה תצוגה מלאה תצוגה תמציתית תמונות ממוזערות כריכות הוסף תיקיות… הגדרות אשפה FB2 הבית על הגבעה דוד כהן הבית על הגבעה דוד כהן EPUB הספר הישן מרים לוי"
+  "text": "ספרים ומסמכים FB2 הבית על הגבעה דוד כהן הבית על הגבעה דוד כהן EPUB הספר הישן מרים לוי הספר הישן מרים לוי HTML זיכרונות של ספרייה רחל בן-עמי זיכרונות של ספרייה רחל בן-עמי MD מדריך הגן הקטן עמוס גבע מדריך הגן הקטן עמוס גבע · 100% TXT מכתבים מ"
 }
