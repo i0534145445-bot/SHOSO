@@ -1,4 +1,4 @@
-start 2026-11-28T17:36:52.867Z
+start 2026-11-28T17:41:29.108Z
 goto
 loaded
 rows ready
@@ -7,20 +7,44 @@ ok drawer
 saved 03-books-list
 ok books list
 saved 04-books-thumbs
-FAIL books tiles — page.waitForSelector: Timeout 6000ms exceeded.
-FAIL reader — locator.click: Timeout 30000ms exceeded.
-FAIL reader settings — locator.waitFor: Timeout 8000ms exceeded.
-FAIL sepia mode — locator.selectOption: Timeout 6000ms exceeded.
-FAIL toc — locator.waitFor: Timeout 8000ms exceeded.
-FAIL fullscreen — locator.waitFor: Timeout 8000ms exceeded.
-FAIL authors — locator.waitFor: Timeout 8000ms exceeded.
-FAIL genres — locator.waitFor: Timeout 8000ms exceeded.
-FAIL settings — locator.waitFor: Timeout 8000ms exceeded.
-FAIL trash — locator.waitFor: Timeout 8000ms exceeded.
-FAIL reading now — locator.waitFor: Timeout 8000ms exceeded.
-FAIL selection — locator.waitFor: Timeout 8000ms exceeded.
-FAIL highlights — locator.waitFor: Timeout 8000ms exceeded.
-FAIL automatic reading — locator.waitFor: Timeout 8000ms exceeded.
-FAIL book detail — locator.waitFor: Timeout 8000ms exceeded.
+saved 04b-books-brief
+saved 04c-books-grid
+ok books tiles
+saved 05-reader-night
+ok reader
+saved 06-reader-settings
+saved 06b-reader-settings-bottom
+ok reader settings
+saved 07-reader-sepia
+ok sepia mode
+saved 08-reader-toc
+ok toc
+saved 21-reader-menu
+fullscreen active: true
+saved 22-fullscreen-exit
+escape left fullscreen, book still open: true
+saved 23-after-fullscreen
+ok fullscreen
+saved 09-authors
+ok authors
+saved 17-genres
+saved 18-genre-books
+ok genres
+saved 10-settings
+ok settings
+saved 11-trash
+ok trash
+saved 01-reading-now
+ok reading now
+saved 13-selection
+ok selection
+selected 73 chars
+saved 14-selection-bar
+selected 70 chars
+saved 15-highlights
+ok highlights
+saved 16-auto-reading
+ok automatic reading
+saved 12-book-detail
+ok book detail
 done
-FAILED steps (15): books tiles, reader, reader settings, sepia mode, toc, fullscreen, authors, genres, settings, trash, reading now, selection, highlights, automatic reading, book detail
