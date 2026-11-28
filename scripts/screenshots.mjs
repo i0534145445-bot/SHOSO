@@ -120,7 +120,7 @@ try {
     // ReadEra's four library views are all reachable from the overflow menu
     await clickTitle('עוד');
     await page.locator('.topbar-menu-pop button').filter({ hasText: 'תמונות ממוזערות' }).click();
-    await page.waitForSelector('.book-grid.thumbs .book-tile', { timeout: 6000 });
+    await page.waitForSelector('.vgrid.thumbs .book-tile', { timeout: 6000 });
     await shot('04-books-thumbs');
 
     await clickTitle('עוד');
@@ -130,7 +130,7 @@ try {
 
     await clickTitle('עוד');
     await page.locator('.topbar-menu-pop button').filter({ hasText: 'כריכות' }).click();
-    await page.waitForSelector('.book-grid.tiles .book-tile', { timeout: 6000 });
+    await page.waitForSelector('.vgrid.tiles .book-tile', { timeout: 6000 });
     await shot('04c-books-grid');
 
     await clickTitle('עוד');
