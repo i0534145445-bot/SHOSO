@@ -1226,6 +1226,9 @@ svg { shape-rendering: geometricPrecision; }
   height: 48px;
 }
 .reader-bar-row .icon-btn { color: #fff; }
+/* the way out of fullscreen stays gold, above the reader's white icons */
+.reader-bar-row .icon-btn.fullscreen-exit { color: var(--gold); }
+.reader-bar-row .icon-btn.fullscreen-exit:hover { color: var(--gold); background: rgba(224, 166, 60, 0.18); }
 .reader-bar-grow { flex: 1; }
 .reader-bar-title {
   padding: 0 12px 6px;
